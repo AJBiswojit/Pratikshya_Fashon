@@ -1,0 +1,52 @@
+@import "tailwindcss";
+
+@theme {
+  --font-editorial: "Cormorant Garamond", Georgia, serif;
+  --font-heritage: "Cormorant Garamond", Georgia, serif;
+  --font-minimal: "Instrument Sans", system-ui, sans-serif;
+  --font-commerce: "Instrument Sans", system-ui, sans-serif;
+  --font-atelier: "Cormorant Garamond", Georgia, serif;
+  --font-future: "Instrument Sans", system-ui, sans-serif;
+
+  --color-ivory: #fdf8f3;
+  --color-champagne: #f2e8d8;
+  --color-deep-maroon: #6a1b2e;
+  --color-terracotta: #b85c3a;
+  --color-terracotta-dark: #8a3e22;
+  --color-indigo-deep: #1e2a5a;
+  --color-gold: #c9a44c;
+  --color-gold-dim: #9e7d3a;
+  --color-burgundy: #5a1528;
+  --color-dark-luxury: #0a0a0c;
+}
+
+html {
+  scroll-behavior: smooth;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  font-family: "Instrument Sans", system-ui, sans-serif;
+  background-color: #fdf8f3;
+  color: #1a1a1a;
+  overflow-x: hidden;
+}
+
+::selection {
+  background: #c9a44c;
+  color: #fff;
+}
+
+@keyframes slowZoom {
+  from { transform: scale(1.05); }
+  to { transform: scale(1.15); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

@@ -1,0 +1,75 @@
+const pexels = (id, width = 800, height = 1200, ext = "jpeg") =>
+  `https://images.pexels.com/photos/${id}/pexels-photo-${id}.${ext}?auto=compress&cs=tinysrgb&fit=crop&h=${height}&w=${width}`;
+
+const local = (path) => `/images/${path}`;
+
+export const categoryFallbacks = {
+  men: local("texora/groom/groom-sherwani.jpg"),
+  groom: local("texora/groom/groom-sherwani.jpg"),
+  kids: local("texora/kids/kids-festive.jpg"),
+  sarees: local("heritage-textile.jpg"),
+  lehengas: local("bridal-editorial.jpg"),
+  bridal: local("bridal-editorial.jpg"),
+  fabrics: local("atelier-fabric.jpg"),
+  cotton: local("atelier-fabric.jpg"),
+  silk: local("heritage-textile.jpg"),
+  accessories: local("texora/jewellery/bangles-gold.jpg"),
+  default: local("atelier-fabric.jpg"),
+};
+
+export const texoraImages = {
+  "hero-atelier": {
+    id: "hero-atelier",
+    category: "fabrics",
+    purpose: "Atelier macro fabric hero",
+    src: local("atelier-fabric.jpg"),
+    alt: "Layered premium fabrics with silk and cotton folds for TEXORA atelier",
+  },
+  "groom-sherwani": {
+    id: "groom-sherwani",
+    category: "groom",
+    purpose: "Groom campaign",
+    src: local("texora/groom/groom-sherwani.jpg"),
+    alt: "TEXORA groom in navy sherwani with refined gold embroidery",
+  },
+  "kids-festive-wear": { id: "kids-festive-wear", category: "kids", purpose: "Kids festive wear category", src: local("texora/kids/kids-festive.jpg"), alt: "Premium kids festive ethnic wear in ivory and gold" },
+  "kids-kurta-sets": { id: "kids-kurta-sets", category: "kids", purpose: "Kids kurta sets category", src: pexels(12943586), alt: "Young boy in traditional South Asian kurta set" },
+
+  "men-kurta": { id: "men-kurta", category: "men", purpose: "Men's kurta category", src: pexels(3998093), alt: "Stylish Indian man in elegant white kurta attire" },
+  "men-sherwani": { id: "men-sherwani", category: "groom", purpose: "Sherwani category", src: pexels(35043826), alt: "Groom in an ornate traditional sherwani" },
+
+  "women-bridal-wear": { id: "women-bridal-wear", category: "bridal", purpose: "Bridal wear category", src: pexels(38866219), alt: "Indian bride wearing a red bridal lehenga with intricate embroidery" },
+
+  "saree-cotton": { id: "saree-cotton", category: "sarees", purpose: "Cotton saree category", src: pexels(28943484), alt: "Woman in cotton saree reading in a refined market setting" },
+  "saree-silk": { id: "saree-silk", category: "silk", purpose: "Silk saree category", src: local("heritage-textile.jpg"), alt: "Rich Banarasi silk saree textile with gold zari details" },
+  "saree-banarasi": { id: "saree-banarasi", category: "silk", purpose: "Banarasi silk category", src: local("heritage-textile.jpg"), alt: "Banarasi silk fabric with ornate gold weaving" },
+  "saree-printed": { id: "saree-printed", category: "sarees", purpose: "Printed saree category", src: pexels(28943465), alt: "Woman in vibrant printed saree styling" },
+  "saree-traditional": { id: "saree-traditional", category: "sarees", purpose: "Traditional saree category", src: pexels(28943474), alt: "Traditional orange saree campaign portrait" },
+
+  "lehenga-bridal": { id: "lehenga-bridal", category: "bridal", purpose: "Bridal lehenga category", src: local("bridal-editorial.jpg"), alt: "TEXORA red and gold bridal lehenga editorial" },
+  "lehenga-designer": { id: "lehenga-designer", category: "lehengas", purpose: "Designer lehenga category", src: pexels(20790065), alt: "Model in designer Indian lehenga with jewelry" },
+  "lehenga-party": { id: "lehenga-party", category: "lehengas", purpose: "Party lehenga category", src: pexels(20790059), alt: "Model in red choli and lehenga-inspired party look" },
+
+  "fabric-cotton": { id: "fabric-cotton", category: "cotton", purpose: "Cotton fabric texture", src: pexels(4814062, 1200, 627), alt: "Soft cotton fabric texture in warm rose tone" },
+  "fabric-silk": { id: "fabric-silk", category: "silk", purpose: "Silk fabric texture", src: local("heritage-textile.jpg"), alt: "Lustrous silk textile with gold woven detailing" },
+  "fabric-linen": { id: "fabric-linen", category: "fabrics", purpose: "Linen fabric texture", src: pexels(459486, 1200, 627), alt: "Detailed woven linen fabric with natural folds" },
+  "fabric-chiffon": { id: "fabric-chiffon", category: "fabrics", purpose: "Chiffon fabric texture", src: pexels(6653658, 1200, 627), alt: "Delicate pink chiffon fabric with soft folds" },
+  "fabric-printed": { id: "fabric-printed", category: "fabrics", purpose: "Printed fabric texture", src: pexels(6843268, 1200, 627), alt: "Intricate red printed textile texture" },
+  "fabric-embroidered": { id: "fabric-embroidered", category: "fabrics", purpose: "Embroidered fabric texture", src: local("heritage-textile.jpg"), alt: "Embroidered silk textile with gold craftsmanship" },
+
+  "accessory-dupattas": { id: "accessory-dupattas", category: "accessories", purpose: "Dupattas product", src: local("heritage-textile.jpg"), alt: "Golden embroidered dupatta textile close-up" },
+};
+
+Object.values(texoraImages).forEach((image) => {
+  image.fallback = image.fallback || categoryFallbacks[image.category] || categoryFallbacks.default;
+});
+
+export const getImage = (id) => {
+  const image = texoraImages[id] || texoraImages["hero-atelier"];
+  return {
+    ...image,
+    fallback: image.fallback || categoryFallbacks[image.category] || categoryFallbacks.default,
+  };
+};
+
+export const imageRef = (id) => getImage(id);
