@@ -5,6 +5,8 @@ import { hasNavigationScope } from "./data/products/taxonomy";
 import { AuthProvider } from "./context/AuthContext";
 import { AccountProvider } from "./context/AccountContext";
 import { ShoppingProvider } from "./context/ShoppingContext";
+import { CheckoutProvider } from "./context/CheckoutContext";
+import { OrderProvider } from "./context/OrderContext";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 import CustomerLayout from "./layouts/CustomerLayout";
 import AtelierDesign from "./pages/AtelierDesign";
@@ -18,6 +20,7 @@ const ProductDetail = lazy(() => import("./pages/ProductDetail"));
 const Cart = lazy(() => import("./pages/Cart"));
 const Wishlist = lazy(() => import("./pages/Wishlist"));
 const Checkout = lazy(() => import("./pages/Checkout"));
+const OrderSuccess = lazy(() => import("./pages/OrderSuccess"));
 
 /* Authentication Pages */
 const SignIn = lazy(() => import("./pages/auth/SignIn"));
@@ -39,6 +42,7 @@ const dedicatedPaths = new Set([
   "/cart",
   "/wishlist",
   "/checkout",
+  "/order-success",
   "/account",
   "/account/profile",
   "/account/addresses",
@@ -62,6 +66,8 @@ const dedicatedPaths = new Set([
  * AuthProvider (Identity & Session)
  * └── AccountProvider (Profile, Addresses & Preferences)
  *     └── ShoppingProvider (Bag & Wishlist)
+ *         └── OrderProvider (Mock order records)
+ *             └── CheckoutProvider (Current checkout session)
  */
 export default function App() {
   return (
@@ -69,7 +75,9 @@ export default function App() {
       <AuthProvider>
         <AccountProvider>
           <ShoppingProvider>
-            <Routes>
+            <OrderProvider>
+              <CheckoutProvider>
+                <Routes>
               <Route element={<CustomerLayout />}>
                 <Route index element={<AtelierDesign />} />
 
@@ -83,6 +91,7 @@ export default function App() {
                 {/* Shopping */}
                 <Route path="/cart" element={<Cart />} />
                 <Route path="/checkout" element={<Checkout />} />
+                <Route path="/order-success" element={<OrderSuccess />} />
                 <Route path="/account/wishlist" element={<Wishlist />} />
                 <Route path="/wishlist" element={<Navigate to="/account/wishlist" replace />} />
 
@@ -120,8 +129,10 @@ export default function App() {
                   ))}
 
                 <Route path="*" element={<NotFound />} />
-              </Route>
-            </Routes>
+                </Route>
+              </Routes>
+              </CheckoutProvider>
+            </OrderProvider>
           </ShoppingProvider>
         </AccountProvider>
       </AuthProvider>

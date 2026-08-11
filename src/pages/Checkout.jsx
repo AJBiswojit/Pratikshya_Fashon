@@ -1,29 +1,41 @@
-import { ArrowRight } from "lucide-react";
-import { useEffect } from "react";
-import { Link } from "react-router-dom";
+import { useEffect, useRef } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { AlertCircle } from "lucide-react";
 import {
   AtelierButton,
   AtelierSection,
   Breadcrumb,
   EmptyState,
-  MediaFrame,
-  Rule,
 } from "../design-system";
-import { imageRef } from "../data/pratikshyaImageManifest";
+import { CHECKOUT_STEPS } from "../config/checkoutConfig";
 import { useCart } from "../context/CartContext";
+import { useCheckout } from "../context/CheckoutContext";
 import { formatINR } from "../utils/shopping";
+import CheckoutShell from "../components/checkout/CheckoutShell";
+import CheckoutOrderSummary from "../components/checkout/CheckoutOrderSummary";
+import CustomerInformation from "../components/checkout/CustomerInformation";
+import DeliveryStep from "../components/checkout/DeliveryStep";
+import OrderReview from "../components/checkout/OrderReview";
+import PaymentStep from "../components/checkout/PaymentStep";
 
 /**
- * The checkout handoff — /checkout.
+ * Checkout — /checkout.
  *
- * Phase 6 ends at the threshold: the bag is complete and the order journey
- * is acknowledged, but address, delivery and payment belong to a later
- * phase. This page is a premium placeholder foundation — it renders safely
- * with or without a bag and never pretends to take an order.
+ * The Phase 8 transaction journey: customer → delivery → review →
+ * payment, orchestrated by the checkout context, priced by the Phase 6
+ * engine, paid through the clearly-labelled demo payment layer. The bag
+ * is the guard rail: an empty bag shows the atelier empty state instead
+ * of a form, and the cart is only cleared after a successful payment.
  */
 export default function Checkout() {
   const cart = useCart();
-  const isEmpty = cart.items.length === 0;
+  const checkout = useCheckout();
+  const navigate = useNavigate();
+
+  const customerRef = useRef(null);
+  const deliveryRef = useRef(null);
+  const reviewRef = useRef(null);
+  const paymentRef = useRef(null);
 
   useEffect(() => {
     const previousTitle = document.title;
@@ -33,7 +45,16 @@ export default function Checkout() {
     };
   }, []);
 
-  if (isEmpty) {
+  /* A successful demo payment hands off to the order confirmation. */
+  useEffect(() => {
+    if (checkout.completedOrder) {
+      navigate("/order-success", { replace: true });
+    }
+  }, [checkout.completedOrder, navigate]);
+
+  /* ---------------------------------------------------------------- */
+
+  if (cart.items.length === 0) {
     return (
       <main>
         <AtelierSection rhythm="none" width="wide" className="pb-24 pt-28 sm:pt-32 md:pb-32">
@@ -43,17 +64,12 @@ export default function Checkout() {
           />
           <EmptyState
             eyebrow="Checkout"
-            title="There is nothing to check out yet."
-            description="Your bag is empty. Begin with the collection, and return here when your pieces are chosen."
+            title="Your collection is empty."
+            description="Add something beautiful before continuing to checkout."
             actions={
-              <>
-                <AtelierButton as={Link} to="/shop" variant="primary" size="md">
-                  Explore the Collection
-                </AtelierButton>
-                <AtelierButton as={Link} to="/cart" variant="outline" size="md">
-                  Return to Bag
-                </AtelierButton>
-              </>
+              <AtelierButton as={Link} to="/shop" variant="primary" size="md">
+                Continue Shopping
+              </AtelierButton>
             }
           />
         </AtelierSection>
@@ -61,47 +77,70 @@ export default function Checkout() {
     );
   }
 
+  /* ---------------------------------------------------------------- */
+
+  const stepIndex = checkout.stepIndex;
+  const isPaymentStep = stepIndex === CHECKOUT_STEPS.length - 1;
+
+  const handlePrimary = () => {
+    if (isPaymentStep) {
+      paymentRef.current?.pay?.();
+      return;
+    }
+    const stepRef = [customerRef, deliveryRef, reviewRef, paymentRef][stepIndex];
+    const valid = stepRef.current?.validate?.() ?? true;
+    if (valid) checkout.nextStep();
+  };
+
+  const primaryLabels = [
+    "Continue to Delivery",
+    "Continue to Review",
+    "Continue to Payment",
+    `Pay ${formatINR(checkout.totals.total)}`,
+  ];
+
+  const stepPanels = [
+    <CustomerInformation key="customer" ref={customerRef} />,
+    <DeliveryStep key="delivery" ref={deliveryRef} />,
+    <OrderReview key="review" ref={reviewRef} />,
+    <PaymentStep key="payment" ref={paymentRef} />,
+  ];
+
+  const bagChangedNotice =
+    isPaymentStep && checkout.bagChanged ? (
+      <div
+        role="status"
+        className="mb-8 flex flex-wrap items-center justify-between gap-3 border border-accent/30 bg-accent/5 px-5 py-4"
+      >
+        <p className="flex items-center gap-2.5 font-ui text-[11px] leading-relaxed text-accent">
+          <AlertCircle size={14} className="shrink-0" aria-hidden="true" />
+          Your bag changed since you reviewed your order — please review it again
+          before paying.
+        </p>
+        <button
+          type="button"
+          onClick={() => checkout.goToStep(2)}
+          className="font-ui text-[10px] uppercase tracking-[.16em] text-accent underline-offset-2 hover:underline focus-visible:outline focus-visible:outline-1 focus-visible:outline-accent"
+        >
+          Review Order
+        </button>
+      </div>
+    ) : null;
+
   return (
-    <main>
-      <AtelierSection rhythm="none" width="wide" className="pb-24 pt-28 sm:pt-32 md:pb-32">
-        <Breadcrumb
-          items={[{ label: "Bag", to: "/cart" }, { label: "Checkout" }]}
-          className="mb-8 md:mb-10"
-        />
-
-        <div className="grid overflow-hidden bg-surface md:grid-cols-2">
-          <MediaFrame
-            image={imageRef("saree-banarasi")}
-            alt="PRATIKSHYA FASHON heritage textile detail"
-            aspect="portrait"
-            overlay="imageBottom"
-            className="min-h-72 md:min-h-[34rem]"
-          />
-
-          <div className="flex flex-col justify-center px-7 py-16 text-center md:px-14">
-            <p className="font-ui text-[10px] uppercase tracking-[.3em] text-accent">
-              The Order Journey
-            </p>
-            <h1 className="mt-5 font-display text-3xl font-light tracking-tight md:text-5xl">
-              Your order journey continues here.
-            </h1>
-            <Rule width="w-16" tone="accent" className="mx-auto my-8" />
-            <p className="mx-auto max-w-md font-ui text-sm leading-relaxed text-taupe">
-              Address, delivery and secure payment arrive with a later phase of the
-              atelier. Your {cart.count} {cart.count === 1 ? "piece" : "pieces"} —{" "}
-              {formatINR(cart.totals.total)} in all — remain held in your bag.
-            </p>
-            <div className="mt-10 flex flex-wrap items-center justify-center gap-4">
-              <AtelierButton as={Link} to="/cart" variant="primary" size="md">
-                Return to Bag <ArrowRight size={14} aria-hidden="true" />
-              </AtelierButton>
-              <AtelierButton as={Link} to="/shop" variant="outline" size="md">
-                Continue Shopping
-              </AtelierButton>
-            </div>
-          </div>
-        </div>
-      </AtelierSection>
-    </main>
+    <CheckoutShell
+      stepIndex={stepIndex}
+      onStepClick={checkout.goToStep}
+      notice={bagChangedNotice}
+      summary={<CheckoutOrderSummary />}
+      onBack={checkout.backStep}
+      onPrimary={handlePrimary}
+      primaryLabel={primaryLabels[stepIndex]}
+      backDisabled={stepIndex === 0}
+      mobilePrimaryLabel={primaryLabels[stepIndex]}
+      mobileTotal={formatINR(checkout.totals.total)}
+    >
+      {stepPanels[stepIndex]}
+    </CheckoutShell>
   );
 }
