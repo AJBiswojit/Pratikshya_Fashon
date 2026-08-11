@@ -23,9 +23,9 @@ import { cn } from "../../utils/cn";
  * labels, and a hairline bottom bar carrying the copyright and the legal
  * links.
  */
-export default function SiteFooter() {
+export default function SiteFooter({ className = "" }) {
   return (
-    <footer className="bg-ink text-ivory px-6 md:px-12 py-16">
+    <footer className={cn("bg-ink text-ivory px-6 md:px-12 py-16", className)}>
       <Container className={cn(grid.footer, gap.column, "mb-12")}>
         <div>
           <h4 className={cn(heading.footer, "mb-4")}>{brand.name}</h4>
