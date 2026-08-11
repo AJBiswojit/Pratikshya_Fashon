@@ -14,6 +14,8 @@ import { useReducedMotion } from "framer-motion";
 export const duration = {
   reveal: 0.6,
   hero: 1.2,
+  /** Route change — shorter than a reveal so navigation never feels held up. */
+  page: 0.35,
 };
 
 /** Durations, as Tailwind classes, used by CSS transitions. */
@@ -27,6 +29,8 @@ export const distance = {
   short: 20,
   medium: 25,
   long: 30,
+  /** Route change — a hint of travel, not a slide. */
+  page: 12,
 };
 
 /* ------------------------------------------------------------------ */
@@ -47,6 +51,25 @@ export const enter = (travel = distance.long, seconds = duration.hero) => ({
   animate: { opacity: 1, y: 0 },
   transition: { duration: seconds },
 });
+
+/**
+ * Route transition — the fade a page plays as it is swapped in and out.
+ *
+ * Shaped for an `AnimatePresence` with `mode="wait"`, which is why `exit`
+ * is deliberately faster than `animate`: the outgoing page must clear
+ * before the incoming one starts.
+ */
+export const pageTransition = (travel = distance.page, seconds = duration.page) => ({
+  initial: { opacity: 0, y: travel },
+  animate: { opacity: 1, y: 0, transition: { duration: seconds, ease: "easeOut" } },
+  exit: { opacity: 0, y: 0, transition: { duration: seconds * 0.6, ease: "easeIn" } },
+});
+
+const staticPage = {
+  initial: { opacity: 1, y: 0 },
+  animate: { opacity: 1, y: 0, transition: { duration: 0 } },
+  exit: { opacity: 1, y: 0, transition: { duration: 0 } },
+};
 
 const staticReveal = {
   initial: { opacity: 1, y: 0 },
@@ -79,6 +102,15 @@ export function useEnter(travel = distance.long, seconds = duration.hero) {
   return shouldReduceMotion ? staticEnter : enter(travel, seconds);
 }
 
+/**
+ * Route-transition props, disabled when the visitor has asked for reduced
+ * motion. Used by `PageTransition`.
+ */
+export function usePageTransition(travel = distance.page, seconds = duration.page) {
+  const shouldReduceMotion = useReducedMotion();
+  return shouldReduceMotion ? staticPage : pageTransition(travel, seconds);
+}
+
 /* ------------------------------------------------------------------ */
 /* CSS transition presets                                              */
 /* ------------------------------------------------------------------ */
@@ -108,6 +140,7 @@ export const motionTokens = {
   distance,
   fadeUp,
   enter,
+  pageTransition,
   transition,
   zoom,
 };

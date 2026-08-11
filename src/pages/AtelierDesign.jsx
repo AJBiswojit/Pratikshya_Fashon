@@ -22,28 +22,16 @@ import {
   heading,
   header,
   imageTreatment,
-  nav,
   overlays,
-  transition,
   useEnter,
   useReveal,
 } from "../design-system";
-
-const navItems = [
-  ["Women", "#women"], ["Bridal", "#bridal"], ["Men", "#men"], ["Kids", "#kids"], ["Jewellery", "#jewellery"], ["Collections", "#collections"],
-];
 
 const fabricDetails = {
   Silk: { desc: "Lustrous · Ceremonial · Refined", products: ["Pato Sarees", "Banarasi Silk", "Bridal Sarees"] },
   Cotton: { desc: "Breathable · Handwoven · Everyday", products: ["Cotton Sarees", "Soft Drapes", "Summer Edit"] },
   Designer: { desc: "Expressive · Detailed · Festive", products: ["Designer Sarees", "Party Lehengas", "Wedding Edit"] },
 };
-
-const footerColumns = [
-  { title: "Women", items: ["Sarees", "Pato Sarees", "Lehengas", "Innerwear"] },
-  { title: "Occasions", items: ["Bridal", "Wedding Wear", "Men + Groom", "Kids Festive"] },
-  { title: "Customer Care", items: ["Bangles + Jewellery", "New Arrivals", "About Us", "Policies + Contact"] },
-];
 
 export default function AtelierDesign() {
   const [selectedFabric, setSelectedFabric] = useState("Silk");
@@ -58,16 +46,7 @@ export default function AtelierDesign() {
   ];
 
   return (
-    <main className="min-h-screen bg-canvas text-ink font-display selection:bg-accent selection:text-white">
-      <nav className="fixed top-0 left-0 right-0 z-50 bg-canvas/80 backdrop-blur-md border-b border-mist/50">
-        <Container width="content" padded className={`${header.height} flex items-center justify-between`}>
-          <a href="#top" className={`${nav.brand} hover:text-accent ${transition.colors}`}>PRATIKSHYA FASHON</a>
-          <div className={`hidden md:flex gap-5 lg:gap-8 ${nav.link} text-brass`}>
-            {navItems.map(([label, href]) => <a key={label} href={href} className={`hover:text-accent ${transition.colors}`}>{label}</a>)}
-          </div>
-        </Container>
-      </nav>
-
+    <main>
       <section id="top" className={`relative min-h-[100dvh] overflow-hidden ${header.offset}`}>
         <PratikshyaImage image="hero-atelier" alt="PRATIKSHYA FASHON silk and textile campaign" loading="eager" fetchPriority="high" className={`${imageTreatment.fill} ${imageTreatment.heroScale}`} />
         <div aria-hidden="true" className={`absolute inset-0 ${overlays.heroScrim}`} />
@@ -235,30 +214,6 @@ export default function AtelierDesign() {
         <p className={`${body.story} text-graphite max-w-2xl mx-auto`}>PRATIKSHYA FASHON brings together the richness of textile craft and the joy of dressing for life’s most meaningful occasions. From the everyday grace of a cotton saree to bridal splendour, every piece is selected with warmth, intention and respect for tradition.</p>
       </AtelierSection>
 
-      <footer className="bg-ink text-ivory px-6 md:px-12 py-16">
-        <Container className={`${grid.footer} ${gap.column} mb-12`}>
-          <div>
-            <h4 className={`${heading.footer} mb-4`}>PRATIKSHYA FASHON</h4>
-            <p className={`${body.caption} text-ash`}>Fashion, textile and celebration—considered with care.</p>
-          </div>
-          {footerColumns.map((column) => <FooterColumn key={column.title} {...column} />)}
-        </Container>
-        <Container className={`pt-8 border-t border-ink-line flex flex-wrap gap-3 justify-between ${body.micro} text-ash-deep`}>
-          <span>© 2026 PRATIKSHYA FASHON</span>
-          <span>Privacy · Terms · Contact</span>
-        </Container>
-      </footer>
     </main>
-  );
-}
-
-function FooterColumn({ title, items }) {
-  return (
-    <div>
-      <h5 className={`${eyebrow.labelDisplay} text-gold mb-4`}>{title}</h5>
-      <ul className={`space-y-2 ${body.caption} text-ash`}>
-        {items.map((item) => <li key={item}><a href="#top" className="hover:text-white">{item}</a></li>)}
-      </ul>
-    </div>
   );
 }
