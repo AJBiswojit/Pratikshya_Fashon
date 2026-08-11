@@ -1,5 +1,6 @@
-import { lazy } from "react";
+import { lazy, Suspense } from "react";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+import { LoadingState } from "./design-system";
 import { routeManifest } from "./config/navigationConfig";
 import { hasNavigationScope } from "./data/products/taxonomy";
 import { AuthProvider } from "./context/AuthContext";
@@ -7,8 +8,12 @@ import { AccountProvider } from "./context/AccountContext";
 import { ShoppingProvider } from "./context/ShoppingContext";
 import { CheckoutProvider } from "./context/CheckoutContext";
 import { OrderProvider } from "./context/OrderContext";
+import { EmployeeAuthProvider } from "./context/EmployeeAuthContext";
+import { EmployeeManagementProvider } from "./context/EmployeeManagementContext";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
+import EmployeeProtectedRoute from "./components/employee/EmployeeProtectedRoute";
 import CustomerLayout from "./layouts/CustomerLayout";
+import EmployeeLayout from "./layouts/EmployeeLayout";
 import AtelierDesign from "./pages/AtelierDesign";
 import CatalogueListing from "./pages/CatalogueListing";
 import CategoryPage from "./pages/CategoryPage";
@@ -39,6 +44,27 @@ const OrderReturn = lazy(() => import("./pages/account/OrderReturn"));
 const AccountSettings = lazy(() => import("./pages/account/AccountSettings"));
 const AccountSecurity = lazy(() => import("./pages/account/AccountSecurity"));
 
+/* Employee Portal */
+const EmployeeLogin = lazy(() => import("./pages/employee/EmployeeLogin"));
+const EmployeeForgotPassword = lazy(() => import("./pages/employee/EmployeeForgotPassword"));
+const EmployeeChangePassword = lazy(() => import("./pages/employee/EmployeeChangePassword"));
+const EmployeeDashboard = lazy(() => import("./pages/employee/EmployeeDashboard"));
+const EmployeeProfile = lazy(() => import("./pages/employee/EmployeeProfile"));
+const EmployeeAttendance = lazy(() => import("./pages/employee/EmployeeAttendance"));
+const EmployeePerformance = lazy(() => import("./pages/employee/EmployeePerformance"));
+const EmployeeProducts = lazy(() => import("./pages/employee/EmployeeProducts"));
+const EmployeeCustomers = lazy(() => import("./pages/employee/EmployeeCustomers"));
+const EmployeeOrders = lazy(() => import("./pages/employee/EmployeeOrders"));
+const EmployeeAssistedOrder = lazy(() => import("./pages/employee/EmployeeAssistedOrder"));
+const EmployeeOffers = lazy(() => import("./pages/employee/EmployeeOffers"));
+const EmployeeAccessDenied = lazy(() => import("./pages/employee/EmployeeAccessDenied"));
+const EmployeeDesk = lazy(() => import("./pages/employee/EmployeeDesk"));
+const EmployeeList = lazy(() => import("./pages/employee/management/EmployeeList"));
+const EmployeeCreate = lazy(() => import("./pages/employee/management/EmployeeCreate"));
+const EmployeeDetail = lazy(() => import("./pages/employee/management/EmployeeDetail"));
+const EmployeeEdit = lazy(() => import("./pages/employee/management/EmployeeEdit"));
+const ActivityLog = lazy(() => import("./pages/employee/management/ActivityLog"));
+
 /** Paths owned by dedicated pages rather than the generic interior shell. */
 const dedicatedPaths = new Set([
   "/search",
@@ -62,15 +88,17 @@ const dedicatedPaths = new Set([
 /**
  * Routing.
  *
- * Every customer-facing route is nested inside `CustomerLayout`, so the
- * header, footer and page transition are declared once.
+ * Customer storefront stays inside `CustomerLayout`.
+ * Employee portal is a sibling tree — its own shell, its own auth.
  *
- * Providers compose clean state boundaries:
- * AuthProvider (Identity & Session)
- * └── AccountProvider (Profile, Addresses & Preferences)
- *     └── ShoppingProvider (Bag & Wishlist)
- *         └── OrderProvider (Mock order records)
- *             └── CheckoutProvider (Current checkout session)
+ * Providers:
+ * AuthProvider (customer)
+ * └── AccountProvider
+ *     └── ShoppingProvider
+ *         └── OrderProvider
+ *             └── CheckoutProvider
+ *                 └── EmployeeAuthProvider
+ *                     └── EmployeeManagementProvider
  */
 export default function App() {
   return (
@@ -80,77 +108,140 @@ export default function App() {
           <ShoppingProvider>
             <OrderProvider>
               <CheckoutProvider>
-                <Routes>
-              <Route element={<CustomerLayout />}>
-                <Route index element={<AtelierDesign />} />
+                <EmployeeAuthProvider>
+                  <EmployeeManagementProvider>
+                    <Suspense fallback={<LoadingState label="Opening PRATIKSHYA FASHON" />}>
+                    <Routes>
+                      {/*
+                        Employee portal — never rendered through customer auth or shell.
+                        Future Admin Portal will live at /admin/* and can reuse
+                        EmployeeManagementContext + employeeService without rewriting this tree.
+                      */}
+                      <Route path="/employee/login" element={<EmployeeLogin />} />
+                      <Route path="/employee/forgot-password" element={<EmployeeForgotPassword />} />
 
-                {/* Storefront */}
-                <Route path="/shop" element={<Shop />} />
-                <Route path="/category/:slug" element={<CatalogueListing variant="category" />} />
-                <Route path="/collection/:slug" element={<CatalogueListing variant="collection" />} />
-                <Route path="/search" element={<SearchResults />} />
-                <Route path="/product/:productId" element={<ProductDetail />} />
+                      <Route element={<EmployeeProtectedRoute />}>
+                        <Route path="/employee/change-password" element={<EmployeeChangePassword />} />
+                        <Route element={<EmployeeLayout />}>
+                          <Route path="/employee" element={<EmployeeDashboard />} />
+                          <Route path="/employee/profile" element={<EmployeeProfile />} />
+                          <Route path="/employee/attendance" element={<EmployeeAttendance />} />
+                          <Route path="/employee/performance" element={<EmployeePerformance />} />
+                          <Route path="/employee/access-denied" element={<EmployeeAccessDenied />} />
+                          <Route path="/employee/products" element={<EmployeeProducts />} />
+                          <Route path="/employee/customers" element={<EmployeeCustomers />} />
+                          <Route path="/employee/orders" element={<EmployeeOrders />} />
+                          <Route path="/employee/orders/assisted" element={<EmployeeAssistedOrder />} />
+                          <Route path="/employee/offers" element={<EmployeeOffers />} />
+                          <Route path="/employee/inventory" element={<EmployeeDesk />} />
+                          <Route path="/employee/inventory/movements" element={<EmployeeDesk />} />
+                          <Route path="/employee/inventory/transfers" element={<EmployeeDesk />} />
+                          <Route path="/employee/inventory/low-stock" element={<EmployeeDesk />} />
+                          <Route path="/employee/inventory/out-of-stock" element={<EmployeeDesk />} />
+                          <Route path="/employee/inventory/receive" element={<EmployeeDesk />} />
+                          <Route path="/employee/inventory/adjust" element={<EmployeeDesk />} />
+                          <Route path="/employee/inventory/requests" element={<EmployeeDesk />} />
+                          <Route path="/employee/warehouse" element={<EmployeeDesk />} />
+                          <Route path="/employee/warehouse/incoming" element={<EmployeeDesk />} />
+                          <Route path="/employee/warehouse/outgoing" element={<EmployeeDesk />} />
+                          <Route path="/employee/warehouse/pick-pack" element={<EmployeeDesk />} />
+                          <Route path="/employee/warehouse/transfers" element={<EmployeeDesk />} />
+                          <Route path="/employee/warehouse/damaged" element={<EmployeeDesk />} />
+                          <Route path="/employee/returns" element={<EmployeeDesk />} />
+                          <Route path="/employee/support" element={<EmployeeDesk />} />
+                          <Route path="/employee/support/cases" element={<EmployeeDesk />} />
+                          <Route path="/employee/support/returns" element={<EmployeeDesk />} />
+                          <Route path="/employee/support/feedback" element={<EmployeeDesk />} />
+                          <Route path="/employee/styling" element={<EmployeeDesk />} />
+                          <Route path="/employee/styling/requests" element={<EmployeeDesk />} />
+                          <Route path="/employee/styling/appointments" element={<EmployeeDesk />} />
+                          <Route path="/employee/styling/recommendations" element={<EmployeeDesk />} />
+                          <Route path="/employee/styling/bridal" element={<EmployeeDesk />} />
+                          <Route path="/employee/styling/wedding" element={<EmployeeDesk />} />
+                          <Route path="/employee/sales" element={<EmployeeDesk />} />
+                          <Route path="/employee/team" element={<EmployeeDesk />} />
+                          <Route path="/employee/reports" element={<EmployeeDesk />} />
+                          <Route path="/employee/management" element={<EmployeeList />} />
+                          <Route path="/employee/management/new" element={<EmployeeCreate />} />
+                          <Route path="/employee/management/activity" element={<ActivityLog />} />
+                          <Route path="/employee/management/:employeeId" element={<EmployeeDetail />} />
+                          <Route path="/employee/management/:employeeId/edit" element={<EmployeeEdit />} />
+                        </Route>
+                      </Route>
 
-                {/* Shopping */}
-                <Route path="/cart" element={<Cart />} />
-                <Route path="/checkout" element={<Checkout />} />
-                <Route path="/order-success" element={<OrderSuccess />} />
-                <Route path="/account/wishlist" element={<Wishlist />} />
-                <Route path="/wishlist" element={<Navigate to="/account/wishlist" replace />} />
+                      <Route element={<CustomerLayout />}>
+                        <Route index element={<AtelierDesign />} />
 
-                {/* Authentication */}
-                <Route path="/signin" element={<SignIn />} />
-                <Route path="/signup" element={<SignUp />} />
-                <Route path="/forgot-password" element={<ForgotPassword />} />
-                <Route path="/reset-password" element={<ResetPassword />} />
+                        {/* Storefront */}
+                        <Route path="/shop" element={<Shop />} />
+                        <Route path="/category/:slug" element={<CatalogueListing variant="category" />} />
+                        <Route path="/collection/:slug" element={<CatalogueListing variant="collection" />} />
+                        <Route path="/search" element={<SearchResults />} />
+                        <Route path="/product/:productId" element={<ProductDetail />} />
 
-                {/*
-                  Single-order routes. Not wrapped in ProtectedRoute: a guest
-                  who has just checked out must still reach the order they
-                  placed in this browser. Access is enforced on the order
-                  itself — the context only resolves orders the current
-                  identity owns, so another customer's order is never exposed.
-                */}
-                <Route path="/account/orders/:orderId" element={<OrderDetail />} />
-                <Route
-                  path="/account/orders/:orderId/track"
-                  element={<OrderTracking />}
-                />
-                <Route
-                  path="/account/orders/:orderId/return"
-                  element={<OrderReturn />}
-                />
+                        {/* Shopping */}
+                        <Route path="/cart" element={<Cart />} />
+                        <Route path="/checkout" element={<Checkout />} />
+                        <Route path="/order-success" element={<OrderSuccess />} />
+                        <Route path="/account/wishlist" element={<Wishlist />} />
+                        <Route path="/wishlist" element={<Navigate to="/account/wishlist" replace />} />
 
-                {/* Protected Customer Account */}
-                <Route element={<ProtectedRoute />}>
-                  <Route path="/account" element={<AccountDashboard />} />
-                  <Route path="/account/profile" element={<AccountProfile />} />
-                  <Route path="/account/addresses" element={<AccountAddresses />} />
-                  <Route path="/account/orders" element={<AccountOrders />} />
-                  <Route path="/account/settings" element={<AccountSettings />} />
-                  <Route path="/account/security" element={<AccountSecurity />} />
-                </Route>
+                        {/* Authentication */}
+                        <Route path="/signin" element={<SignIn />} />
+                        <Route path="/signup" element={<SignUp />} />
+                        <Route path="/forgot-password" element={<ForgotPassword />} />
+                        <Route path="/reset-password" element={<ResetPassword />} />
 
-                {/* Navigation manifest interior routes */}
-                {routeManifest
-                  .filter((route) => !dedicatedPaths.has(route.path))
-                  .map((route) => (
-                    <Route
-                      key={route.path}
-                      path={route.path}
-                      element={
-                        hasNavigationScope(route.path) ? (
-                          <CatalogueListing variant="navigation" />
-                        ) : (
-                          <CategoryPage />
-                        )
-                      }
-                    />
-                  ))}
+                        {/*
+                          Single-order routes. Not wrapped in ProtectedRoute: a guest
+                          who has just checked out must still reach the order they
+                          placed in this browser. Access is enforced on the order
+                          itself — the context only resolves orders the current
+                          identity owns, so another customer's order is never exposed.
+                        */}
+                        <Route path="/account/orders/:orderId" element={<OrderDetail />} />
+                        <Route
+                          path="/account/orders/:orderId/track"
+                          element={<OrderTracking />}
+                        />
+                        <Route
+                          path="/account/orders/:orderId/return"
+                          element={<OrderReturn />}
+                        />
 
-                <Route path="*" element={<NotFound />} />
-                </Route>
-              </Routes>
+                        {/* Protected Customer Account */}
+                        <Route element={<ProtectedRoute />}>
+                          <Route path="/account" element={<AccountDashboard />} />
+                          <Route path="/account/profile" element={<AccountProfile />} />
+                          <Route path="/account/addresses" element={<AccountAddresses />} />
+                          <Route path="/account/orders" element={<AccountOrders />} />
+                          <Route path="/account/settings" element={<AccountSettings />} />
+                          <Route path="/account/security" element={<AccountSecurity />} />
+                        </Route>
+
+                        {/* Navigation manifest interior routes */}
+                        {routeManifest
+                          .filter((route) => !dedicatedPaths.has(route.path))
+                          .map((route) => (
+                            <Route
+                              key={route.path}
+                              path={route.path}
+                              element={
+                                hasNavigationScope(route.path) ? (
+                                  <CatalogueListing variant="navigation" />
+                                ) : (
+                                  <CategoryPage />
+                                )
+                              }
+                            />
+                          ))}
+
+                        <Route path="*" element={<NotFound />} />
+                      </Route>
+                    </Routes>
+                    </Suspense>
+                  </EmployeeManagementProvider>
+                </EmployeeAuthProvider>
               </CheckoutProvider>
             </OrderProvider>
           </ShoppingProvider>
