@@ -1,0 +1,145 @@
+/**
+ * PRATIKSHYA FASHON — Employee permission catalogue.
+ *
+ * The single source of truth for every authorization key the employee
+ * portal understands. Pages and navigation never invent permission
+ * strings — they import them from here.
+ *
+ * This is a frontend authorization model for the current mock stage.
+ * A real backend must enforce the same keys later. UI hiding is never
+ * the only control.
+ */
+
+export const PERMISSIONS = {
+  DASHBOARD_VIEW: "dashboard.view",
+
+  PRODUCTS_VIEW: "products.view",
+  PRODUCTS_MANAGE: "products.manage",
+
+  ORDERS_VIEW: "orders.view",
+  ORDERS_CREATE: "orders.create",
+
+  CUSTOMERS_VIEW: "customers.view",
+  CUSTOMERS_MANAGE: "customers.manage",
+
+  INVENTORY_VIEW: "inventory.view",
+  INVENTORY_RECEIVE: "inventory.receive",
+  INVENTORY_ADJUST: "inventory.adjust",
+  INVENTORY_TRANSFER: "inventory.transfer",
+  INVENTORY_MANAGE: "inventory.manage",
+
+  WAREHOUSE_VIEW: "warehouse.view",
+  WAREHOUSE_PICK: "warehouse.pick",
+
+  RETURNS_VIEW: "returns.view",
+  RETURNS_MANAGE: "returns.manage",
+
+  OFFERS_VIEW: "offers.view",
+  OFFERS_MANAGE: "offers.manage",
+
+  EMPLOYEES_VIEW: "employees.view",
+  EMPLOYEES_CREATE: "employees.create",
+  EMPLOYEES_EDIT: "employees.edit",
+  EMPLOYEES_SUSPEND: "employees.suspend",
+  EMPLOYEES_RESET_PASSWORD: "employees.resetPassword",
+  EMPLOYEES_MANAGE_PERMISSIONS: "employees.managePermissions",
+  EMPLOYEES_MANAGE: "employees.manage",
+
+  ANALYTICS_VIEW: "analytics.view",
+
+  PROFILE_VIEW: "profile.view",
+  PROFILE_EDIT: "profile.edit",
+
+  ATTENDANCE_VIEW: "attendance.view",
+  PERFORMANCE_VIEW: "performance.view",
+  TEAM_VIEW: "team.view",
+
+  SUPPORT_VIEW: "support.view",
+  SUPPORT_MANAGE: "support.manage",
+
+  STYLING_VIEW: "styling.view",
+  STYLING_MANAGE: "styling.manage",
+};
+
+/** Human labels for the permission matrix. Never expose raw keys in UI. */
+export const PERMISSION_CATALOGUE = [
+  {
+    group: "Workspace",
+    items: [
+      { key: PERMISSIONS.DASHBOARD_VIEW, label: "View dashboard" },
+      { key: PERMISSIONS.PROFILE_VIEW, label: "View profile" },
+      { key: PERMISSIONS.PROFILE_EDIT, label: "Edit own profile" },
+      { key: PERMISSIONS.ATTENDANCE_VIEW, label: "View attendance" },
+      { key: PERMISSIONS.PERFORMANCE_VIEW, label: "View performance" },
+    ],
+  },
+  {
+    group: "Selling floor",
+    items: [
+      { key: PERMISSIONS.PRODUCTS_VIEW, label: "View products" },
+      { key: PERMISSIONS.PRODUCTS_MANAGE, label: "Manage products" },
+      { key: PERMISSIONS.ORDERS_VIEW, label: "View orders" },
+      { key: PERMISSIONS.ORDERS_CREATE, label: "Create assisted orders" },
+      { key: PERMISSIONS.CUSTOMERS_VIEW, label: "View customers" },
+      { key: PERMISSIONS.CUSTOMERS_MANAGE, label: "Manage customers" },
+      { key: PERMISSIONS.OFFERS_VIEW, label: "View offers" },
+      { key: PERMISSIONS.OFFERS_MANAGE, label: "Manage offers" },
+    ],
+  },
+  {
+    group: "Inventory & warehouse",
+    items: [
+      { key: PERMISSIONS.INVENTORY_VIEW, label: "View inventory" },
+      { key: PERMISSIONS.INVENTORY_RECEIVE, label: "Receive stock" },
+      { key: PERMISSIONS.INVENTORY_ADJUST, label: "Adjust stock" },
+      { key: PERMISSIONS.INVENTORY_TRANSFER, label: "Transfer stock" },
+      { key: PERMISSIONS.INVENTORY_MANAGE, label: "Manage inventory settings" },
+      { key: PERMISSIONS.WAREHOUSE_VIEW, label: "View warehouse" },
+      { key: PERMISSIONS.WAREHOUSE_PICK, label: "Pick & pack" },
+    ],
+  },
+  {
+    group: "Care & styling",
+    items: [
+      { key: PERMISSIONS.RETURNS_VIEW, label: "View returns" },
+      { key: PERMISSIONS.RETURNS_MANAGE, label: "Manage returns" },
+      { key: PERMISSIONS.SUPPORT_VIEW, label: "View support cases" },
+      { key: PERMISSIONS.SUPPORT_MANAGE, label: "Manage support cases" },
+      { key: PERMISSIONS.STYLING_VIEW, label: "View styling work" },
+      { key: PERMISSIONS.STYLING_MANAGE, label: "Manage styling work" },
+    ],
+  },
+  {
+    group: "People & reports",
+    items: [
+      { key: PERMISSIONS.TEAM_VIEW, label: "View assigned team" },
+      { key: PERMISSIONS.ANALYTICS_VIEW, label: "View store reports" },
+      { key: PERMISSIONS.EMPLOYEES_VIEW, label: "View employees" },
+      { key: PERMISSIONS.EMPLOYEES_CREATE, label: "Create employees" },
+      { key: PERMISSIONS.EMPLOYEES_EDIT, label: "Edit employees" },
+      { key: PERMISSIONS.EMPLOYEES_SUSPEND, label: "Suspend employees" },
+      { key: PERMISSIONS.EMPLOYEES_RESET_PASSWORD, label: "Reset employee passwords" },
+      { key: PERMISSIONS.EMPLOYEES_MANAGE_PERMISSIONS, label: "Manage permissions" },
+      { key: PERMISSIONS.EMPLOYEES_MANAGE, label: "Manage employee accounts" },
+    ],
+  },
+];
+
+export const ALL_PERMISSION_KEYS = PERMISSION_CATALOGUE.flatMap((group) =>
+  group.items.map((item) => item.key)
+);
+
+export const getPermissionLabel = (key) => {
+  for (const group of PERMISSION_CATALOGUE) {
+    const item = group.items.find((entry) => entry.key === key);
+    if (item) return item.label;
+  }
+  return "Restricted action";
+};
+
+export default {
+  PERMISSIONS,
+  PERMISSION_CATALOGUE,
+  ALL_PERMISSION_KEYS,
+  getPermissionLabel,
+};
