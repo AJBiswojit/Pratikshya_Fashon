@@ -8,6 +8,7 @@ import { useCart } from "../context/CartContext";
 import { useWishlist } from "../context/WishlistContext";
 import SiteFooter from "../components/shell/SiteFooter";
 import SiteHeader from "../components/shell/SiteHeader";
+import CheckoutHeader from "../components/checkout/CheckoutHeader";
 
 /**
  * The customer-facing application shell.
@@ -24,7 +25,14 @@ import SiteHeader from "../components/shell/SiteHeader";
 
 /** Routes that pin a bar to the bottom of small screens. */
 const hasMobileActionBar = (pathname) =>
-  pathname.startsWith("/product/") || pathname === "/cart";
+  pathname.startsWith("/product/") ||
+  pathname === "/cart" ||
+  pathname.startsWith("/checkout") ||
+  pathname.startsWith("/order-success");
+
+/** The order journey trades the full shopping header for the quiet one. */
+const isOrderJourney = (pathname) =>
+  pathname.startsWith("/checkout") || pathname.startsWith("/order-success");
 
 export default function CustomerLayout() {
   const { pathname } = useLocation();
@@ -42,7 +50,11 @@ export default function CustomerLayout() {
   return (
     <div className="min-h-screen flex flex-col bg-canvas text-ink font-display selection:bg-accent selection:text-white">
       <ScrollToTop />
-      <SiteHeader counts={counts} onOpenCart={cart.openDrawer} />
+      {isOrderJourney(pathname) ? (
+        <CheckoutHeader />
+      ) : (
+        <SiteHeader counts={counts} onOpenCart={cart.openDrawer} />
+      )}
 
       <div className="flex-1">
         <AnimatePresence mode="wait" initial={false}>
