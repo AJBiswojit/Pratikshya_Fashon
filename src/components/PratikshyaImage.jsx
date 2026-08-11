@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { categoryFallbacks, getImage } from "../data/texoraImageManifest";
+import { categoryFallbacks, getImage } from "../data/pratikshyaImageManifest";
 
 const resolveImage = (image, category) => {
   if (typeof image === "string") {
@@ -34,7 +34,7 @@ function SafeImage({ image, category, alt, className, loading = "lazy", fetchPri
   return (
     <img
       src={currentSrc}
-      alt={alt ?? resolved.alt ?? "TEXORA premium fashion imagery"}
+      alt={alt ?? resolved.alt ?? "PRATIKSHYA FASHON premium fashion imagery"}
       className={className}
       loading={loading}
       decoding={decoding}
@@ -46,7 +46,7 @@ function SafeImage({ image, category, alt, className, loading = "lazy", fetchPri
   );
 }
 
-export default function TexoraImage({ hoverImage, className = "", ...props }) {
+export default function PratikshyaImage({ hoverImage, className = "", ...props }) {
   if (!hoverImage) {
     return <SafeImage {...props} className={className} />;
   }

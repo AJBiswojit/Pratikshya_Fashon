@@ -4,35 +4,35 @@ const pexels = (id, width = 800, height = 1200, ext = "jpeg") =>
 const local = (path) => `/images/${path}`;
 
 export const categoryFallbacks = {
-  men: local("texora/groom/groom-sherwani.jpg"),
-  groom: local("texora/groom/groom-sherwani.jpg"),
-  kids: local("texora/kids/kids-festive.jpg"),
+  men: local("pratikshya/groom/groom-sherwani.jpg"),
+  groom: local("pratikshya/groom/groom-sherwani.jpg"),
+  kids: local("pratikshya/kids/kids-festive.jpg"),
   sarees: local("heritage-textile.jpg"),
   lehengas: local("bridal-editorial.jpg"),
   bridal: local("bridal-editorial.jpg"),
   fabrics: local("atelier-fabric.jpg"),
   cotton: local("atelier-fabric.jpg"),
   silk: local("heritage-textile.jpg"),
-  accessories: local("texora/jewellery/bangles-gold.jpg"),
+  accessories: local("pratikshya/jewellery/bangles-gold.jpg"),
   default: local("atelier-fabric.jpg"),
 };
 
-export const texoraImages = {
+export const pratikshyaImages = {
   "hero-atelier": {
     id: "hero-atelier",
     category: "fabrics",
     purpose: "Atelier macro fabric hero",
     src: local("atelier-fabric.jpg"),
-    alt: "Layered premium fabrics with silk and cotton folds for TEXORA atelier",
+    alt: "Layered premium fabrics with silk and cotton folds for PRATIKSHYA FASHON atelier",
   },
   "groom-sherwani": {
     id: "groom-sherwani",
     category: "groom",
     purpose: "Groom campaign",
-    src: local("texora/groom/groom-sherwani.jpg"),
-    alt: "TEXORA groom in navy sherwani with refined gold embroidery",
+    src: local("pratikshya/groom/groom-sherwani.jpg"),
+    alt: "PRATIKSHYA FASHON groom in navy sherwani with refined gold embroidery",
   },
-  "kids-festive-wear": { id: "kids-festive-wear", category: "kids", purpose: "Kids festive wear category", src: local("texora/kids/kids-festive.jpg"), alt: "Premium kids festive ethnic wear in ivory and gold" },
+  "kids-festive-wear": { id: "kids-festive-wear", category: "kids", purpose: "Kids festive wear category", src: local("pratikshya/kids/kids-festive.jpg"), alt: "Premium kids festive ethnic wear in ivory and gold" },
   "kids-kurta-sets": { id: "kids-kurta-sets", category: "kids", purpose: "Kids kurta sets category", src: pexels(12943586), alt: "Young boy in traditional South Asian kurta set" },
 
   "men-kurta": { id: "men-kurta", category: "men", purpose: "Men's kurta category", src: pexels(3998093), alt: "Stylish Indian man in elegant white kurta attire" },
@@ -46,7 +46,7 @@ export const texoraImages = {
   "saree-printed": { id: "saree-printed", category: "sarees", purpose: "Printed saree category", src: pexels(28943465), alt: "Woman in vibrant printed saree styling" },
   "saree-traditional": { id: "saree-traditional", category: "sarees", purpose: "Traditional saree category", src: pexels(28943474), alt: "Traditional orange saree campaign portrait" },
 
-  "lehenga-bridal": { id: "lehenga-bridal", category: "bridal", purpose: "Bridal lehenga category", src: local("bridal-editorial.jpg"), alt: "TEXORA red and gold bridal lehenga editorial" },
+  "lehenga-bridal": { id: "lehenga-bridal", category: "bridal", purpose: "Bridal lehenga category", src: local("bridal-editorial.jpg"), alt: "PRATIKSHYA FASHON red and gold bridal lehenga editorial" },
   "lehenga-designer": { id: "lehenga-designer", category: "lehengas", purpose: "Designer lehenga category", src: pexels(20790065), alt: "Model in designer Indian lehenga with jewelry" },
   "lehenga-party": { id: "lehenga-party", category: "lehengas", purpose: "Party lehenga category", src: pexels(20790059), alt: "Model in red choli and lehenga-inspired party look" },
 
@@ -58,14 +58,16 @@ export const texoraImages = {
   "fabric-embroidered": { id: "fabric-embroidered", category: "fabrics", purpose: "Embroidered fabric texture", src: local("heritage-textile.jpg"), alt: "Embroidered silk textile with gold craftsmanship" },
 
   "accessory-dupattas": { id: "accessory-dupattas", category: "accessories", purpose: "Dupattas product", src: local("heritage-textile.jpg"), alt: "Golden embroidered dupatta textile close-up" },
+  "bridal-bangles": { id: "bridal-bangles", category: "accessories", purpose: "Bridal bangles campaign", src: local("pratikshya/jewellery/bangles-gold.jpg"), alt: "Gold bridal bangles arranged for a wedding celebration" },
+  "bridal-jewellery": { id: "bridal-jewellery", category: "accessories", purpose: "Bridal jewellery detail", src: local("pratikshya/jewellery/bangles-gold.jpg"), alt: "Gold jewellery and bangles with a warm heirloom finish" },
 };
 
-Object.values(texoraImages).forEach((image) => {
+Object.values(pratikshyaImages).forEach((image) => {
   image.fallback = image.fallback || categoryFallbacks[image.category] || categoryFallbacks.default;
 });
 
 export const getImage = (id) => {
-  const image = texoraImages[id] || texoraImages["hero-atelier"];
+  const image = pratikshyaImages[id] || pratikshyaImages["hero-atelier"];
   return {
     ...image,
     fallback: image.fallback || categoryFallbacks[image.category] || categoryFallbacks.default,
