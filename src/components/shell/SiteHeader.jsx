@@ -14,8 +14,10 @@ import {
   primaryNavigation,
   utilityNavigation,
 } from "../../config/navigationConfig";
+import { useAuth } from "../../context/AuthContext";
 import { cn } from "../../utils/cn";
 import { utilityIcons } from "./utilityIcons";
+import AccountDropdown from "./AccountDropdown";
 import MegaMenu from "./MegaMenu";
 import MobileNav from "./MobileNav";
 import SearchPanel from "./SearchPanel";
@@ -25,20 +27,22 @@ import SearchPanel from "./SearchPanel";
  *
  * Reproduces the Phase 1 navigation exactly — fixed, translucent canvas,
  * blurred, hairline underneath, brand mark left, letter-spaced links right
- * — and extends it with the three things an application shell needs: a
- * mega menu on the primary groups, the utility actions, and a mobile
- * drawer.
+ * — and extends it with the mega menu on primary groups, utility actions,
+ * account dropdown, and mobile drawer.
  *
- * Only one overlay is ever open: opening the search closes the menu, and
+ * Only one overlay is ever open: opening search/account closes the menu, and
  * navigating closes everything.
  */
 export default function SiteHeader({ counts = {}, onOpenCart }) {
   const [openGroup, setOpenGroup] = useState(null);
   const [searchOpen, setSearchOpen] = useState(false);
+  const [accountOpen, setAccountOpen] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const closeTimer = useRef(null);
+  const accountCloseTimer = useRef(null);
   const menuId = useId();
   const { pathname } = useLocation();
+  const { user, isAuthenticated } = useAuth();
 
   const clearCloseTimer = () => {
     if (closeTimer.current) {
@@ -47,10 +51,19 @@ export default function SiteHeader({ counts = {}, onOpenCart }) {
     }
   };
 
+  const clearAccountTimer = () => {
+    if (accountCloseTimer.current) {
+      clearTimeout(accountCloseTimer.current);
+      accountCloseTimer.current = null;
+    }
+  };
+
   const closeAll = useCallback(() => {
     clearCloseTimer();
+    clearAccountTimer();
     setOpenGroup(null);
     setSearchOpen(false);
+    setAccountOpen(false);
     setDrawerOpen(false);
   }, []);
 
@@ -59,11 +72,14 @@ export default function SiteHeader({ counts = {}, onOpenCart }) {
     closeAll();
   }, [pathname, closeAll]);
 
-  useEffect(() => () => clearCloseTimer(), []);
+  useEffect(() => () => {
+    clearCloseTimer();
+    clearAccountTimer();
+  }, []);
 
   /* Escape closes whatever is open. */
   useEffect(() => {
-    if (!openGroup && !searchOpen && !drawerOpen) return undefined;
+    if (!openGroup && !searchOpen && !accountOpen && !drawerOpen) return undefined;
 
     const onKeyDown = (event) => {
       if (event.key === "Escape") closeAll();
@@ -71,7 +87,7 @@ export default function SiteHeader({ counts = {}, onOpenCart }) {
 
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [openGroup, searchOpen, drawerOpen, closeAll]);
+  }, [openGroup, searchOpen, accountOpen, drawerOpen, closeAll]);
 
   /* The drawer owns the viewport while it is open. */
   useEffect(() => {
@@ -83,25 +99,35 @@ export default function SiteHeader({ counts = {}, onOpenCart }) {
     };
   }, [drawerOpen]);
 
-  /**
-   * A short grace period on leaving lets the pointer cross the gap between
-   * the trigger and the panel without the menu collapsing.
-   */
   const scheduleClose = () => {
     clearCloseTimer();
     closeTimer.current = setTimeout(() => setOpenGroup(null), 120);
   };
 
+  const scheduleAccountClose = () => {
+    clearAccountTimer();
+    accountCloseTimer.current = setTimeout(() => setAccountOpen(false), 150);
+  };
+
   const openMenu = (id) => {
     clearCloseTimer();
     setSearchOpen(false);
+    setAccountOpen(false);
     setOpenGroup(id);
   };
 
   const toggleSearch = () => {
     clearCloseTimer();
     setOpenGroup(null);
+    setAccountOpen(false);
     setSearchOpen((open) => !open);
+  };
+
+  const openAccount = () => {
+    clearAccountTimer();
+    setOpenGroup(null);
+    setSearchOpen(false);
+    setAccountOpen(true);
   };
 
   const activeGroup = primaryNavigation.find((group) => group.id === openGroup) ?? null;
@@ -168,6 +194,7 @@ export default function SiteHeader({ counts = {}, onOpenCart }) {
               const count = counts[item.id];
               const isSearch = item.action === "search";
               const isCart = item.id === "cart" && typeof onOpenCart === "function";
+              const isAccount = item.id === "account";
 
               const content = (
                 <>
@@ -225,6 +252,48 @@ export default function SiteHeader({ counts = {}, onOpenCart }) {
                   >
                     {content}
                   </button>
+                );
+              }
+
+              if (isAccount) {
+                const accountLabel = isAuthenticated && user ? `Account (${user.firstName})` : "Account";
+
+                return (
+                  <div
+                    key={item.id}
+                    className="relative"
+                    onMouseEnter={openAccount}
+                    onMouseLeave={scheduleAccountClose}
+                  >
+                    <Link
+                      to={isAuthenticated ? "/account" : "/signin"}
+                      aria-label={accountLabel}
+                      aria-haspopup="menu"
+                      aria-expanded={accountOpen}
+                      onClick={(e) => {
+                        // On click, if on mobile or if needed, can toggle
+                      }}
+                      className={cn(
+                        shared,
+                        isAuthenticated && "text-ink font-medium",
+                        accountOpen && "text-accent"
+                      )}
+                    >
+                      {content}
+                    </Link>
+
+                    <AnimatePresence>
+                      {accountOpen && (
+                        <AccountDropdown
+                          isOpen={accountOpen}
+                          onMouseEnter={clearAccountTimer}
+                          onMouseLeave={scheduleAccountClose}
+                          onClose={() => setAccountOpen(false)}
+                          wishlistCount={counts.wishlist || 0}
+                        />
+                      )}
+                    </AnimatePresence>
+                  </div>
                 );
               }
 

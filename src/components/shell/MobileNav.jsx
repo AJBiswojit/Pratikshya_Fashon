@@ -1,7 +1,7 @@
 import { AnimatePresence, motion } from "framer-motion";
-import { ChevronDown, X } from "lucide-react";
+import { ChevronDown, X, LogOut, LogIn, User, ShoppingBag, MapPin, Sliders, Heart } from "lucide-react";
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import {
   body,
   duration,
@@ -16,6 +16,7 @@ import {
   primaryNavigation,
   utilityNavigation,
 } from "../../config/navigationConfig";
+import { useAuth } from "../../context/AuthContext";
 import { cn } from "../../utils/cn";
 import { utilityIcons } from "./utilityIcons";
 
@@ -24,13 +25,22 @@ import { utilityIcons } from "./utilityIcons";
  *
  * Full-height, canvas, sliding in from the right. Each primary group is an
  * accordion: tapping the chevron opens its sub-links, tapping the label
- * itself goes to the group's landing page. Only one group is open at a
- * time, which keeps the drawer scannable on a small screen.
+ * itself goes to the group's landing page.
+ *
+ * Fully integrated with customer authentication state.
  */
 export default function MobileNav({ onClose, counts = {} }) {
   const [expanded, setExpanded] = useState(null);
+  const { user, isAuthenticated, signOut } = useAuth();
+  const navigate = useNavigate();
 
   const toggle = (id) => setExpanded((current) => (current === id ? null : id));
+
+  const handleSignOut = () => {
+    signOut();
+    onClose();
+    navigate("/", { replace: true });
+  };
 
   return (
     <motion.div className="lg:hidden fixed inset-0 z-50">
@@ -74,6 +84,83 @@ export default function MobileNav({ onClose, counts = {} }) {
           >
             <X size={18} strokeWidth={1.5} aria-hidden="true" />
           </button>
+        </div>
+
+        {/* Auth status banner on mobile */}
+        <div className={cn("py-4 border-b border-mist/50 bg-surface/50", pagePadding)}>
+          {isAuthenticated && user ? (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="font-ui text-[9px] uppercase tracking-[.25em] text-accent">
+                    Welcome Back
+                  </p>
+                  <p className="font-display text-lg font-light text-ink">
+                    {user.firstName} {user.lastName || ""}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleSignOut}
+                  className="font-ui text-[11px] uppercase tracking-[.14em] text-taupe hover:text-accent inline-flex items-center gap-1"
+                >
+                  <LogOut size={12} aria-hidden="true" /> Sign Out
+                </button>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2 pt-1 font-ui text-xs">
+                <Link
+                  to="/account"
+                  onClick={onClose}
+                  className="flex items-center gap-2 border border-pearl bg-canvas px-3 py-2 text-ink hover:text-accent"
+                >
+                  <User size={13} strokeWidth={1.5} />
+                  <span>My Account</span>
+                </Link>
+                <Link
+                  to="/account/orders"
+                  onClick={onClose}
+                  className="flex items-center gap-2 border border-pearl bg-canvas px-3 py-2 text-ink hover:text-accent"
+                >
+                  <ShoppingBag size={13} strokeWidth={1.5} />
+                  <span>Orders</span>
+                </Link>
+                <Link
+                  to="/account/addresses"
+                  onClick={onClose}
+                  className="flex items-center gap-2 border border-pearl bg-canvas px-3 py-2 text-ink hover:text-accent"
+                >
+                  <MapPin size={13} strokeWidth={1.5} />
+                  <span>Addresses</span>
+                </Link>
+                <Link
+                  to="/account/settings"
+                  onClick={onClose}
+                  className="flex items-center gap-2 border border-pearl bg-canvas px-3 py-2 text-ink hover:text-accent"
+                >
+                  <Sliders size={13} strokeWidth={1.5} />
+                  <span>Settings</span>
+                </Link>
+              </div>
+            </div>
+          ) : (
+            <div className="flex items-center gap-3">
+              <Link
+                to="/signin"
+                onClick={onClose}
+                className="flex-1 text-center py-2.5 px-4 bg-ink text-ivory font-ui text-xs uppercase tracking-[.14em] hover:bg-accent transition-colors"
+              >
+                Sign In
+              </Link>
+              <Link
+                to="/signup"
+                onClick={onClose}
+                className="flex-1 text-center py-2.5 px-4 border border-pearl bg-canvas text-ink font-ui text-xs uppercase tracking-[.14em] hover:border-ink transition-colors"
+              >
+                Join Atelier
+              </Link>
+            </div>
+          )}
         </div>
 
         {/* Groups */}
@@ -159,11 +246,12 @@ export default function MobileNav({ onClose, counts = {} }) {
             {utilityNavigation.map((item) => {
               const Icon = utilityIcons[item.icon];
               const count = counts[item.id];
+              const target = item.id === "account" && !isAuthenticated ? "/signin" : item.to;
 
               return (
                 <li key={item.id}>
                   <Link
-                    to={item.to}
+                    to={target}
                     onClick={onClose}
                     className={cn(
                       "flex items-center gap-3 text-brass hover:text-accent",
@@ -172,7 +260,7 @@ export default function MobileNav({ onClose, counts = {} }) {
                     )}
                   >
                     <Icon size={16} strokeWidth={1.5} aria-hidden="true" />
-                    {item.label}
+                    {item.id === "account" && !isAuthenticated ? "Sign In" : item.label}
                     {count > 0 && <span className="text-accent">({count})</span>}
                   </Link>
                 </li>
