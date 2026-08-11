@@ -19,7 +19,7 @@ import MediaFrame from "./MediaFrame";
  */
 
 export const formatPrice = (value) =>
-  typeof value === "number" ? `₹${value.toLocaleString()}` : value;
+  typeof value === "number" ? `₹${value.toLocaleString("en-IN")}` : value;
 
 export const discountPercent = (current, original) =>
   typeof current === "number" && typeof original === "number" && original > current

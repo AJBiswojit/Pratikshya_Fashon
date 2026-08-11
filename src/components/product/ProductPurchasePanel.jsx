@@ -1,17 +1,21 @@
 import { AnimatePresence, motion } from "framer-motion";
-import { Check, Heart, MapPin, Minus, Plus, RotateCcw, ShoppingBag, Star, Truck } from "lucide-react";
+import { Check, Heart, MapPin, RotateCcw, ShoppingBag, Star, Truck } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   AtelierBadge,
   AtelierButton,
   discountPercent,
   formatPrice,
   heading,
+  transition,
 } from "../../design-system";
 import { colorSwatches } from "../../data/products/taxonomy";
 import { useCart } from "../../context/CartContext";
 import { useWishlist } from "../../context/WishlistContext";
+import { getMaxQuantity } from "../../utils/shopping";
 import { cn } from "../../utils/cn";
+import QuantityStepper from "../cart/QuantityStepper";
 
 const isFreeSizeOnly = (sizes = []) => sizes.length === 0 || (sizes.length === 1 && sizes[0] === "Free Size");
 
@@ -29,11 +33,11 @@ const availabilityCopy = (product) => {
   return "In stock · Ready to dispatch";
 };
 
-function Feedback({ message, kind = "success" }) {
+function Feedback({ message, kind = "success", action = null }) {
   return (
     <AnimatePresence mode="wait">
       {message ? (
-        <motion.p
+        <motion.div
           key={message}
           role={kind === "error" ? "alert" : "status"}
           aria-live="polite"
@@ -41,13 +45,16 @@ function Feedback({ message, kind = "success" }) {
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0 }}
           className={cn(
-            "mt-4 flex items-center gap-2 font-ui text-[11px] tracking-wide",
+            "mt-4 flex flex-wrap items-center gap-x-3 gap-y-1 font-ui text-[11px] tracking-wide",
             kind === "error" ? "text-accent" : "text-cocoa"
           )}
         >
-          {kind === "success" ? <Check size={14} aria-hidden="true" /> : null}
-          {message}
-        </motion.p>
+          <span className="inline-flex items-center gap-2">
+            {kind === "success" ? <Check size={14} aria-hidden="true" /> : null}
+            {message}
+          </span>
+          {kind === "success" ? action : null}
+        </motion.div>
       ) : null}
     </AnimatePresence>
   );
@@ -105,6 +112,7 @@ function DeliveryCheck({ product }) {
 export default function ProductPurchasePanel({ product }) {
   const wishlist = useWishlist();
   const cart = useCart();
+  const navigate = useNavigate();
   const requiresSize = !isFreeSizeOnly(product.sizes);
   const availableColors = product.colors.filter((color) => !product.unavailableColors.includes(color));
   const [color, setColor] = useState(availableColors[0] ?? null);
@@ -113,7 +121,7 @@ export default function ProductPurchasePanel({ product }) {
   const [feedback, setFeedback] = useState({ message: "", kind: "success" });
   const isSaved = wishlist.isSaved(product);
   const unavailable = product.availability === "unavailable";
-  const maximum = unavailable ? 0 : product.stock > 0 ? product.stock : 5;
+  const maximum = getMaxQuantity(product);
   const discount = discountPercent(product.price, product.originalPrice);
 
   useEffect(() => {
@@ -163,17 +171,23 @@ export default function ProductPurchasePanel({ product }) {
 
   const addToCart = () => {
     if (!validate()) return;
-    cart.addItem(product, selection);
-    setFeedback({ message: "Added to your collection.", kind: "success" });
+    const result = cart.addToCart(product, selection);
+    setFeedback({
+      message: result.message,
+      kind: result.ok ? "success" : "error",
+      showBag: result.ok,
+    });
   };
 
   const buyNow = () => {
     if (!validate()) return;
-    cart.prepareBuyNow(product, selection);
-    setFeedback({
-      message: "Your selection is ready. Secure checkout will open in a future phase.",
-      kind: "success",
-    });
+    const held = cart.getCartItemQuantity(product, selection);
+    const result = held > 0 ? { ok: true } : cart.addToCart(product, selection);
+    if (!result.ok) {
+      setFeedback({ message: result.message, kind: "error" });
+      return;
+    }
+    navigate("/checkout");
   };
 
   const toggleWishlist = () => {
@@ -311,27 +325,12 @@ export default function ProductPurchasePanel({ product }) {
 
       <div className="mt-7 flex items-center justify-between gap-5">
         <span className="font-ui text-[10px] uppercase tracking-[.18em] text-ink">Quantity</span>
-        <div className="flex h-10 items-center border border-mist" aria-label="Quantity selector">
-          <button
-            type="button"
-            aria-label="Decrease quantity"
-            disabled={quantity <= 1}
-            onClick={() => setQuantity((value) => Math.max(1, value - 1))}
-            className="flex h-full w-10 items-center justify-center text-ink hover:bg-surface disabled:cursor-not-allowed disabled:opacity-25 focus-visible:outline focus-visible:outline-1 focus-visible:outline-accent"
-          >
-            <Minus size={13} />
-          </button>
-          <output aria-live="polite" className="min-w-9 text-center font-ui text-xs">{quantity}</output>
-          <button
-            type="button"
-            aria-label="Increase quantity"
-            disabled={quantity >= maximum}
-            onClick={() => setQuantity((value) => Math.min(maximum, value + 1))}
-            className="flex h-full w-10 items-center justify-center text-ink hover:bg-surface disabled:cursor-not-allowed disabled:opacity-25 focus-visible:outline focus-visible:outline-1 focus-visible:outline-accent"
-          >
-            <Plus size={13} />
-          </button>
-        </div>
+        <QuantityStepper
+          value={quantity}
+          max={Math.max(maximum, 1)}
+          onChange={setQuantity}
+          label={`Quantity of ${product.name}`}
+        />
       </div>
 
       <div className="mt-7 grid grid-cols-2 gap-3">
@@ -364,7 +363,25 @@ export default function ProductPurchasePanel({ product }) {
           <span className="hidden min-[390px]:inline">{isSaved ? "Saved" : "Wishlist"}</span>
         </AtelierButton>
       </div>
-      <Feedback {...feedback} />
+      <Feedback
+        message={feedback.message}
+        kind={feedback.kind}
+        action={
+          feedback.showBag ? (
+            <button
+              type="button"
+              onClick={cart.openDrawer}
+              className={cn(
+                "inline-flex items-center gap-1.5 font-ui text-[10px] uppercase tracking-[.16em] text-accent underline-offset-4 hover:underline",
+                transition.colors,
+                "focus-visible:outline focus-visible:outline-1 focus-visible:outline-accent"
+              )}
+            >
+              View Bag
+            </button>
+          ) : null
+        }
+      />
 
       <div className="mt-8 space-y-6">
         <DeliveryCheck product={product} />
