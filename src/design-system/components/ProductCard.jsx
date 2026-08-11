@@ -13,6 +13,9 @@ import MediaFrame from "./MediaFrame";
  *
  * The whole card is one link; the wishlist control, when present, sits above
  * it and stops the click from propagating.
+ *
+ * `as` swaps the link element — pass the router's `Link` (with `to`) inside
+ * the application, leave it alone for a plain anchor.
  */
 
 export const formatPrice = (value) =>
@@ -25,6 +28,7 @@ export const discountPercent = (current, original) =>
 
 export default function ProductCard({
   product,
+  as: Tag = "a",
   href = "#",
   showCategory = false,
   showOriginalPrice = true,
@@ -51,7 +55,7 @@ export default function ProductCard({
   const discount = showDiscount ? discountPercent(price, originalPrice) : null;
 
   return (
-    <a href={href} className={cn("group", className)} {...rest}>
+    <Tag href={Tag === "a" ? href : undefined} className={cn("group", className)} {...rest}>
       <MediaFrame
         image={image}
         hoverImage={hoverImage}
@@ -106,6 +110,6 @@ export default function ProductCard({
         ) : null}
         {discount ? <span className={priceType.discount}>{discount}% off</span> : null}
       </div>
-    </a>
+    </Tag>
   );
 }

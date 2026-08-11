@@ -57,6 +57,10 @@ export const pratikshyaImages = {
   "fabric-printed": { id: "fabric-printed", category: "fabrics", purpose: "Printed fabric texture", src: pexels(6843268, 1200, 627), alt: "Intricate red printed textile texture" },
   "fabric-embroidered": { id: "fabric-embroidered", category: "fabrics", purpose: "Embroidered fabric texture", src: local("heritage-textile.jpg"), alt: "Embroidered silk textile with gold craftsmanship" },
 
+  "saree-ivory-silk": { id: "saree-ivory-silk", category: "silk", purpose: "Ivory silk saree campaign", src: local("editorial-hero.jpg"), alt: "Woman in an ivory silk saree with woven zari border and temple jewellery" },
+  "lehenga-wine": { id: "lehenga-wine", category: "lehengas", purpose: "Wine bridal lehenga campaign", src: local("future-hero.jpg"), alt: "Model in a wine velvet lehenga with mirror and gold zardozi work" },
+  "women-contemporary": { id: "women-contemporary", category: "fabrics", purpose: "Women's contemporary wear", src: local("minimal-hero.jpg"), alt: "Woman in a minimal ivory linen dress against a soft studio backdrop" },
+
   "accessory-dupattas": { id: "accessory-dupattas", category: "accessories", purpose: "Dupattas product", src: local("heritage-textile.jpg"), alt: "Golden embroidered dupatta textile close-up" },
   "bridal-bangles": { id: "bridal-bangles", category: "accessories", purpose: "Bridal bangles campaign", src: local("pratikshya/jewellery/bangles-gold.jpg"), alt: "Gold bridal bangles arranged for a wedding celebration" },
   "bridal-jewellery": { id: "bridal-jewellery", category: "accessories", purpose: "Bridal jewellery detail", src: local("pratikshya/jewellery/bangles-gold.jpg"), alt: "Gold jewellery and bangles with a warm heirloom finish" },
