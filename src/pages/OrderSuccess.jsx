@@ -3,7 +3,6 @@ import { useEffect } from "react";
 import { Link } from "react-router-dom";
 import { CheckCircle2, PackageCheck } from "lucide-react";
 import {
-  AtelierBadge,
   AtelierButton,
   AtelierSection,
   Breadcrumb,
@@ -13,6 +12,7 @@ import {
 } from "../design-system";
 import { useAuth } from "../context/AuthContext";
 import { useOrder } from "../context/OrderContext";
+import OrderStatusBadge from "../components/orders/OrderStatusBadge";
 import { formatINR } from "../utils/shopping";
 import { formatPhone } from "../utils/validation";
 
@@ -134,7 +134,7 @@ export default function OrderSuccess() {
             <Meta label="Payment">
               <span className="flex flex-wrap items-center gap-2">
                 {order.paymentMethod.label}
-                <AtelierBadge variant="ink">Paid</AtelierBadge>
+                <OrderStatusBadge status={order.paymentStatus} kind="payment" />
               </span>
             </Meta>
             <Meta label="Estimated Delivery">
@@ -238,19 +238,53 @@ export default function OrderSuccess() {
 
           {/* ---------------------------- Actions ---------------------------- */}
           <div className="mt-12 flex flex-wrap items-center gap-4">
-            {isAuthenticated && user ? (
-              <AtelierButton as={Link} to="/account/orders" variant="primary" size="md">
-                View Order
-              </AtelierButton>
-            ) : (
-              <AtelierButton as={Link} to="/signup?return=/account/orders" variant="primary" size="md">
-                Create an Account to Track This Order
-              </AtelierButton>
-            )}
+            <AtelierButton
+              as={Link}
+              to={`/account/orders/${order.id}`}
+              variant="primary"
+              size="md"
+            >
+              View Order
+            </AtelierButton>
+            <AtelierButton
+              as={Link}
+              to={`/account/orders/${order.id}/track`}
+              variant="outline"
+              size="md"
+            >
+              Track Order
+            </AtelierButton>
             <AtelierButton as={Link} to="/shop" variant="outline" size="md">
               Continue Shopping
             </AtelierButton>
           </div>
+
+          {/*
+            Guests keep this order in the current browser demo session. Creating
+            an account offers to bring it along — the account order history
+            picks it up from there.
+          */}
+          {!isAuthenticated || !user ? (
+            <div className="mt-8 border border-accent/25 bg-accent/5 p-6">
+              <p className="font-ui text-[10px] uppercase tracking-[.2em] text-accent">
+                Keep This Order
+              </p>
+              <p className="mt-2 max-w-xl font-ui text-xs leading-relaxed text-graphite">
+                Create an account to keep your orders organized. This order stays
+                available in this browser, and can be added to your account once
+                you have one.
+              </p>
+              <AtelierButton
+                as={Link}
+                to={`/signup?returnTo=${encodeURIComponent("/account/orders")}`}
+                variant="primary"
+                size="chip"
+                className="mt-5"
+              >
+                Create an Account
+              </AtelierButton>
+            </div>
+          ) : null}
 
           <p className="mt-10 flex items-center gap-2 font-ui text-[10px] uppercase tracking-[.18em] text-taupe">
             <PackageCheck size={13} className="text-accent" aria-hidden="true" />

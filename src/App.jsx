@@ -33,6 +33,9 @@ const AccountDashboard = lazy(() => import("./pages/account/AccountDashboard"));
 const AccountProfile = lazy(() => import("./pages/account/AccountProfile"));
 const AccountAddresses = lazy(() => import("./pages/account/AccountAddresses"));
 const AccountOrders = lazy(() => import("./pages/account/AccountOrders"));
+const OrderDetail = lazy(() => import("./pages/account/OrderDetail"));
+const OrderTracking = lazy(() => import("./pages/account/OrderTracking"));
+const OrderReturn = lazy(() => import("./pages/account/OrderReturn"));
 const AccountSettings = lazy(() => import("./pages/account/AccountSettings"));
 const AccountSecurity = lazy(() => import("./pages/account/AccountSecurity"));
 
@@ -100,6 +103,23 @@ export default function App() {
                 <Route path="/signup" element={<SignUp />} />
                 <Route path="/forgot-password" element={<ForgotPassword />} />
                 <Route path="/reset-password" element={<ResetPassword />} />
+
+                {/*
+                  Single-order routes. Not wrapped in ProtectedRoute: a guest
+                  who has just checked out must still reach the order they
+                  placed in this browser. Access is enforced on the order
+                  itself — the context only resolves orders the current
+                  identity owns, so another customer's order is never exposed.
+                */}
+                <Route path="/account/orders/:orderId" element={<OrderDetail />} />
+                <Route
+                  path="/account/orders/:orderId/track"
+                  element={<OrderTracking />}
+                />
+                <Route
+                  path="/account/orders/:orderId/return"
+                  element={<OrderReturn />}
+                />
 
                 {/* Protected Customer Account */}
                 <Route element={<ProtectedRoute />}>
