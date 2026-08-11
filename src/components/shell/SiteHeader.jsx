@@ -32,7 +32,7 @@ import SearchPanel from "./SearchPanel";
  * Only one overlay is ever open: opening the search closes the menu, and
  * navigating closes everything.
  */
-export default function SiteHeader({ counts = {} }) {
+export default function SiteHeader({ counts = {}, onOpenCart }) {
   const [openGroup, setOpenGroup] = useState(null);
   const [searchOpen, setSearchOpen] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -167,6 +167,7 @@ export default function SiteHeader({ counts = {} }) {
               const Icon = utilityIcons[item.icon];
               const count = counts[item.id];
               const isSearch = item.action === "search";
+              const isCart = item.id === "cart" && typeof onOpenCart === "function";
 
               const content = (
                 <>
@@ -191,22 +192,47 @@ export default function SiteHeader({ counts = {} }) {
                 !isSearch && item.id === "wishlist" && "hidden sm:inline-flex"
               );
 
-              return isSearch ? (
-                <button
-                  key={item.id}
-                  type="button"
-                  onClick={toggleSearch}
-                  aria-label={item.label}
-                  aria-expanded={searchOpen}
-                  className={shared}
-                >
-                  {content}
-                </button>
-              ) : (
+              const countLabel = count > 0 ? `${item.label}, ${count} ${count === 1 ? "item" : "items"}` : item.label;
+
+              if (isSearch) {
+                return (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={toggleSearch}
+                    aria-label={item.label}
+                    aria-expanded={searchOpen}
+                    className={shared}
+                  >
+                    {content}
+                  </button>
+                );
+              }
+
+              if (isCart) {
+                return (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => {
+                      closeAll();
+                      onOpenCart();
+                    }}
+                    aria-label={countLabel}
+                    aria-haspopup="dialog"
+                    onMouseEnter={scheduleClose}
+                    className={shared}
+                  >
+                    {content}
+                  </button>
+                );
+              }
+
+              return (
                 <Link
                   key={item.id}
                   to={item.to}
-                  aria-label={item.label}
+                  aria-label={countLabel}
                   onMouseEnter={scheduleClose}
                   className={shared}
                 >

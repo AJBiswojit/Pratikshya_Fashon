@@ -136,3 +136,47 @@ export function getProductRecommendations(product, options = {}) {
 
   return { related, completeTheLook, recommended };
 }
+
+/**
+ * The bag's cross-sell edit.
+ *
+ * Deterministic, catalogue-only mock logic: each piece in the bag proposes
+ * its companion categories (a lehenga suggests bangles and jewellery, a
+ * saree suggests bangles and a dupatta), the proposals are pooled and
+ * ranked, and anything already in the bag is excluded. The same seam a
+ * future recommendation service would replace.
+ */
+export function getCartRecommendations(cartProducts, { limit = 4 } = {}) {
+  if (!cartProducts?.length) return [];
+  const exclude = cartProducts.map((product) => product.id);
+  const scores = new Map();
+  const byId = new Map();
+
+  cartProducts.forEach((product) => {
+    getCompleteTheLook(product, { limit: limit * 2, exclude }).forEach(
+      (candidate, index) => {
+        byId.set(candidate.id, candidate);
+        scores.set(
+          candidate.id,
+          (scores.get(candidate.id) ?? 0) + (limit * 2 - index)
+        );
+      }
+    );
+  });
+
+  const ranked = [...byId.values()].sort(
+    (a, b) => scores.get(b.id) - scores.get(a.id) || a.id.localeCompare(b.id)
+  );
+
+  // Fill any remaining places from the wider recommendation pool.
+  if (ranked.length < limit) {
+    const chosen = new Set([...exclude, ...ranked.map((product) => product.id)]);
+    getRecommendedProducts(cartProducts[0], {
+      limit: limit - ranked.length,
+      exclude: [...chosen],
+    }).forEach((candidate) => ranked.push(candidate));
+  }
+
+  return ranked.slice(0, limit);
+}
+

@@ -269,7 +269,7 @@ export const primaryNavigation = [
  */
 export const utilityNavigation = [
   { id: "search", label: "Search", icon: "search", action: "search", to: "/search" },
-  { id: "wishlist", label: "Wishlist", icon: "wishlist", to: "/wishlist" },
+  { id: "wishlist", label: "Wishlist", icon: "wishlist", to: "/account/wishlist" },
   { id: "account", label: "Account", icon: "account", to: "/account" },
   { id: "cart", label: "Bag", icon: "cart", to: "/cart" },
 ];
@@ -343,7 +343,7 @@ export const standalonePages = [
     image: "fabric-silk",
   },
   {
-    to: "/wishlist",
+    to: "/account/wishlist",
     label: "Wishlist",
     eyebrow: "Saved Pieces",
     description: "The pieces you have set aside to return to.",

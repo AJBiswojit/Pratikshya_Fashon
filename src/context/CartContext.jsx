@@ -1,132 +1,344 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+/**
+ * PRATIKSHYA FASHON — The bag.
+ *
+ * The one cart implementation in the application. Phase 5's lightweight
+ * session state grew into this provider; the product detail panel, the
+ * mini-cart drawer, the cart page and the shell count all read from here.
+ *
+ * A cart line stores only identity — product id, colour, size, quantity,
+ * when it was added. The product itself is resolved from the catalogue at
+ * read time, so prices and stock can never drift from the mock data, and a
+ * retired product simply drops out on initialisation instead of crashing.
+ *
+ * Persistence is localStorage under a namespaced key. Corrupted storage is
+ * discarded silently and the bag starts clean.
+ */
+
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
+import { getProductById } from "../data/products";
+import { getCoupon, validateCoupon } from "../data/shopping/coupons";
+import {
+  calculateCartTotals,
+  cartLineId,
+  CART_STORAGE_KEY,
+  clampQuantity,
+  getMaxQuantity,
+  readStorage,
+  writeStorage,
+} from "../utils/shopping";
+
+const CartContext = createContext(null);
+
+/* ------------------------------------------------------------------ */
+/* Initialisation                                                      */
+/* ------------------------------------------------------------------ */
 
 /**
- * Lightweight Phase 5 commerce state.
- *
- * It intentionally stops at selection and cart count. There is no cart page,
- * checkout, inventory reservation or order creation in this provider.
+ * Rebuilds a safe cart from whatever storage held: invalid records and
+ * retired products are removed, quantities are clamped to the mock stock,
+ * duplicate identities are merged and the stored coupon is only kept if it
+ * still resolves to a live offer.
  */
-const CartContext = createContext(null);
-const CART_KEY = "pratikshya-phase5-cart";
-const BUY_NOW_KEY = "pratikshya-phase5-buy-now";
+const restoreCart = () => {
+  const stored = readStorage(CART_STORAGE_KEY, null);
+  const rawLines = Array.isArray(stored?.lines) ? stored.lines : [];
+  const byId = new Map();
 
-const readSession = (key, fallback) => {
-  if (typeof window === "undefined") return fallback;
-  try {
-    const stored = window.sessionStorage.getItem(key);
-    return stored ? JSON.parse(stored) : fallback;
-  } catch {
-    return fallback;
-  }
+  rawLines.forEach((line) => {
+    if (!line || typeof line !== "object") return;
+    const product = getProductById(line.productId);
+    if (!product) return;
+
+    const color = typeof line.color === "string" ? line.color : null;
+    const size = typeof line.size === "string" ? line.size : null;
+    const id = cartLineId(product.id, { color, size });
+    const quantity = clampQuantity(
+      product,
+      (byId.get(id)?.quantity ?? 0) + (Number(line.quantity) || 0)
+    );
+    if (quantity < 1) return;
+
+    byId.set(id, {
+      id,
+      productId: product.id,
+      color,
+      size,
+      quantity,
+      addedAt: Number(line.addedAt) || Date.now(),
+    });
+  });
+
+  const couponCode = typeof stored?.coupon === "string" ? stored.coupon : null;
+
+  return {
+    lines: [...byId.values()],
+    couponCode: couponCode && getCoupon(couponCode) ? couponCode : null,
+  };
 };
 
-const selectionKey = (product, selection) =>
-  [product.id, selection.color ?? "", selection.size ?? ""].join(":");
-
-const maximumQuantity = (product) => {
-  if (product.availability === "unavailable") return 0;
-  if (Number(product.stock) > 0) return Number(product.stock);
-  return product.availability === "made-to-order" ? 5 : 1;
-};
+/* ------------------------------------------------------------------ */
+/* Provider                                                            */
+/* ------------------------------------------------------------------ */
 
 export function CartProvider({ children }) {
-  const [items, setItems] = useState(() => {
-    const stored = readSession(CART_KEY, []);
-    return Array.isArray(stored) ? stored : [];
-  });
-  const [buyNowSelection, setBuyNowSelection] = useState(() => readSession(BUY_NOW_KEY, null));
+  const [{ lines, couponCode }, setState] = useState(restoreCart);
+  const [isDrawerOpen, setDrawerOpen] = useState(false);
 
+  /* Persist identity only — never the product record, never anything sensitive. */
   useEffect(() => {
-    try {
-      window.sessionStorage.setItem(CART_KEY, JSON.stringify(items));
-    } catch {
-      // Session persistence is an enhancement; interaction remains available.
-    }
-  }, [items]);
+    writeStorage(CART_STORAGE_KEY, { lines, coupon: couponCode });
+  }, [lines, couponCode]);
 
-  useEffect(() => {
-    try {
-      if (buyNowSelection) {
-        window.sessionStorage.setItem(BUY_NOW_KEY, JSON.stringify(buyNowSelection));
-      } else {
-        window.sessionStorage.removeItem(BUY_NOW_KEY);
+  /* ---------------------------------------------------------------- */
+  /* Derived state                                                     */
+  /* ---------------------------------------------------------------- */
+
+  /** Cart lines with their live catalogue product attached. */
+  const items = useMemo(
+    () =>
+      lines
+        .map((line) => {
+          const product = getProductById(line.productId);
+          if (!product) return null;
+          return {
+            ...line,
+            product,
+            maximum: getMaxQuantity(product),
+            lineTotal: product.price * line.quantity,
+          };
+        })
+        .filter(Boolean),
+    [lines]
+  );
+
+  const coupon = useMemo(() => (couponCode ? getCoupon(couponCode) : null), [couponCode]);
+
+  /** Coupon status against the current bag — an offer can lapse gracefully. */
+  const couponState = useMemo(() => {
+    if (!coupon) return { active: false, lapsed: false };
+    const result = validateCoupon(coupon.code, items);
+    return { active: result.ok, lapsed: !result.ok };
+  }, [coupon, items]);
+
+  const totals = useMemo(
+    () => calculateCartTotals(items, couponState.active ? coupon : null),
+    [items, coupon, couponState]
+  );
+
+  /** Total item quantity — the number the shell badge shows. */
+  const count = useMemo(
+    () => items.reduce((total, item) => total + item.quantity, 0),
+    [items]
+  );
+
+  /* ---------------------------------------------------------------- */
+  /* Actions                                                           */
+  /* ---------------------------------------------------------------- */
+
+  /**
+   * Adds a product + variant to the bag, merging with an existing line of
+   * the same identity and honouring the mock stock across repeated
+   * additions. Returns a result the caller can turn into feedback.
+   */
+  const addToCart = useCallback(
+    (product, selection = {}) => {
+      if (!product?.id || !getProductById(product.id)) {
+        return { ok: false, message: "This piece is currently unavailable." };
       }
-    } catch {
-      // Keep the in-memory selection when storage is unavailable.
-    }
-  }, [buyNowSelection]);
 
-  const addItem = useCallback((product, selection) => {
-    if (!product?.id) return;
-    const maximum = maximumQuantity(product);
-    if (maximum === 0) return;
-    const quantity = Math.min(maximum, Math.max(1, Number(selection.quantity) || 1));
-    const key = selectionKey(product, selection);
-
-    setItems((current) => {
-      const existing = current.find((item) => item.key === key);
-      if (existing) {
-        return current.map((item) =>
-          item.key === key
-            ? { ...item, maximum, quantity: Math.min(maximum, item.quantity + quantity) }
-            : item
-        );
+      const maximum = getMaxQuantity(product);
+      if (maximum === 0) {
+        return { ok: false, message: "This piece is currently unavailable." };
       }
-      return [
+
+      const requested = Math.max(1, Math.floor(Number(selection.quantity) || 1));
+      const id = cartLineId(product.id, selection);
+      const existing = lines.find((line) => line.id === id);
+      const held = existing?.quantity ?? 0;
+
+      if (held >= maximum) {
+        return {
+          ok: false,
+          message: `Your bag already holds every available piece (${maximum}).`,
+        };
+      }
+
+      const quantity = Math.min(maximum, held + requested);
+      const capped = quantity < held + requested;
+
+      setState((current) => {
+        const line = current.lines.find((entry) => entry.id === id);
+        if (line) {
+          return {
+            ...current,
+            lines: current.lines.map((entry) =>
+              entry.id === id ? { ...entry, quantity } : entry
+            ),
+          };
+        }
+        return {
+          ...current,
+          lines: [
+            ...current.lines,
+            {
+              id,
+              productId: product.id,
+              color: selection.color ?? null,
+              size: selection.size ?? null,
+              quantity,
+              addedAt: Date.now(),
+            },
+          ],
+        };
+      });
+
+      return capped
+        ? {
+            ok: true,
+            message: `Only ${maximum} ${maximum === 1 ? "piece is" : "pieces are"} available — your bag now holds them all.`,
+          }
+        : { ok: true, message: "Added to your collection." };
+    },
+    [lines]
+  );
+
+  const removeFromCart = useCallback((lineId) => {
+    setState((current) => ({
+      ...current,
+      lines: current.lines.filter((line) => line.id !== lineId),
+    }));
+  }, []);
+
+  /** Sets a line's quantity, clamped to [1, stock]. Zero removes the line. */
+  const updateCartQuantity = useCallback((lineId, quantity) => {
+    setState((current) => {
+      if (Number(quantity) < 1) {
+        return { ...current, lines: current.lines.filter((line) => line.id !== lineId) };
+      }
+      return {
         ...current,
-        {
-          key,
-          productId: product.id,
-          slug: product.slug,
-          name: product.name,
-          price: product.price,
-          color: selection.color ?? null,
-          size: selection.size ?? null,
-          maximum,
-          quantity,
-        },
-      ];
+        lines: current.lines.map((line) => {
+          if (line.id !== lineId) return line;
+          const product = getProductById(line.productId);
+          const next = product ? clampQuantity(product, quantity) : 0;
+          return next > 0 ? { ...line, quantity: next } : line;
+        }),
+      };
     });
   }, []);
 
-  const prepareBuyNow = useCallback((product, selection) => {
-    if (!product?.id || maximumQuantity(product) === 0) return;
-    setBuyNowSelection({
-      productId: product.id,
-      slug: product.slug,
-      name: product.name,
-      price: product.price,
-      color: selection.color ?? null,
-      size: selection.size ?? null,
-      quantity: Math.min(
-        maximumQuantity(product),
-        Math.max(1, Number(selection.quantity) || 1)
-      ),
-    });
+  const clearCart = useCallback(() => {
+    setState({ lines: [], couponCode: null });
   }, []);
+
+  /** Quantity already held — for one line when a selection is given, else the product. */
+  const getCartItemQuantity = useCallback(
+    (product, selection = null) => {
+      const productId = typeof product === "string" ? product : product?.id;
+      if (!productId) return 0;
+      if (selection) {
+        const id = cartLineId(productId, selection);
+        return items.find((item) => item.id === id)?.quantity ?? 0;
+      }
+      return items
+        .filter((item) => item.productId === productId)
+        .reduce((total, item) => total + item.quantity, 0);
+    },
+    [items]
+  );
+
+  const applyCoupon = useCallback(
+    (code) => {
+      const result = validateCoupon(code, items, { appliedCode: couponCode });
+      if (!result.ok) return result;
+      setState((current) => ({ ...current, couponCode: result.coupon.code }));
+      return {
+        ok: true,
+        coupon: result.coupon,
+        message: `${result.coupon.code} is now part of your order.`,
+      };
+    },
+    [items, couponCode]
+  );
+
+  const removeCoupon = useCallback(() => {
+    setState((current) => ({ ...current, couponCode: null }));
+  }, []);
+
+  const openDrawer = useCallback(() => setDrawerOpen(true), []);
+  const closeDrawer = useCallback(() => setDrawerOpen(false), []);
+
+  /* ---------------------------------------------------------------- */
 
   const value = useMemo(
     () => ({
       items,
-      count: items.reduce((total, item) => total + item.quantity, 0),
-      addItem,
-      prepareBuyNow,
-      buyNowSelection,
+      count,
+      totals,
+      coupon,
+      couponLapsed: couponState.lapsed,
+      addToCart,
+      removeFromCart,
+      updateCartQuantity,
+      clearCart,
+      getCartItemQuantity,
+      applyCoupon,
+      removeCoupon,
+      isDrawerOpen,
+      openDrawer,
+      closeDrawer,
     }),
-    [items, addItem, prepareBuyNow, buyNowSelection]
+    [
+      items,
+      count,
+      totals,
+      coupon,
+      couponState,
+      addToCart,
+      removeFromCart,
+      updateCartQuantity,
+      clearCart,
+      getCartItemQuantity,
+      applyCoupon,
+      removeCoupon,
+      isDrawerOpen,
+      openDrawer,
+      closeDrawer,
+    ]
   );
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
 }
 
+/**
+ * Bag accessor. Returns an inert bag when no provider is mounted, so a
+ * component can render in isolation without crashing.
+ */
 export function useCart() {
   return (
     useContext(CartContext) ?? {
       items: [],
       count: 0,
-      addItem: () => {},
-      prepareBuyNow: () => {},
-      buyNowSelection: null,
+      totals: calculateCartTotals([]),
+      coupon: null,
+      couponLapsed: false,
+      addToCart: () => ({ ok: false, message: "" }),
+      removeFromCart: () => {},
+      updateCartQuantity: () => {},
+      clearCart: () => {},
+      getCartItemQuantity: () => 0,
+      applyCoupon: () => ({ ok: false, message: "" }),
+      removeCoupon: () => {},
+      isDrawerOpen: false,
+      openDrawer: () => {},
+      closeDrawer: () => {},
     }
   );
 }
