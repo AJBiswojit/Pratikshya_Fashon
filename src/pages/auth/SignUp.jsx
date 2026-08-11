@@ -8,6 +8,7 @@ import {
   Rule,
 } from "../../design-system";
 import { useAuth } from "../../context/AuthContext";
+import { useOrder } from "../../context/OrderContext";
 import {
   isValidEmail,
   isValidPhone,
@@ -26,6 +27,7 @@ import { cn } from "../../utils/cn";
  */
 export default function SignUp() {
   const { signUp, isAuthenticated } = useAuth();
+  const { claimGuestOrders } = useOrder();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
 
@@ -127,6 +129,12 @@ export default function SignUp() {
     });
 
     if (result.ok) {
+      /*
+       * Anything ordered as a guest in this browser now belongs to the account
+       * that was just created, so the new customer finds their purchase waiting
+       * in Order History instead of losing it at signup.
+       */
+      claimGuestOrders(result.user?.id);
       setSuccess(true);
       setTimeout(() => {
         navigate(returnTo, { replace: true });

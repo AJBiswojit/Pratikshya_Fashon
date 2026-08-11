@@ -347,6 +347,8 @@ export const buildOrderSnapshot = ({
     label: getDeliveryMethod(deliveryMethodId).label,
     estimate: deliveryEstimate,
   },
+  /** Mirrored at the top level so the order experience reads one field. */
+  estimatedDelivery: deliveryEstimate,
   paymentMethod: {
     id: paymentMethodId,
     label: getPaymentMethodLabel(paymentMethodId),
@@ -361,9 +363,14 @@ export const buildOrderSnapshot = ({
     total: totals.total,
     saved: totals.saved,
   },
+  currency: "INR",
   createdAt: createdAt.toISOString(),
   status: "CONFIRMED",
-  paymentStatus: "PAID",
+  /**
+   * Cash on delivery is not captured at checkout; every other demo method
+   * settles at the moment of a successful mock payment.
+   */
+  paymentStatus: paymentMethodId === "cod" ? "PENDING" : "PAID",
 });
 
 /** Customer-facing label for a payment method id. */

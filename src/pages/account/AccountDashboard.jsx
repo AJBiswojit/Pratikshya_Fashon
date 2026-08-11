@@ -8,17 +8,24 @@ import {
   Sliders,
   Shield,
   ArrowRight,
-  Plus,
 } from "lucide-react";
 import AccountShell from "../../components/account/AccountShell";
+import OrderStatusBadge from "../../components/orders/OrderStatusBadge";
 import { useAccount } from "../../context/AccountContext";
+import { useOrder } from "../../context/OrderContext";
 import { useWishlist } from "../../context/WishlistContext";
-import { AtelierButton, EditorialHeading, Rule, transition } from "../../design-system";
+import { EditorialHeading, Rule, transition } from "../../design-system";
+import { formatOrderDate, orderItemCount } from "../../utils/orders";
+import { formatINR } from "../../utils/shopping";
 import { cn } from "../../utils/cn";
 
 export default function AccountDashboard() {
   const { profile, addresses, defaultAddress, preferences } = useAccount();
+  const { orders } = useOrder();
   const wishlist = useWishlist();
+
+  /* The one order state — the dashboard never keeps a copy of its own. */
+  const latestOrder = orders[0] ?? null;
 
   useEffect(() => {
     const prevTitle = document.title;
@@ -52,18 +59,52 @@ export default function AccountDashboard() {
                   <ShoppingBag size={18} strokeWidth={1.5} aria-hidden="true" />
                 </div>
                 <span className="font-ui text-[10px] uppercase tracking-[.2em] text-taupe">
-                  0 Orders
+                  {orders.length} {orders.length === 1 ? "Order" : "Orders"}
                 </span>
               </div>
               <h3 className="font-display text-xl font-light text-ink">
                 Orders &amp; Purchases
               </h3>
               <Rule width="w-8" tone="accent" className="my-3" />
-              <p className="font-ui text-xs text-taupe leading-relaxed">
-                Track your active orders, past celebration purchases, and download official invoices.
-              </p>
+
+              {latestOrder ? (
+                <div>
+                  <p className="font-ui text-[10px] uppercase tracking-[.16em] text-accent">
+                    Most Recent
+                  </p>
+                  <div className="mt-2.5 flex items-center gap-3">
+                    <img
+                      src={latestOrder.items[0].image}
+                      alt=""
+                      className="h-14 w-11 shrink-0 bg-surface object-cover"
+                      loading="lazy"
+                    />
+                    <div className="min-w-0">
+                      <p className="truncate font-ui text-xs text-ink">
+                        {latestOrder.id}
+                      </p>
+                      <p className="mt-0.5 font-ui text-[11px] text-taupe">
+                        {formatOrderDate(latestOrder.createdAt)} ·{" "}
+                        {orderItemCount(latestOrder)}{" "}
+                        {orderItemCount(latestOrder) === 1 ? "piece" : "pieces"}
+                      </p>
+                      <p className="mt-1 font-ui text-xs text-ink">
+                        {formatINR(latestOrder.pricing.total)}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="mt-3">
+                    <OrderStatusBadge status={latestOrder.status} kind="order" />
+                  </div>
+                </div>
+              ) : (
+                <p className="font-ui text-xs text-taupe leading-relaxed">
+                  Track your active orders, past celebration purchases, and view
+                  your invoices.
+                </p>
+              )}
             </div>
-            <div className="mt-6 pt-4 border-t border-mist/60 flex items-center justify-between">
+            <div className="mt-6 pt-4 border-t border-mist/60 flex flex-wrap items-center gap-x-5 gap-y-2">
               <Link
                 to="/account/orders"
                 className={cn(
@@ -71,8 +112,19 @@ export default function AccountDashboard() {
                   transition.colors
                 )}
               >
-                View Orders <ArrowRight size={12} aria-hidden="true" />
+                View All Orders <ArrowRight size={12} aria-hidden="true" />
               </Link>
+              {latestOrder ? (
+                <Link
+                  to={`/account/orders/${latestOrder.id}`}
+                  className={cn(
+                    "font-ui text-[10px] uppercase tracking-[.14em] text-brass hover:text-accent",
+                    transition.colors
+                  )}
+                >
+                  Latest Order
+                </Link>
+              ) : null}
             </div>
           </div>
 

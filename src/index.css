@@ -73,3 +73,31 @@ body {
     transition-duration: 0.01ms !important;
   }
 }
+
+/*
+ * Print — invoice preview only.
+ *
+ * The invoice opens as an overlay, so a naive print would carry the whole
+ * page behind it. Printing hides the app and lets the invoice flow onto
+ * paper as a plain document.
+ */
+@media print {
+  body > *:not([data-invoice-overlay]) {
+    display: none !important;
+  }
+
+  [data-invoice-overlay] {
+    position: static !important;
+    overflow: visible !important;
+    background: none !important;
+    padding: 0 !important;
+    backdrop-filter: none !important;
+  }
+
+  [data-invoice-overlay] [role="dialog"] {
+    max-width: none !important;
+    margin: 0 !important;
+    border: 0 !important;
+    box-shadow: none !important;
+  }
+}
