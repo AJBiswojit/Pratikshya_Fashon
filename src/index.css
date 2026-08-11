@@ -1,23 +1,45 @@
 @import "tailwindcss";
 
+/**
+ * PRATIKSHYA FASHON — Atelier theme.
+ *
+ * These custom properties are the CSS mirror of `src/design-system/tokens.js`
+ * and `src/design-system/typography.js`. Keep the two in sync: the JS modules
+ * are the documentation, this block is what Tailwind compiles utilities from.
+ */
 @theme {
-  --font-editorial: "Cormorant Garamond", Georgia, serif;
-  --font-heritage: "Cormorant Garamond", Georgia, serif;
-  --font-minimal: "Instrument Sans", system-ui, sans-serif;
-  --font-commerce: "Instrument Sans", system-ui, sans-serif;
-  --font-atelier: "Cormorant Garamond", Georgia, serif;
-  --font-future: "Instrument Sans", system-ui, sans-serif;
+  /* Typefaces */
+  --font-display: "Cormorant Garamond", Georgia, serif;
+  --font-ui: "Instrument Sans", system-ui, sans-serif;
 
+  /* Surfaces */
+  --color-canvas: #f7f4f0;
+  --color-canvas-deep: #efeae3;
+  --color-surface: #f0ebe6;
   --color-ivory: #fdf8f3;
-  --color-champagne: #f2e8d8;
-  --color-deep-maroon: #6a1b2e;
-  --color-terracotta: #b85c3a;
-  --color-terracotta-dark: #8a3e22;
-  --color-indigo-deep: #1e2a5a;
+
+  /* Ink */
+  --color-ink: #2a2015;
+  --color-graphite: #555555;
+  --color-taupe: #777777;
+  --color-cocoa: #6a4e38;
+  --color-brass: #8a6e4a;
+
+  /* Accents */
+  --color-accent: #8a3e22;
+  --color-accent-deep: #5a2a18;
   --color-gold: #c9a44c;
-  --color-gold-dim: #9e7d3a;
-  --color-burgundy: #5a1528;
-  --color-dark-luxury: #0a0a0c;
+  --color-blush: #e8d5c4;
+  --color-blush-deep: #e8c8b8;
+
+  /* Lines */
+  --color-pearl: #dddddd;
+  --color-mist: #ddd8cf;
+  --color-ink-line: #3a2a1e;
+
+  /* Neutrals on dark surfaces */
+  --color-ash: #aaaaaa;
+  --color-ash-deep: #666666;
 }
 
 html {
@@ -38,13 +60,14 @@ body {
   color: #fff;
 }
 
-@keyframes slowZoom {
-  from { transform: scale(1.05); }
-  to { transform: scale(1.15); }
-}
-
 @media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
