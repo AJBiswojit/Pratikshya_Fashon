@@ -2,7 +2,10 @@ import { lazy } from "react";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { routeManifest } from "./config/navigationConfig";
 import { hasNavigationScope } from "./data/products/taxonomy";
+import { AuthProvider } from "./context/AuthContext";
+import { AccountProvider } from "./context/AccountContext";
 import { ShoppingProvider } from "./context/ShoppingContext";
+import ProtectedRoute from "./components/auth/ProtectedRoute";
 import CustomerLayout from "./layouts/CustomerLayout";
 import AtelierDesign from "./pages/AtelierDesign";
 import CatalogueListing from "./pages/CatalogueListing";
@@ -16,72 +19,112 @@ const Cart = lazy(() => import("./pages/Cart"));
 const Wishlist = lazy(() => import("./pages/Wishlist"));
 const Checkout = lazy(() => import("./pages/Checkout"));
 
-/** Paths owned by dedicated pages rather than the generic interior shell. */
-const dedicatedPaths = new Set(["/search", "/cart", "/wishlist", "/account/wishlist"]);
+/* Authentication Pages */
+const SignIn = lazy(() => import("./pages/auth/SignIn"));
+const SignUp = lazy(() => import("./pages/auth/SignUp"));
+const ForgotPassword = lazy(() => import("./pages/auth/ForgotPassword"));
+const ResetPassword = lazy(() => import("./pages/auth/ResetPassword"));
 
+/* Customer Account Pages */
+const AccountDashboard = lazy(() => import("./pages/account/AccountDashboard"));
+const AccountProfile = lazy(() => import("./pages/account/AccountProfile"));
+const AccountAddresses = lazy(() => import("./pages/account/AccountAddresses"));
+const AccountOrders = lazy(() => import("./pages/account/AccountOrders"));
+const AccountSettings = lazy(() => import("./pages/account/AccountSettings"));
+const AccountSecurity = lazy(() => import("./pages/account/AccountSecurity"));
+
+/** Paths owned by dedicated pages rather than the generic interior shell. */
+const dedicatedPaths = new Set([
+  "/search",
+  "/cart",
+  "/wishlist",
+  "/checkout",
+  "/account",
+  "/account/profile",
+  "/account/addresses",
+  "/account/orders",
+  "/account/settings",
+  "/account/security",
+  "/account/wishlist",
+  "/signin",
+  "/signup",
+  "/forgot-password",
+  "/reset-password",
+]);
 
 /**
  * Routing.
  *
  * Every customer-facing route is nested inside `CustomerLayout`, so the
- * header, footer and page transition are declared once. The landing page
- * keeps the index route and its own full-bleed composition; the shell simply
- * frames it.
+ * header, footer and page transition are declared once.
  *
- * Interior routes come from two places:
- *
- *   — the storefront's own paths (`/shop`, `/category/:slug`,
- *     `/collection/:slug`, `/search`, `/product/:slug`);
- *   — the route manifest in `src/config/navigationConfig.js`, the same
- *     source the navigation, mega menu, drawer and breadcrumbs read from, so
- *     a destination can never appear in the menu without resolving.
- *
- * A manifest path that maps to a catalogue scope renders the storefront;
- * the rest keep the generic interior page. That is what lets the Phase 3
- * navigation lead to real inventory without inventing a parallel set of URLs.
+ * Providers compose clean state boundaries:
+ * AuthProvider (Identity & Session)
+ * └── AccountProvider (Profile, Addresses & Preferences)
+ *     └── ShoppingProvider (Bag & Wishlist)
  */
 export default function App() {
   return (
     <BrowserRouter>
-      <ShoppingProvider>
-        <Routes>
-          <Route element={<CustomerLayout />}>
-            <Route index element={<AtelierDesign />} />
+      <AuthProvider>
+        <AccountProvider>
+          <ShoppingProvider>
+            <Routes>
+              <Route element={<CustomerLayout />}>
+                <Route index element={<AtelierDesign />} />
 
-            {/* Storefront */}
-            <Route path="/shop" element={<Shop />} />
-            <Route path="/category/:slug" element={<CatalogueListing variant="category" />} />
-            <Route path="/collection/:slug" element={<CatalogueListing variant="collection" />} />
-            <Route path="/search" element={<SearchResults />} />
-            <Route path="/product/:productId" element={<ProductDetail />} />
+                {/* Storefront */}
+                <Route path="/shop" element={<Shop />} />
+                <Route path="/category/:slug" element={<CatalogueListing variant="category" />} />
+                <Route path="/collection/:slug" element={<CatalogueListing variant="collection" />} />
+                <Route path="/search" element={<SearchResults />} />
+                <Route path="/product/:productId" element={<ProductDetail />} />
 
-            {/* Shopping */}
-            <Route path="/cart" element={<Cart />} />
-            <Route path="/checkout" element={<Checkout />} />
-            <Route path="/account/wishlist" element={<Wishlist />} />
-            <Route path="/wishlist" element={<Navigate to="/account/wishlist" replace />} />
+                {/* Shopping */}
+                <Route path="/cart" element={<Cart />} />
+                <Route path="/checkout" element={<Checkout />} />
+                <Route path="/account/wishlist" element={<Wishlist />} />
+                <Route path="/wishlist" element={<Navigate to="/account/wishlist" replace />} />
 
-            {/* Navigation manifest */}
-            {routeManifest
-              .filter((route) => !dedicatedPaths.has(route.path))
-              .map((route) => (
-                <Route
-                  key={route.path}
-                  path={route.path}
-                  element={
-                    hasNavigationScope(route.path) ? (
-                      <CatalogueListing variant="navigation" />
-                    ) : (
-                      <CategoryPage />
-                    )
-                  }
-                />
-              ))}
+                {/* Authentication */}
+                <Route path="/signin" element={<SignIn />} />
+                <Route path="/signup" element={<SignUp />} />
+                <Route path="/forgot-password" element={<ForgotPassword />} />
+                <Route path="/reset-password" element={<ResetPassword />} />
 
-            <Route path="*" element={<NotFound />} />
-          </Route>
-        </Routes>
-      </ShoppingProvider>
+                {/* Protected Customer Account */}
+                <Route element={<ProtectedRoute />}>
+                  <Route path="/account" element={<AccountDashboard />} />
+                  <Route path="/account/profile" element={<AccountProfile />} />
+                  <Route path="/account/addresses" element={<AccountAddresses />} />
+                  <Route path="/account/orders" element={<AccountOrders />} />
+                  <Route path="/account/settings" element={<AccountSettings />} />
+                  <Route path="/account/security" element={<AccountSecurity />} />
+                </Route>
+
+                {/* Navigation manifest interior routes */}
+                {routeManifest
+                  .filter((route) => !dedicatedPaths.has(route.path))
+                  .map((route) => (
+                    <Route
+                      key={route.path}
+                      path={route.path}
+                      element={
+                        hasNavigationScope(route.path) ? (
+                          <CatalogueListing variant="navigation" />
+                        ) : (
+                          <CategoryPage />
+                        )
+                      }
+                    />
+                  ))}
+
+                <Route path="*" element={<NotFound />} />
+              </Route>
+            </Routes>
+          </ShoppingProvider>
+        </AccountProvider>
+      </AuthProvider>
     </BrowserRouter>
   );
 }
