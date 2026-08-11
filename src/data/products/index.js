@@ -14,6 +14,15 @@
 
 import { imageRef } from "../pratikshyaImageManifest";
 import catalogue from "./catalogue";
+import {
+  getCareInstructions,
+  getDeliveryInfo,
+  getGalleryImageIds,
+  getProductDescription,
+  getProductDetails,
+  getProductSpecifications,
+  getReturnInfo,
+} from "./details";
 import { categoryLabels, getCategory } from "./taxonomy";
 
 /** `Sambalpuri Pato Silk Saree` → `sambalpuri-pato-silk-saree` */
@@ -69,19 +78,30 @@ const buildTags = (product) =>
 const availabilityLabels = {
   "in-stock": "In Stock",
   "low-stock": "Only a Few Left",
-  "made-to-order": "Made to Order",
+  "made-to-order": "Available for Order",
+  unavailable: "Currently Unavailable",
 };
 
 const normalise = (product, index) => {
   const slug = slugify(product.name);
+  const id = `pf-${String(index + 1).padStart(3, "0")}`;
+  const sku = product.sku ?? `PF-${product.category.slice(0, 4).toUpperCase()}-${String(index + 1).padStart(3, "0")}`;
   const discount = percentOff(product.price, product.originalPrice);
   const tags = buildTags(product);
   const badges = product.badges ?? [];
+  const galleryIds = [
+    product.image,
+    product.hoverImage,
+    ...(product.additionalImages ?? []),
+    ...getGalleryImageIds(product),
+  ].filter(Boolean);
+  const images = [...new Set(galleryIds)].slice(0, 5).map(imageRef);
 
   return {
     /* Identity */
-    id: `pf-${String(index + 1).padStart(3, "0")}`,
+    id,
     slug,
+    sku,
     name: product.name,
 
     /* Placement */
@@ -100,11 +120,13 @@ const normalise = (product, index) => {
     /* Imagery — manifest refs, never raw URLs. */
     image: imageRef(product.image),
     hoverImage: product.hoverImage ? imageRef(product.hoverImage) : undefined,
-    images: [product.image, product.hoverImage].filter(Boolean).map(imageRef),
+    images,
 
-    /* Attributes */
+    /* Attributes and variants */
     colors: product.colors ?? [],
+    unavailableColors: product.unavailableColors ?? [],
     sizes: product.sizes ?? [],
+    unavailableSizes: product.unavailableSizes ?? [],
     fabric: product.fabric,
     material: product.material,
     occasion: product.occasion ?? [],
@@ -117,7 +139,15 @@ const normalise = (product, index) => {
     availability: product.availability ?? "in-stock",
     availabilityLabel: availabilityLabels[product.availability ?? "in-stock"],
     stock: product.stock ?? 0,
-    inStock: product.availability !== "made-to-order",
+    inStock: product.availability !== "unavailable",
+
+    /* Product story — authored values win over category-aware defaults. */
+    description: getProductDescription(product),
+    details: getProductDetails(product),
+    careInstructions: getCareInstructions(product),
+    specifications: getProductSpecifications(product, sku),
+    deliveryInfo: getDeliveryInfo(product),
+    returnInfo: getReturnInfo(product),
 
     /* Merchandising */
     badges,
@@ -163,13 +193,9 @@ const byId = new Map(products.map((product) => [product.id, product]));
 
 export const getProductBySlug = (slug) => bySlug.get(slug) ?? null;
 export const getProductById = (id) => byId.get(id) ?? null;
+export const getProductByIdentifier = (value) => bySlug.get(value) ?? byId.get(value) ?? null;
 
-/**
- * Where a product card links to.
- *
- * The detail page belongs to a later phase; the route shape is settled now
- * so the card never has to change when that page arrives.
- */
+/** Canonical URL for the reusable product-detail route. */
 export const productHref = (product) => `/product/${product.slug}`;
 
 /* ------------------------------------------------------------------ */

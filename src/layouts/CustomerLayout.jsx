@@ -3,10 +3,10 @@ import { AnimatePresence } from "framer-motion";
 import { Outlet, useLocation } from "react-router-dom";
 import { LoadingState, PageTransition } from "../design-system";
 import ScrollToTop from "../components/shell/ScrollToTop";
+import { useCart } from "../context/CartContext";
 import { useWishlist } from "../context/WishlistContext";
 import SiteFooter from "../components/shell/SiteFooter";
 import SiteHeader from "../components/shell/SiteHeader";
-import { products } from "../data/pratikshyaMockData";
 
 /**
  * The customer-facing application shell.
@@ -16,17 +16,16 @@ import { products } from "../data/pratikshyaMockData";
  * pathname inside an `AnimatePresence`, so one page fades out before the
  * next fades in.
  *
- * The wishlist count is real — it reads the session wishlist the storefront
- * writes to. The bag is still a placeholder; the cart belongs to a later
- * phase and the shell only needs somewhere for that number to live.
+ * Wishlist and bag counts read the lightweight session state written by the
+ * storefront and product detail. Full wishlist and cart destinations remain
+ * intentionally deferred to their later phases.
  */
-
-const placeholderCart = Math.min(products.length, 2);
 
 export default function CustomerLayout() {
   const { pathname } = useLocation();
   const wishlist = useWishlist();
-  const counts = { wishlist: wishlist.count, cart: placeholderCart };
+  const cart = useCart();
+  const counts = { wishlist: wishlist.count, cart: cart.count };
 
   return (
     <div className="min-h-screen flex flex-col bg-canvas text-ink font-display selection:bg-accent selection:text-white">
@@ -43,7 +42,7 @@ export default function CustomerLayout() {
         </AnimatePresence>
       </div>
 
-      <SiteFooter />
+      <SiteFooter className={pathname.startsWith("/product/") ? "pb-36 md:pb-16" : ""} />
     </div>
   );
 }

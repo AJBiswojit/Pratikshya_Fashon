@@ -17,6 +17,7 @@
  *   hoverImage    manifest id revealed on hover (omit to stay still)
  *   colors        colourways stocked, from `taxonomy.colorSwatches`
  *   sizes         sizes stocked, from `taxonomy.sizes`
+ *   unavailableColors / unavailableSizes  optional mock variant exclusions
  *   fabric        primary cloth
  *   material      primary craft or finish
  *   occasion      every occasion the piece suits
@@ -100,7 +101,7 @@ const catalogue = [
   /* ---------------------------------------------------------------- */
   /* Bangles — 8                                                       */
   /* ---------------------------------------------------------------- */
-  { name: "Bridal Kundan Bangle Set of Twelve", category: "bangles", subcategory: "Bridal Bangles", gender: "Women", collection: "Bridal Trousseau", price: 8400, originalPrice: 10500, image: "bridal-bangles", hoverImage: "bridal-jewellery", colors: ["Gold", "Red"], sizes: ["2.4", "2.6", "2.8", "2.10"], fabric: "Brass Alloy", material: "Kundan", occasion: ["Bridal", "Wedding"], rating: 4.7, reviewCount: 168, availability: "in-stock", stock: 26, badges: ["Bridal"], isBestseller: true },
+  { name: "Bridal Kundan Bangle Set of Twelve", category: "bangles", subcategory: "Bridal Bangles", gender: "Women", collection: "Bridal Trousseau", price: 8400, originalPrice: 10500, image: "bridal-bangles", hoverImage: "bridal-jewellery", colors: ["Gold", "Red"], unavailableColors: ["Red"], sizes: ["2.4", "2.6", "2.8", "2.10"], unavailableSizes: ["2.10"], fabric: "Brass Alloy", material: "Kundan", occasion: ["Bridal", "Wedding"], rating: 4.7, reviewCount: 168, availability: "in-stock", stock: 26, badges: ["Bridal"], isBestseller: true },
   { name: "Polki Chooda Set in Ivory & Red", category: "bangles", subcategory: "Bridal Bangles", gender: "Women", collection: "Bridal Trousseau", price: 12600, image: "bridal-bangles", hoverImage: "women-bridal-wear", colors: ["Ivory", "Red"], sizes: ["2.4", "2.6", "2.8"], fabric: "Brass Alloy", material: "Polki", occasion: ["Bridal", "Wedding"], rating: 4.8, reviewCount: 94, availability: "low-stock", stock: 4, badges: [], isFeatured: true },
   { name: "Gold-finish Meenakari Bangles", category: "bangles", subcategory: "Gold-finish Bangles", gender: "Women", collection: "Festive Edit", price: 3200, originalPrice: 4100, image: "bridal-bangles", hoverImage: "bridal-jewellery", colors: ["Gold", "Emerald"], sizes: ["2.4", "2.6", "2.8", "2.10"], fabric: "Brass Alloy", material: "Gold Plated", occasion: ["Festive", "Puja", "Gifting"], rating: 4.5, reviewCount: 212, availability: "in-stock", stock: 48, badges: [] },
   { name: "Gold-finish Textured Bangle Pair", category: "bangles", subcategory: "Gold-finish Bangles", gender: "Women", collection: "Everyday Atelier", price: 1650, image: "bridal-bangles", hoverImage: "fabric-silk", colors: ["Gold"], sizes: ["2.4", "2.6", "2.8"], fabric: "Brass Alloy", material: "Gold Plated", occasion: ["Everyday", "Office", "Gifting"], rating: 4.3, reviewCount: 289, availability: "in-stock", stock: 72, badges: [] },

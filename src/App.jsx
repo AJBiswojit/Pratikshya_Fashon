@@ -1,15 +1,18 @@
+import { lazy } from "react";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { routeManifest } from "./config/navigationConfig";
 import { hasNavigationScope } from "./data/products/taxonomy";
+import { CartProvider } from "./context/CartContext";
 import { WishlistProvider } from "./context/WishlistContext";
 import CustomerLayout from "./layouts/CustomerLayout";
 import AtelierDesign from "./pages/AtelierDesign";
 import CatalogueListing from "./pages/CatalogueListing";
 import CategoryPage from "./pages/CategoryPage";
 import NotFound from "./pages/NotFound";
-import ProductPlaceholder from "./pages/ProductPlaceholder";
 import SearchResults from "./pages/SearchResults";
 import Shop from "./pages/Shop";
+
+const ProductDetail = lazy(() => import("./pages/ProductDetail"));
 
 /**
  * Routing.
@@ -35,37 +38,39 @@ export default function App() {
   return (
     <BrowserRouter>
       <WishlistProvider>
-        <Routes>
-          <Route element={<CustomerLayout />}>
-            <Route index element={<AtelierDesign />} />
+        <CartProvider>
+          <Routes>
+            <Route element={<CustomerLayout />}>
+              <Route index element={<AtelierDesign />} />
 
-            {/* Storefront */}
-            <Route path="/shop" element={<Shop />} />
-            <Route path="/category/:slug" element={<CatalogueListing variant="category" />} />
-            <Route path="/collection/:slug" element={<CatalogueListing variant="collection" />} />
-            <Route path="/search" element={<SearchResults />} />
-            <Route path="/product/:slug" element={<ProductPlaceholder />} />
+              {/* Storefront */}
+              <Route path="/shop" element={<Shop />} />
+              <Route path="/category/:slug" element={<CatalogueListing variant="category" />} />
+              <Route path="/collection/:slug" element={<CatalogueListing variant="collection" />} />
+              <Route path="/search" element={<SearchResults />} />
+              <Route path="/product/:productId" element={<ProductDetail />} />
 
-            {/* Navigation manifest */}
-            {routeManifest
-              .filter((route) => route.path !== "/search")
-              .map((route) => (
-                <Route
-                  key={route.path}
-                  path={route.path}
-                  element={
-                    hasNavigationScope(route.path) ? (
-                      <CatalogueListing variant="navigation" />
-                    ) : (
-                      <CategoryPage />
-                    )
-                  }
-                />
-              ))}
+              {/* Navigation manifest */}
+              {routeManifest
+                .filter((route) => route.path !== "/search")
+                .map((route) => (
+                  <Route
+                    key={route.path}
+                    path={route.path}
+                    element={
+                      hasNavigationScope(route.path) ? (
+                        <CatalogueListing variant="navigation" />
+                      ) : (
+                        <CategoryPage />
+                      )
+                    }
+                  />
+                ))}
 
-            <Route path="*" element={<NotFound />} />
-          </Route>
-        </Routes>
+              <Route path="*" element={<NotFound />} />
+            </Route>
+          </Routes>
+        </CartProvider>
       </WishlistProvider>
     </BrowserRouter>
   );

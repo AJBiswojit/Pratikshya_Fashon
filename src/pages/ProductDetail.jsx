@@ -1,0 +1,156 @@
+import { motion } from "framer-motion";
+import { Link, useParams } from "react-router-dom";
+import { useEffect, useMemo } from "react";
+import {
+  AtelierButton,
+  AtelierSection,
+  Breadcrumb,
+  EmptyState,
+  EditorialHeading,
+  MediaFrame,
+  PageHeader,
+  useReveal,
+} from "../design-system";
+import ProductDetailsAccordion from "../components/product/ProductDetailsAccordion";
+import ProductGallery from "../components/product/ProductGallery";
+import ProductPurchasePanel from "../components/product/ProductPurchasePanel";
+import ProductRecommendations from "../components/product/ProductRecommendations";
+import { getProductByIdentifier } from "../data/products";
+import { getProductRecommendations } from "../data/products/recommendations";
+import { imageRef } from "../data/pratikshyaImageManifest";
+
+function ProductNotFound() {
+  return (
+    <>
+      <PageHeader
+        eyebrow="The Collection"
+        title="This piece is no longer in the collection."
+        breadcrumb={[{ label: "Shop", to: "/shop" }, { label: "Piece Unavailable" }]}
+        size="subsection"
+      />
+      <AtelierSection rhythm="none" width="wide" className="pb-24 md:pb-36">
+        <div className="grid overflow-hidden bg-surface md:grid-cols-2">
+          <MediaFrame
+            image={imageRef("saree-banarasi")}
+            alt="PRATIKSHYA FASHON heritage textile detail"
+            aspect="portrait"
+            overlay="imageBottom"
+            className="min-h-72 md:min-h-[32rem]"
+          />
+          <EmptyState
+            eyebrow="A Changing Atelier"
+            title="Another heirloom is waiting."
+            description="Our edits are made in considered numbers. Return to the house collection, or begin with the sarees currently on the rail."
+            className="px-7"
+            actions={
+              <>
+                <AtelierButton as={Link} to="/shop" variant="primary" size="md">Return to Shop</AtelierButton>
+                <AtelierButton as={Link} to="/category/sarees" variant="outline" size="md">Explore Sarees</AtelierButton>
+              </>
+            }
+          />
+        </div>
+      </AtelierSection>
+    </>
+  );
+}
+
+export default function ProductDetail() {
+  const { productId } = useParams();
+  const product = getProductByIdentifier(productId);
+  const reveal = useReveal();
+  const recommendations = useMemo(
+    () => (product ? getProductRecommendations(product) : null),
+    [product]
+  );
+
+  useEffect(() => {
+    if (!product) return undefined;
+    const previousTitle = document.title;
+    document.title = `${product.name} — PRATIKSHYA FASHON`;
+    return () => {
+      document.title = previousTitle;
+    };
+  }, [product]);
+
+  if (!product) return <ProductNotFound />;
+
+  const categoryPath = `/category/${product.category}`;
+  const subcategoryPath = `${categoryPath}?subcategory=${encodeURIComponent(product.subcategory)}`;
+  const breadcrumbs = [
+    { label: "Shop", to: "/shop" },
+    { label: product.categoryLabel, to: categoryPath },
+    { label: product.subcategory, to: subcategoryPath },
+    { label: product.name },
+  ];
+
+  return (
+    <main className="pb-20 md:pb-0">
+      <AtelierSection rhythm="none" width="wide" className="pb-16 pt-28 sm:pt-32 md:pb-24">
+        <Breadcrumb items={breadcrumbs} separator="/" className="mb-8 md:mb-10" />
+
+        <div className="grid gap-11 md:grid-cols-2 md:gap-7 lg:grid-cols-12 lg:gap-12 xl:gap-16">
+          <div className="min-w-0 lg:col-span-7">
+            <ProductGallery product={product} />
+          </div>
+          <div className="min-w-0 lg:col-span-5">
+            <ProductPurchasePanel product={product} />
+          </div>
+        </div>
+      </AtelierSection>
+
+      <AtelierSection id="product-details" tone="fade" rhythm="default" width="wide">
+        <div className="grid gap-12 md:grid-cols-12 md:gap-10 lg:gap-16">
+          <motion.div {...reveal} className="md:col-span-4">
+            <EditorialHeading
+              as="h2"
+              size="subsection"
+              eyebrow="About the Piece"
+              description={`From ${product.collection}, a study in ${product.fabric.toLowerCase()} and ${product.material.toLowerCase()}.`}
+              descriptionClassName="max-w-sm font-display text-xl leading-relaxed text-graphite"
+              rule
+              spacing={{ eyebrow: "mb-4", title: "mb-5", rule: "mb-6" }}
+            >
+              The story is in the <span className="italic text-accent">making.</span>
+            </EditorialHeading>
+            <div className="mt-10 border-l border-gold pl-5">
+              <p className="font-display text-2xl text-ink">{product.rating.toFixed(1)}</p>
+              <p className="mt-1 font-ui text-[9px] uppercase tracking-[.17em] text-taupe">
+                From {product.reviewCount.toLocaleString("en-IN")} considered reviews
+              </p>
+            </div>
+          </motion.div>
+
+          <motion.div {...reveal} className="md:col-span-7 md:col-start-6">
+            <ProductDetailsAccordion product={product} />
+          </motion.div>
+        </div>
+      </AtelierSection>
+
+      <ProductRecommendations
+        id="related-products"
+        eyebrow="In the Same Story"
+        title={<>Related <span className="italic text-accent">pieces</span></>}
+        description="Selected through shared cloth, craft, collection and occasion — never at random."
+        products={recommendations.related}
+      />
+
+      <ProductRecommendations
+        id="complete-the-look"
+        eyebrow="The Styling Edit"
+        title={<>Complete the <span className="italic text-accent">look</span></>}
+        description="A composed edit of finishing pieces chosen to sit naturally beside this silhouette."
+        products={recommendations.completeTheLook}
+        tone="fade"
+      />
+
+      <ProductRecommendations
+        id="recommended-products"
+        eyebrow="More to Discover"
+        title={<>You may also <span className="italic text-accent">like</span></>}
+        description="Similar in occasion, palette and price — with no repetition from the edits above."
+        products={recommendations.recommended}
+      />
+    </main>
+  );
+}

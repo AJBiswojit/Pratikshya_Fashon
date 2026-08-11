@@ -1,21 +1,35 @@
 /**
  * PRATIKSHYA FASHON — Wishlist state.
  *
- * Deliberately minimal: a set of product ids held in memory for the session,
- * so the heart on a product card can be filled and the header count is real
- * rather than a placeholder.
- *
- * There is no persistence, no server and no cart here — those belong to
- * later phases. This exists only so the storefront's save control is
- * genuinely interactive instead of decorative.
+ * Deliberately minimal: a set of product ids persisted in sessionStorage,
+ * so save controls and the shell count stay in sync for the browser session.
+ * There is intentionally no account or server persistence.
  */
 
-import { createContext, useCallback, useContext, useMemo, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 
 const WishlistContext = createContext(null);
+const WISHLIST_KEY = "pratikshya-phase5-wishlist";
+
+const readWishlist = () => {
+  if (typeof window === "undefined") return new Set();
+  try {
+    return new Set(JSON.parse(window.sessionStorage.getItem(WISHLIST_KEY) ?? "[]"));
+  } catch {
+    return new Set();
+  }
+};
 
 export function WishlistProvider({ children }) {
-  const [saved, setSaved] = useState(() => new Set());
+  const [saved, setSaved] = useState(readWishlist);
+
+  useEffect(() => {
+    try {
+      window.sessionStorage.setItem(WISHLIST_KEY, JSON.stringify([...saved]));
+    } catch {
+      // The wishlist remains fully interactive when storage is unavailable.
+    }
+  }, [saved]);
 
   const toggle = useCallback((product) => {
     const id = typeof product === "string" ? product : product?.id;
