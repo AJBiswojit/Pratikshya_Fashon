@@ -29,6 +29,8 @@ import {
   AI_SHOPPING_QUICK_PROMPTS,
 } from "../../services/ai/shopping/aiShoppingMockData";
 import { PRODUCTS_CHANGED_EVENT } from "../../services/catalogRepository";
+import { MEDIA_CHANGED_EVENT } from "../../services/media/mediaRepository";
+import { decorateProductsWithMedia } from "../../services/media/mediaResolver";
 import { TAXONOMY_CHANGED_EVENT } from "../../services/taxonomyRepository";
 import { getStylePreferences } from "../../services/customer/stylePreferences";
 import {
@@ -111,9 +113,11 @@ export default function AiShoppingAssistant() {
     const sync = () => setCatalogueRevision((value) => value + 1);
     window.addEventListener(PRODUCTS_CHANGED_EVENT, sync);
     window.addEventListener(TAXONOMY_CHANGED_EVENT, sync);
+    window.addEventListener(MEDIA_CHANGED_EVENT, sync);
     return () => {
       window.removeEventListener(PRODUCTS_CHANGED_EVENT, sync);
       window.removeEventListener(TAXONOMY_CHANGED_EVENT, sync);
+      window.removeEventListener(MEDIA_CHANGED_EVENT, sync);
     };
   }, []);
 

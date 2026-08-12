@@ -20,7 +20,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ArrowLeft, ArrowRight, Pause, Play } from "lucide-react";
 import PratikshyaImage from "../PratikshyaImage";
 import { imageRef } from "../../data/pratikshyaImageManifest";
-import { resolvePlacementImage } from "../../services/media/marketingMediaSource";
+import { resolveHeroSlideImage } from "../../services/media/mediaResolver";
 import { AtelierButton } from "../../design-system";
 import { cn } from "../../utils/cn";
 
@@ -33,58 +33,61 @@ const CROSSFADE_MS = 900;
  * that an ACTIVE marketing record may override for the lead plate. CTAs
  * point at real catalogue/collection routes defined in navigationConfig.
  */
-const buildSlides = (heroMedia) => [
-  {
-    id: "festive-edit",
-    eyebrow: "New Collection",
-    title: "The Festive Edit",
-    body: "Timeless silhouettes crafted for the celebrations that matter most.",
-    cta: { label: "Explore Edit", href: "/collections/festive-edit" },
-    image: resolvePlacementImage(heroMedia, imageRef("editorial-hero")),
-    objectPosition: "58% center",
-    tone: "light",
-  },
-  {
-    id: "bridal",
-    eyebrow: "Bridal Couture",
-    title: "Made for Your Moment",
-    body: "Statement craftsmanship and heirloom detail for the day you'll always remember.",
-    cta: { label: "Shop Lehengas", href: "/women/bridal-lehengas" },
-    image: imageRef("lehenga-bridal"),
-    objectPosition: "50% center",
-    tone: "dark",
-  },
-  {
-    id: "heritage-saree",
-    eyebrow: "Heritage Weaves",
-    title: "The Art of the Saree",
-    body: "Banarasi, Pato and silk — traditional craft, reimagined for today.",
-    cta: { label: "Shop Sarees", href: "/women/silk-sarees" },
-    image: imageRef("saree-ivory-silk"),
-    objectPosition: "55% center",
-    tone: "light",
-  },
-  {
-    id: "couple",
-    eyebrow: "The Celebration Edit",
-    title: "Dressed, Together",
-    body: "Coordinated festive wardrobes for weddings, receptions and every gathering around them.",
-    cta: { label: "Shop Bridal", href: "/bridal" },
-    image: imageRef("commerce-hero"),
-    objectPosition: "50% center",
-    tone: "dark",
-  },
-  {
-    id: "new-arrivals",
-    eyebrow: "New Arrivals",
-    title: "Your Next Signature Look",
-    body: "The latest pieces to arrive from the PRATIKSHYA atelier.",
-    cta: { label: "Discover Now", href: "/collections/new-arrivals" },
-    image: imageRef("lehenga-wine"),
-    objectPosition: "50% center",
-    tone: "dark",
-  },
-];
+const buildSlides = (heroMedia) => {
+  const usedIds = new Set();
+  return [
+    {
+      id: "festive-edit",
+      eyebrow: "New Collection",
+      title: "The Festive Edit",
+      body: "Timeless silhouettes crafted for the celebrations that matter most.",
+      cta: { label: "Explore Edit", href: "/collections/festive-edit" },
+      image: resolveHeroSlideImage("festive", { heroMedia, lead: true, usedIds }) || imageRef("editorial-hero"),
+      objectPosition: "58% center",
+      tone: "light",
+    },
+    {
+      id: "bridal",
+      eyebrow: "Bridal Couture",
+      title: "Made for Your Moment",
+      body: "Statement craftsmanship and heirloom detail for the day you'll always remember.",
+      cta: { label: "Shop Lehengas", href: "/women/bridal-lehengas" },
+      image: resolveHeroSlideImage("bridal", { usedIds }) || imageRef("lehenga-bridal"),
+      objectPosition: "50% center",
+      tone: "dark",
+    },
+    {
+      id: "heritage-saree",
+      eyebrow: "Heritage Weaves",
+      title: "The Art of the Saree",
+      body: "Banarasi, Pato and silk — traditional craft, reimagined for today.",
+      cta: { label: "Shop Sarees", href: "/women/silk-sarees" },
+      image: resolveHeroSlideImage("heritage", { usedIds }) || imageRef("saree-ivory-silk"),
+      objectPosition: "55% center",
+      tone: "light",
+    },
+    {
+      id: "couple",
+      eyebrow: "The Celebration Edit",
+      title: "Dressed, Together",
+      body: "Coordinated festive wardrobes for weddings, receptions and every gathering around them.",
+      cta: { label: "Shop Bridal", href: "/bridal" },
+      image: resolveHeroSlideImage("celebration", { usedIds }) || imageRef("commerce-hero"),
+      objectPosition: "50% center",
+      tone: "dark",
+    },
+    {
+      id: "new-arrivals",
+      eyebrow: "New Arrivals",
+      title: "Your Next Signature Look",
+      body: "The latest pieces to arrive from the PRATIKSHYA atelier.",
+      cta: { label: "Discover Now", href: "/collections/new-arrivals" },
+      image: resolveHeroSlideImage("arrivals", { usedIds }) || imageRef("lehenga-wine"),
+      objectPosition: "50% center",
+      tone: "dark",
+    },
+  ];
+};
 
 const usePrefersReducedMotion = () => {
   const [reduced, setReduced] = useState(false);

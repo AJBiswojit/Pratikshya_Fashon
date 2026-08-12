@@ -11,10 +11,10 @@ import {
   gap,
   useReveal,
 } from "../../design-system";
-import { imageRef } from "../../data/pratikshyaImageManifest";
 import { getLiveStorefrontProducts } from "../../data/products";
 import { navigationScopes } from "../../data/products/taxonomy";
-import { getById as getMediaById } from "../../services/media/mediaRepository";
+import { resolveCategoryCover } from "../../services/media/mediaResolver";
+import { getProductCoverImage } from "../../services/media/productMediaSource";
 import taxonomyRepository from "../../services/taxonomyRepository";
 import { cn } from "../../utils/cn";
 
@@ -69,26 +69,15 @@ const buildSubcategoryRoutes = () => {
 
 const SUBCATEGORY_ROUTES = buildSubcategoryRoutes();
 
-/** Managed ACTIVE banner beats the category's own artwork. */
-const resolveCategoryImage = (category) => {
-  const media = category.bannerMediaId ? getMediaById(category.bannerMediaId) : null;
-  if (media?.status === "ACTIVE" && media.url) {
-    return {
-      id: media.id,
-      src: media.url,
-      alt: media.alt || category.name,
-      category: media.tags?.[0] ?? "default",
-    };
-  }
-  return imageRef(category.image);
-};
+/** Managed ACTIVE banner, then category library media, then authored artwork. */
+const resolveCategoryImage = (category, usedIds) => resolveCategoryCover(category, usedIds);
 
-const categoryCard = (category) => ({
+const categoryCard = (category, usedIds) => ({
   key: `category-${category.id}`,
   to: `/category/${category.slug}`,
   name: category.name,
   eyebrow: category.eyebrow || "",
-  image: resolveCategoryImage(category),
+  image: resolveCategoryImage(category, usedIds),
   alt: `${category.name} collection at PRATIKSHYA FASHON`,
 });
 
@@ -97,12 +86,13 @@ const subcategoryCard = (category, subcategory, route, product) => ({
   to: route,
   name: subcategory.name,
   eyebrow: "",
-  image: product.image,
+  image: getProductCoverImage(product) || product.image,
   alt: `${subcategory.name} collection at PRATIKSHYA FASHON`,
 });
 
 export default function ShopByCategory() {
   const reveal = useReveal();
+  const usedIds = new Set();
 
   const active = taxonomyRepository.activeCategories();
   const activeById = new Map(active.map((category) => [category.id, category]));
@@ -139,10 +129,10 @@ export default function ShopByCategory() {
         /* A broad bucket keeps its own card only when it has no routed
            subcategories to open into. */
         if (subcards.length) cards.push(...subcards);
-        else cards.push(categoryCard(category));
+        else cards.push(categoryCard(category, usedIds));
       });
     } else {
-      categories.forEach((category) => cards.push(categoryCard(category)));
+      categories.forEach((category) => cards.push(categoryCard(category, usedIds)));
     }
 
     return { ...group, cards };

@@ -18,7 +18,7 @@ const resolveImage = (image, category) => {
   };
 };
 
-function SafeImage({ image, category, alt, className, loading = "lazy", fetchPriority = "auto", decoding = "async", sizes, objectPosition }) {
+function SafeImage({ image, category, alt, className, loading = "lazy", fetchPriority = "auto", decoding = "async", sizes, srcSet, width, height, objectPosition }) {
   const resolved = useMemo(() => resolveImage(image, category), [image, category]);
   const [currentSrc, setCurrentSrc] = useState(resolved.src || categoryFallbacks.default);
 
@@ -40,6 +40,9 @@ function SafeImage({ image, category, alt, className, loading = "lazy", fetchPri
       decoding={decoding}
       fetchPriority={fetchPriority}
       sizes={sizes}
+      srcSet={srcSet || resolved.srcSet}
+      width={width || resolved.width}
+      height={height || resolved.height}
       onError={handleError}
       style={{ objectPosition: objectPosition || resolved.objectPosition || "center" }}
     />

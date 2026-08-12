@@ -197,6 +197,98 @@ export const defaultRoleForType = (type) =>
     : PRODUCT_MEDIA_ROLES.GALLERY;
 
 /* ------------------------------------------------------------------ */
+/* Usage roles (Phase 21.4 — distribution, not product-page order)     */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Where an asset may appear across the house. Orthogonal to
+ * `PRODUCT_MEDIA_ROLES`: a plate can be a product COVER and also a
+ * CATEGORY_COVER / AI_SHOPPING image. The resolver reads these; the
+ * product gallery still reads `role`.
+ */
+export const USAGE_ROLES = {
+  HERO: "HERO",
+  CATEGORY_COVER: "CATEGORY_COVER",
+  PRODUCT_PRIMARY: "PRODUCT_PRIMARY",
+  PRODUCT_GALLERY: "PRODUCT_GALLERY",
+  PRODUCT_THUMBNAIL: "PRODUCT_THUMBNAIL",
+  EDITORIAL: "EDITORIAL",
+  BANNER: "BANNER",
+  NEW_ARRIVAL: "NEW_ARRIVAL",
+  SALE: "SALE",
+  LOOKBOOK: "LOOKBOOK",
+  COLLECTION_COVER: "COLLECTION_COVER",
+  AI_SHOPPING: "AI_SHOPPING",
+  AI_MIRROR: "AI_MIRROR",
+};
+
+export const USAGE_ROLE_OPTIONS = [
+  { id: USAGE_ROLES.HERO, label: "Hero" },
+  { id: USAGE_ROLES.CATEGORY_COVER, label: "Category cover" },
+  { id: USAGE_ROLES.PRODUCT_PRIMARY, label: "Product primary" },
+  { id: USAGE_ROLES.PRODUCT_GALLERY, label: "Product gallery" },
+  { id: USAGE_ROLES.PRODUCT_THUMBNAIL, label: "Product thumbnail" },
+  { id: USAGE_ROLES.EDITORIAL, label: "Editorial" },
+  { id: USAGE_ROLES.BANNER, label: "Banner" },
+  { id: USAGE_ROLES.NEW_ARRIVAL, label: "New arrival" },
+  { id: USAGE_ROLES.SALE, label: "Sale" },
+  { id: USAGE_ROLES.LOOKBOOK, label: "Lookbook" },
+  { id: USAGE_ROLES.COLLECTION_COVER, label: "Collection cover" },
+  { id: USAGE_ROLES.AI_SHOPPING, label: "AI Shopping" },
+  { id: USAGE_ROLES.AI_MIRROR, label: "AI Mirror" },
+];
+
+export const getUsageRoleLabel = (roleId) =>
+  USAGE_ROLE_OPTIONS.find((role) => role.id === roleId)?.label ?? roleId;
+
+/** Apparel categories the AI Mirror may receive. Jewellery and innerwear never qualify. */
+export const AI_MIRROR_ELIGIBLE_CATEGORIES = [
+  "sarees",
+  "lehengas",
+  "bridal-couture",
+  "kurtis-and-suits",
+  "menswear",
+  "kidswear",
+];
+
+export const AI_MIRROR_EXCLUDED_CATEGORIES = [
+  "jewellery",
+  "bangles",
+  "dupattas",
+  "innerwear",
+];
+
+/* ------------------------------------------------------------------ */
+/* Ingestion mapping / duplicate vocabulary (Phase 21.4)               */
+/* ------------------------------------------------------------------ */
+
+export const MAPPING_STATUS = {
+  MAPPED: "MAPPED",
+  UNMAPPED: "UNMAPPED",
+  NEEDS_REVIEW: "NEEDS_REVIEW",
+};
+
+export const MAPPING_STATUS_OPTIONS = [
+  { id: MAPPING_STATUS.MAPPED, label: "Mapped", tone: "ink" },
+  { id: MAPPING_STATUS.UNMAPPED, label: "Unmapped", tone: "alert" },
+  { id: MAPPING_STATUS.NEEDS_REVIEW, label: "Needs review", tone: "brass" },
+];
+
+export const DUPLICATE_STATUS = {
+  UNIQUE: "UNIQUE",
+  DUPLICATE: "DUPLICATE",
+  POSSIBLE_DUPLICATE: "POSSIBLE_DUPLICATE",
+};
+
+export const DUPLICATE_STATUS_OPTIONS = [
+  { id: DUPLICATE_STATUS.UNIQUE, label: "Unique" },
+  { id: DUPLICATE_STATUS.DUPLICATE, label: "Duplicate" },
+  { id: DUPLICATE_STATUS.POSSIBLE_DUPLICATE, label: "Possible duplicate" },
+];
+
+export const isValidUsageRole = (role) => Object.values(USAGE_ROLES).includes(role);
+
+/* ------------------------------------------------------------------ */
 /* Marketing placements                                                */
 /* ------------------------------------------------------------------ */
 
@@ -254,55 +346,55 @@ export const MARKETING_PLACEMENT_OPTIONS = [
     id: MARKETING_PLACEMENTS.WOMEN_SECTION,
     label: "Women's section",
     surface: "Landing page — women's edit tiles",
-    live: false,
+    live: true,
   },
   {
     id: MARKETING_PLACEMENTS.BRIDAL_SECTION,
     label: "Bridal section",
     surface: "Bridal couture category",
-    live: false,
+    live: true,
   },
   {
     id: MARKETING_PLACEMENTS.GROOM_SECTION,
     label: "Groom section",
     surface: "Menswear & groom category",
-    live: false,
+    live: true,
   },
   {
     id: MARKETING_PLACEMENTS.KIDS_SECTION,
     label: "Kids section",
     surface: "Kidswear category",
-    live: false,
+    live: true,
   },
   {
     id: MARKETING_PLACEMENTS.BANGLES_SECTION,
     label: "Bangles section",
     surface: "Bangles category",
-    live: false,
+    live: true,
   },
   {
     id: MARKETING_PLACEMENTS.JEWELLERY_SECTION,
     label: "Jewellery section",
     surface: "Jewellery category",
-    live: false,
+    live: true,
   },
   {
     id: MARKETING_PLACEMENTS.NEW_ARRIVALS,
     label: "New arrivals",
     surface: "New arrivals edit",
-    live: false,
+    live: true,
   },
   {
     id: MARKETING_PLACEMENTS.EDITORIAL,
     label: "Editorial",
     surface: "Editorial storytelling plates",
-    live: false,
+    live: true,
   },
   {
     id: MARKETING_PLACEMENTS.PROMOTION,
     label: "Promotion",
     surface: "Seasonal promotion artwork",
-    live: false,
+    live: true,
   },
 ];
 

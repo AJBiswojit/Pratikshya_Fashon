@@ -103,6 +103,11 @@ export const useProductMediaSummaries = (products) => {
 /** Library-wide counts for the dashboard and library tiles. */
 export const useMediaMetrics = () => useMediaSelector(() => mediaRepository.getMediaMetrics(), []);
 
+/** Ingested / unmapped / duplicate slices for the admin library. */
+export const useUnmappedMedia = () => useMediaSelector(() => mediaRepository.getUnmappedMedia(), []);
+export const useDuplicateMedia = () => useMediaSelector(() => mediaRepository.getDuplicateMedia(), []);
+export const useNeedsReviewMedia = () => useMediaSelector(() => mediaRepository.getNeedsReviewMedia(), []);
+
 /** The slides a product page should render, published media first. */
 export const useProductSlides = (product) =>
   useMediaSelector(() => getProductSlides(product), [product?.id]);

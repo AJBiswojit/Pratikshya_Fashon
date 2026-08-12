@@ -5,6 +5,7 @@ import { imageRef } from "../../data/pratikshyaImageManifest";
 import { MARKETING_PLACEMENTS } from "../../config/mediaTypes";
 import { useActivePlacementMedia } from "../../hooks/useMedia";
 import { resolvePlacementImage } from "../../services/media/marketingMediaSource";
+import { resolveEditorialFrame } from "../../services/media/mediaResolver";
 import { AtelierButton, AtelierSection, MediaFrame, body, eyebrow, heading } from "../../design-system";
 import { cn } from "../../utils/cn";
 
@@ -52,10 +53,18 @@ export default function CelebrationEdit() {
   const [activeId, setActiveId] = useState("bridal");
   const festiveMedia = useActivePlacementMedia(MARKETING_PLACEMENTS.FESTIVE_SECTION);
   const activeEdit = edits.find((edit) => edit.id === activeId) ?? edits[0];
-  const resolveImage = (edit) =>
-    edit.id === "festive"
-      ? resolvePlacementImage(festiveMedia, imageRef(edit.image))
-      : imageRef(edit.image);
+  const usedIds = new Set();
+  const themeFor = (id) => ({ bridal: "bridal", groom: "celebration", festive: "festive", heritage: "heritage" }[id] || "festive");
+  const images = Object.fromEntries(
+    edits.map((edit) => {
+      const resolved =
+        edit.id === "festive"
+          ? resolvePlacementImage(festiveMedia, resolveEditorialFrame("festive", usedIds) || imageRef(edit.image))
+          : resolveEditorialFrame(themeFor(edit.id), usedIds) || imageRef(edit.image);
+      return [edit.id, resolved];
+    })
+  );
+  const resolveImage = (edit) => images[edit.id] || imageRef(edit.image);
 
   return (
     <AtelierSection id="bridal" rhythm="none" width="wide" className="py-20 md:py-28">

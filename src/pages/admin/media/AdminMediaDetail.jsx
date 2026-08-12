@@ -163,6 +163,16 @@ export default function AdminMediaDetail() {
                 ["Sort order", media.sortOrder],
                 ["Created", formatEmployeeDateTime(media.createdAt)],
                 ["Updated", formatEmployeeDateTime(media.updatedAt)],
+                ...(media.originalPath ? [["Original path", media.originalPath]] : []),
+                ...(media.optimizedPath ? [["Optimized path", media.optimizedPath]] : []),
+                ...(media.checksum ? [["Checksum", `${String(media.checksum).slice(0, 16)}…`]] : []),
+                ...(media.width && media.height ? [["Dimensions", `${media.width} × ${media.height}`]] : []),
+                ...(media.mappingStatus ? [["Mapping", media.mappingStatus]] : []),
+                ...(media.categoryId ? [["Category", media.categoryId]] : []),
+                ...(media.subcategoryId ? [["Subcategory", media.subcategoryId]] : []),
+                ...(media.collectionId ? [["Collection", media.collectionId]] : []),
+                ...(media.duplicateStatus ? [["Duplicate", media.duplicateStatus]] : []),
+                ...((media.usageRoles || []).length ? [["Usage roles", media.usageRoles.join(", ")]] : []),
               ].map(([term, value]) => (
                 <div key={term} className="flex items-start justify-between gap-3">
                   <dt className="text-taupe">{term}</dt>

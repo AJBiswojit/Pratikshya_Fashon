@@ -10,9 +10,8 @@ import {
   eyebrow,
   imageTreatment,
 } from "../../design-system";
-import { imageRef } from "../../data/pratikshyaImageManifest";
 import { useActivePlacementMedia } from "../../hooks/useMedia";
-import { resolvePlacementImage } from "../../services/media/marketingMediaSource";
+import { resolveSaleBackdrop } from "../../services/media/mediaResolver";
 import { MARKETING_PLACEMENTS } from "../../config/mediaTypes";
 import offerRepository from "../../services/offers/offerRepository";
 import taxonomyRepository from "../../services/taxonomyRepository";
@@ -74,7 +73,7 @@ export default function SaleBanner() {
       backdrop={
         <>
           <PratikshyaImage
-            image={resolvePlacementImage(festiveMedia, imageRef("lehenga-party"))}
+            image={resolveSaleBackdrop(festiveMedia)}
             alt="PRATIKSHYA FASHON festive sale campaign"
             className={imageTreatment.campaignBackdrop}
           />
