@@ -30,6 +30,7 @@ import {
   UPLOAD_NOTICE_COPY,
   rolesForType,
 } from "../../config/mediaTypes";
+import { PERMISSIONS } from "../../config/employeePermissions";
 import useMediaActions from "../../hooks/useMediaActions";
 import { useAdminAuth } from "../../context/AdminAuthContext";
 import { useEmployeeAuth } from "../../context/EmployeeAuthContext";
@@ -75,11 +76,14 @@ export default function MediaUploadForm({
   const actions = useMediaActions();
 
   const isEmployeeSession = portalType === "employee" || (portalType === "auto" && !admin && Boolean(employee));
+  const canManageMarketing = admin ? true : Boolean(hasPermission?.(PERMISSIONS.MEDIA_MANAGE) || hasPermission?.("media.manage"));
   const isAuthorizedToUpload = isEmployeeSession
-    ? hasPermission?.("media.upload") ?? true
+    ? Boolean(hasPermission?.(PERMISSIONS.MEDIA_UPLOAD) || hasPermission?.("media.upload"))
     : actions.access?.canUpload ?? true;
 
-  const [scope, setScope] = useState(initialScope);
+  const [scope, setScope] = useState(() =>
+    !canManageMarketing ? MEDIA_SCOPES.PRODUCT : initialScope
+  );
   const [productId, setProductId] = useState(initialProductId);
   const [placement, setPlacement] = useState(initialPlacement || MARKETING_PLACEMENTS.HOME_HERO);
 
@@ -186,9 +190,15 @@ export default function MediaUploadForm({
       return false;
     }
 
-    if (scope === MEDIA_SCOPES.MARKETING && !placement) {
-      setFormError("Please select a marketing placement for this upload.");
-      return false;
+    if (scope === MEDIA_SCOPES.MARKETING) {
+      if (!canManageMarketing) {
+        setFormError("You do not have permission to manage marketing media.");
+        return false;
+      }
+      if (!placement) {
+        setFormError("Please select a marketing placement for this upload.");
+        return false;
+      }
     }
 
     // Check that all queue items have non-empty titles
@@ -369,7 +379,7 @@ export default function MediaUploadForm({
       </div>
 
       {/* Scope Selector: Product vs Marketing */}
-      {allowScopeChange ? (
+      {allowScopeChange && canManageMarketing ? (
         <div className="space-y-2">
           <label className="font-ui text-[11px] uppercase tracking-[.18em] text-taupe">
             Media Workflow Destination

@@ -9,12 +9,13 @@
  */
 
 import { canEmployeeLogin } from "../../config/employeeStatus";
-import { isKnownRole } from "../../config/employeeRoles";
+import { ROLES, isKnownRole } from "../../config/employeeRoles";
 import { requiredPermissionForPath } from "../../config/employeeNavigation";
 
 export const hasPermission = (employee, permission) => {
   if (!employee || !permission) return false;
   if (!canEmployeeLogin(employee.status)) return false;
+  if (employee.role === ROLES.SUPER_ADMIN) return true;
   if (!Array.isArray(employee.permissions)) return false;
   return employee.permissions.includes(permission);
 };
