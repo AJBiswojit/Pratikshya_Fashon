@@ -39,6 +39,9 @@ export const ROLE_DEFINITIONS = {
     defaultPermissions: [
       P.DASHBOARD_VIEW,
       P.PRODUCTS_VIEW,
+      /* Phase 13 — Store Managers create, edit and submit products for
+         review; approval and publishing stay with the Admin Portal. */
+      P.PRODUCTS_MANAGE,
       P.ORDERS_VIEW,
       P.CUSTOMERS_VIEW,
       P.INVENTORY_VIEW,

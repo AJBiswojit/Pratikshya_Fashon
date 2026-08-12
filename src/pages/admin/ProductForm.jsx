@@ -1,2 +1,48 @@
-import {useState} from 'react';import {useNavigate,useParams} from 'react-router-dom';import AdminPage from '../../components/admin/AdminPage';import AdminPanel from '../../components/admin/AdminPanel';import {AtelierButton} from '../../design-system';import repo from '../../services/catalogRepository';
-export default function ProductForm(){const {productId}=useParams();const existing=productId?repo.find(productId):null;const [f,setF]=useState(existing||{name:'',sku:'',brand:'Pratikshya Fashon',description:'',category:'Sarees',subcategory:'',price:'',originalPrice:'',fabric:'',stock:0,status:'DRAFT',image:''});const [error,setError]=useState('');const nav=useNavigate();const change=e=>setF({...f,[e.target.name]:e.target.value});const submit=e=>{e.preventDefault();if(!f.name||!f.sku||!f.description||!f.price||!f.category||(!f.image&&!existing?.image))return setError('Please complete name, SKU, description, category, price and an image.');if(Number(f.originalPrice||0)<Number(f.price))return setError('Original price must be at least the selling price.');if(repo.skuTaken(f.sku,productId))return setError('That SKU is already in use.');repo.upsert({...f,id:productId||undefined,price:Number(f.price),originalPrice:Number(f.originalPrice||0),stock:Number(f.stock||0),image:f.image||existing.image});nav('/admin/products')};return <AdminPage eyebrow="Business / Products" title={productId?'Edit product':'New product'} description="Create a considered product record for the shared catalog."><form onSubmit={submit} className="grid gap-6 lg:grid-cols-2"><AdminPanel eyebrow="Basic information" title="Product story"><div className="grid gap-4">{[['name','Product name'],['sku','SKU'],['brand','Brand'],['image','Image URL'],['description','Description']].map(([n,l])=><label className="font-ui text-xs" key={n}>{l}<input required={['name','sku','description'].includes(n)} name={n} value={f[n]||''} onChange={change} className="mt-1 w-full border border-mist p-3" /></label>)}</div></AdminPanel><AdminPanel eyebrow="Catalog details" title="Pricing & placement"><div className="grid gap-4">{[['price','Selling price'],['originalPrice','Original price'],['category','Category'],['subcategory','Subcategory'],['fabric','Fabric'],['stock','Available stock']].map(([n,l])=><label className="font-ui text-xs" key={n}>{l}<input name={n} type={['price','originalPrice','stock'].includes(n)?'number':'text'} value={f[n]??''} onChange={change} className="mt-1 w-full border border-mist p-3" /></label>)}<label className="font-ui text-xs">Status<select name="status" value={f.status} onChange={change} className="mt-1 w-full border border-mist p-3"><option>DRAFT</option><option>PUBLISHED</option><option>ARCHIVED</option></select></label></div></AdminPanel>{error&&<p className="text-sm text-red-700">{error}</p>}<AtelierButton type="submit">{productId?'Save changes':'Create product'}</AtelierButton></form></AdminPage>}
+/**
+ * /admin/products/new · /admin/products/:productId/edit
+ *
+ * The Phase 13 merchandising workspace, wrapped in the Admin shell.
+ * Admins (and the Super Admin) hold publishing rights; the editor does
+ * the rest against the shared catalogue repository.
+ */
+
+import { useParams } from "react-router-dom";
+import AdminPage from "../../components/admin/AdminPage";
+import ProductEditor from "../../components/products/ProductEditor";
+import { useAdminAuth } from "../../context/AdminAuthContext";
+
+export default function ProductForm() {
+  const { productId } = useParams();
+  const { admin } = useAdminAuth();
+
+  const actor = admin
+    ? { adminId: admin.adminId, name: admin.name || admin.fullName || "Administrator" }
+    : null;
+
+  return (
+    <AdminPage
+      eyebrow="Business / Products"
+      title={
+        productId ? (
+          <>
+            Edit <span className="italic text-accent">product.</span>
+          </>
+        ) : (
+          <>
+            New <span className="italic text-accent">product.</span>
+          </>
+        )
+      }
+      description="The complete merchandising record — identity, category, pricing, variants, content, media, SEO and publishing. One shared catalogue serves the storefront, the portals and every future surface."
+    >
+      <ProductEditor
+        key={productId ?? "new"}
+        productId={productId}
+        portal="admin"
+        actor={actor}
+        canPublish
+        exitTo="/admin/products"
+      />
+    </AdminPage>
+  );
+}

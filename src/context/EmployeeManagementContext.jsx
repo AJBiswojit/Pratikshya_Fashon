@@ -10,6 +10,7 @@ import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
   useState,
 } from "react";
@@ -20,6 +21,7 @@ import { getStatusLabel } from "../config/employeeStatus";
 import { employeeFullName } from "../utils/employee";
 import {
   ACTIVITY_ACTIONS,
+  ACTIVITY_CHANGED_EVENT,
   activityForEmployee,
   describeActor,
   loadActivity,
@@ -47,6 +49,21 @@ export function EmployeeManagementProvider({ children }) {
   const [employees, setEmployees] = useState(() => ensureSeeded());
   const [activity, setActivity] = useState(() => loadActivity());
   const [isWorking, setIsWorking] = useState(false);
+
+  /*
+   * Phase 13 — the product repository writes product events straight into
+   * this same diary. Re-read when it announces a write so both portals'
+   * activity views stay live without a second activity system.
+   */
+  useEffect(() => {
+    const sync = () => setActivity(loadActivity());
+    window.addEventListener(ACTIVITY_CHANGED_EVENT, sync);
+    window.addEventListener("storage", sync);
+    return () => {
+      window.removeEventListener(ACTIVITY_CHANGED_EVENT, sync);
+      window.removeEventListener("storage", sync);
+    };
+  }, []);
 
   const syncIfCurrent = useCallback(
     (updated) => {

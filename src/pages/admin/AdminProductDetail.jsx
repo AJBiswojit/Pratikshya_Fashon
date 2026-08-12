@@ -1,18 +1,61 @@
-import { Link, useParams } from "react-router-dom";
+/**
+ * /admin/products/:productId
+ *
+ * The complete product overview: identity, pricing with its history,
+ * variants, attributes, media completeness, publishing controls, the
+ * approval workflow and the product's own slice of the shared activity
+ * diary. The customer preview opens the real storefront design.
+ */
+
+import { useState } from "react";
+import { Link, useNavigate, useParams } from "react-router-dom";
+import { ClipboardCheck, Copy, ExternalLink, Images, Pencil } from "lucide-react";
 import AdminPage from "../../components/admin/AdminPage";
 import AdminPanel from "../../components/admin/AdminPanel";
-import { AtelierButton } from "../../design-system";
 import StatusBadge from "../../components/employee/StatusBadge";
-import repo from "../../services/catalogRepository";
+import { AtelierButton } from "../../design-system";
+import catalogRepository, { getPublishIssues } from "../../services/catalogRepository";
+import { useProduct } from "../../hooks/useProducts";
 import { useProductMedia } from "../../hooks/useMedia";
+import { useActivityLog } from "../../hooks/useProducts";
+import { activityForProduct, getActivityLabel } from "../../services/employees/activityService";
+import { resolveProductCover } from "../../services/media/productMediaSource";
+import { useAdminAuth } from "../../context/AdminAuthContext";
+import { computePricing, describeDiscount, resolveVariantPrice } from "../../utils/pricing";
+import { formatINR } from "../../utils/shopping";
+import {
+  getProductStatusLabel,
+  getProductTypeLabel,
+} from "../../config/productCatalogConfig";
+import { categoryLabels } from "../../data/products/taxonomy";
+import { formatEmployeeDateTime } from "../../utils/employee";
 
-const money = (value) => `₹${Number(value || 0).toLocaleString("en-IN")}`;
+const statusTone = {
+  PUBLISHED: "ink",
+  PENDING_REVIEW: "alert",
+  DRAFT: "quiet",
+  ARCHIVED: "muted",
+};
+
+const Term = ({ label, value }) => (
+  <div>
+    <dt className="font-ui text-[10px] uppercase tracking-[.16em] text-taupe">{label}</dt>
+    <dd className="mt-1 font-ui text-sm text-ink">{value || "—"}</dd>
+  </div>
+);
 
 export default function AdminProductDetail() {
   const { productId } = useParams();
-  const product = repo.find(productId);
-  /* Media counts come from the central register, never from the product row. */
+  const navigate = useNavigate();
+  const { admin } = useAdminAuth();
+  const actor = admin ? { adminId: admin.adminId, name: admin.name || "Administrator" } : null;
+
+  const product = useProduct(productId);
   const { summary } = useProductMedia(productId);
+  const activity = useActivityLog();
+  const [rejection, setRejection] = useState("");
+  const [rejecting, setRejecting] = useState(false);
+  const [notice, setNotice] = useState(null);
 
   if (!product) {
     return (
@@ -22,104 +65,368 @@ export default function AdminProductDetail() {
     );
   }
 
-  const setStatus = (status) => repo.updateStatus(product.id, status);
+  const cover = resolveProductCover(product);
+  const computed = computePricing(product.pricing);
+  const issues = getPublishIssues(product);
+  const productActivity = activityForProduct(activity, product.id);
+  const previewHref = `/product/${product.slug}?preview=1`;
+
+  const run = (fn, successMessage) => {
+    const result = fn();
+    if (result.ok) {
+      setNotice(successMessage);
+    } else {
+      setNotice((result.errors ?? [result.error]).join(" "));
+    }
+  };
 
   return (
     <AdminPage
-      eyebrow="Product catalog"
+      eyebrow="Business / Products"
       title={product.name}
-      description={`${product.sku} · ${product.category} / ${product.subcategory || "—"}`}
+      description={`${product.sku} · ${categoryLabels[product.category] ?? product.category}${product.subcategory ? ` / ${product.subcategory}` : ""}`}
       actions={
         <>
           <AtelierButton
-            as={Link}
-            to={`/admin/products/${product.id}/media`}
+            as="a"
+            href={previewHref}
+            target="_blank"
+            rel="noreferrer"
             size="chip"
             variant="outline"
           >
-            Manage media
+            <ExternalLink size={12} aria-hidden="true" /> Preview as customer
+          </AtelierButton>
+          <AtelierButton as={Link} to={`/admin/products/${product.id}/media`} size="chip" variant="outline">
+            <Images size={12} aria-hidden="true" /> Manage media
+          </AtelierButton>
+          <AtelierButton
+            size="chip"
+            variant="outline"
+            onClick={() => {
+              const result = catalogRepository.duplicateProduct(product.id, actor);
+              if (result.ok) navigate(`/admin/products/${result.product.id}/edit`);
+            }}
+          >
+            <Copy size={12} aria-hidden="true" /> Duplicate
           </AtelierButton>
           <AtelierButton as={Link} to={`/admin/products/${product.id}/edit`} size="chip">
-            Edit product
+            <Pencil size={12} aria-hidden="true" /> Edit product
           </AtelierButton>
         </>
       }
     >
-      <div className="grid gap-6 lg:grid-cols-[280px_1fr]">
+      {notice ? (
+        <p aria-live="polite" className="mb-6 border border-mist/80 bg-canvas px-4 py-3 font-ui text-sm text-ink">
+          {notice}
+        </p>
+      ) : null}
+
+      <div className="grid gap-6 xl:grid-cols-[300px_1fr]">
+        {/* Left rail */}
         <div className="space-y-4">
-          <img src={product.image} alt={product.name} className="h-96 w-full object-cover" />
+          <div className="border border-mist/80 bg-surface/40 p-3">
+            {cover?.src ? (
+              <img src={cover.src} alt={product.name} className="h-80 w-full object-cover" />
+            ) : (
+              <div className="flex h-80 w-full items-center justify-center bg-mist/40 font-ui text-[11px] uppercase tracking-[.16em] text-taupe">
+                No cover yet
+              </div>
+            )}
+          </div>
+
+          <div className="border border-mist/80 bg-surface/30 p-4">
+            <p className="font-ui text-[10px] uppercase tracking-[.18em] text-taupe">Status</p>
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              <StatusBadge label={getProductStatusLabel(product.status)} tone={statusTone[product.status] ?? "quiet"} />
+              {product.review.state === "PENDING" ? <StatusBadge label="Awaiting review" tone="alert" /> : null}
+              {product.review.state === "REJECTED" ? <StatusBadge label="Rejected" tone="danger" /> : null}
+              {product.isFeatured ? <StatusBadge label="Featured" tone="brass" /> : null}
+              {product.isBestseller ? <StatusBadge label="Bestseller" tone="brass" /> : null}
+              {product.isNew ? <StatusBadge label="New arrival" tone="brass" /> : null}
+              {product.isLimitedEdition ? <StatusBadge label="Limited" tone="quiet" /> : null}
+              {product.isTrending ? <StatusBadge label="Trending" tone="quiet" /> : null}
+            </div>
+
+            {product.review.state === "REJECTED" && product.review.rejectionReason ? (
+              <p className="mt-3 border border-accent/40 bg-accent/[0.05] p-3 font-ui text-sm text-accent">
+                {product.review.rejectionReason}
+              </p>
+            ) : null}
+
+            <div className="mt-4 flex flex-wrap gap-2">
+              {product.status === "PENDING_REVIEW" ? (
+                <>
+                  <AtelierButton size="chip" onClick={() => run(() => catalogRepository.approveProduct(product.id, actor), "Approved and published.")}>
+                    Approve &amp; publish
+                  </AtelierButton>
+                  <AtelierButton size="chip" variant="outline" onClick={() => setRejecting((open) => !open)}>
+                    Reject
+                  </AtelierButton>
+                </>
+              ) : product.status === "PUBLISHED" ? (
+                <AtelierButton variant="outline" size="chip" onClick={() => run(() => catalogRepository.unpublishProduct(product.id, actor), "Moved back to draft.")}>
+                  Unpublish
+                </AtelierButton>
+              ) : product.status !== "ARCHIVED" ? (
+                <AtelierButton size="chip" onClick={() => run(() => catalogRepository.publishProduct(product.id, actor), "Published to the storefront.")}>
+                  Publish
+                </AtelierButton>
+              ) : null}
+
+              {product.status === "ARCHIVED" ? (
+                <AtelierButton variant="outline" size="chip" onClick={() => run(() => catalogRepository.restoreProduct(product.id, actor), "Restored to draft.")}>
+                  Restore
+                </AtelierButton>
+              ) : (
+                <AtelierButton variant="outline" size="chip" onClick={() => run(() => catalogRepository.archiveProduct(product.id, actor), "Archived. Historical orders keep their reference.")}>
+                  Archive
+                </AtelierButton>
+              )}
+            </div>
+
+            {rejecting ? (
+              <form
+                className="mt-4 space-y-2"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  run(
+                    () => catalogRepository.rejectProduct(product.id, rejection.trim() || "Missing product details.", actor),
+                    "Rejected — returned to draft."
+                  );
+                  setRejecting(false);
+                  setRejection("");
+                }}
+              >
+                <label htmlFor="reject-reason" className="font-ui text-[10px] uppercase tracking-[.16em] text-ink">
+                  Rejection reason
+                </label>
+                <textarea
+                  id="reject-reason"
+                  rows={3}
+                  value={rejection}
+                  onChange={(event) => setRejection(event.target.value)}
+                  placeholder="Missing product details. Incorrect price. Poor product image…"
+                  className="w-full border border-mist bg-canvas px-3 py-2 font-ui text-sm outline-none focus:border-accent"
+                />
+                <div className="flex gap-2">
+                  <AtelierButton type="submit" size="chip">Reject product</AtelierButton>
+                  <AtelierButton type="button" variant="outline" size="chip" onClick={() => setRejecting(false)}>
+                    Cancel
+                  </AtelierButton>
+                </div>
+              </form>
+            ) : null}
+
+            {issues.length ? (
+              <div className="mt-4 border border-accent/40 bg-accent/[0.05] p-3">
+                <p className="font-ui text-[10px] uppercase tracking-[.16em] text-accent">Publishing blockers</p>
+                <ul className="mt-2 space-y-1">
+                  {issues.map((issue) => (
+                    <li key={issue} className="font-ui text-[12px] text-accent">— {issue}</li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+          </div>
 
           <div className="border border-mist/80 bg-surface/30 p-4">
             <p className="font-ui text-[10px] uppercase tracking-[.18em] text-taupe">Media</p>
             <p className="mt-2 font-ui text-sm text-ink">
-              {summary.total} item{summary.total === 1 ? "" : "s"} · {summary.images} image
-              {summary.images === 1 ? "" : "s"} · {summary.videos} video
-              {summary.videos === 1 ? "" : "s"}
+              {summary.total} item{summary.total === 1 ? "" : "s"} · {summary.images} image{summary.images === 1 ? "" : "s"} ·{" "}
+              {summary.videos} video{summary.videos === 1 ? "" : "s"}
             </p>
             <div className="mt-3 flex flex-wrap gap-1.5">
-              {summary.needsCover ? (
+              {summary.needsCover && !product.image ? (
                 <StatusBadge label="Needs cover" tone="danger" />
-              ) : summary.hasCover ? (
-                <StatusBadge label="Cover set" tone="ink" />
+              ) : summary.hasCover || product.image ? (
+                <StatusBadge label="✓ Cover" tone="ink" />
               ) : (
                 <StatusBadge label="Catalogue plates" tone="quiet" />
               )}
-              {summary.videos ? <StatusBadge label="Has video" tone="quiet" /> : null}
             </div>
-            <AtelierButton
-              as={Link}
-              to={`/admin/products/${product.id}/media`}
-              size="chip"
-              variant="outline"
-              className="mt-4"
-            >
-              Manage media
-            </AtelierButton>
+          </div>
+
+          <div className="border border-mist/80 bg-surface/30 p-4">
+            <p className="font-ui text-[10px] uppercase tracking-[.18em] text-taupe">History</p>
+            <dl className="mt-3 space-y-3 font-ui text-sm">
+              <Term label="Created by" value={product.createdBy} />
+              <Term label="Created at" value={product.createdAt ? formatEmployeeDateTime(product.createdAt) : null} />
+              <Term label="Last updated by" value={product.updatedBy} />
+              <Term label="Last updated at" value={product.updatedAt ? formatEmployeeDateTime(product.updatedAt) : null} />
+              <Term label="Published by" value={product.publishedBy} />
+              <Term label="Published at" value={product.publishedAt ? formatEmployeeDateTime(product.publishedAt) : null} />
+            </dl>
           </div>
         </div>
 
-        <AdminPanel eyebrow="Product record" title="Catalog details">
-          <dl className="grid gap-4 font-ui text-sm sm:grid-cols-2">
-            {[
-              ["Price", money(product.price)],
-              ["Original price", money(product.originalPrice)],
-              ["Status", product.status],
-              ["Stock", product.stock || 0],
-              ["Fabric", product.fabric || "—"],
-              ["Material", product.material || "—"],
-              ["Occasion", (product.occasion || []).join(", ") || "—"],
-              ["Collection", product.collection || "—"],
-              ["Featured", product.isFeatured ? "Yes" : "No"],
-              ["Bestseller", product.isBestseller ? "Yes" : "No"],
-              ["New arrival", product.isNew ? "Yes" : "No"],
-              ["Updated", product.updatedAt || "—"],
-            ].map(([term, value]) => (
-              <div key={term}>
-                <dt className="text-taupe">{term}</dt>
-                <dd>{value}</dd>
+        {/* Main column */}
+        <div className="space-y-6">
+          <AdminPanel eyebrow="Product overview" title="Identity">
+            <dl className="grid gap-4 font-ui text-sm sm:grid-cols-2 lg:grid-cols-3">
+              <Term label="Product type" value={getProductTypeLabel(product.productType)} />
+              <Term label="Brand" value={product.brand} />
+              <Term label="Gender" value={product.gender} />
+              <Term label="Category" value={categoryLabels[product.category] ?? product.category} />
+              <Term label="Subcategory" value={product.subcategory} />
+              <Term label="Collection" value={product.collections?.join(", ") || product.collection} />
+              <Term label="Product code" value={product.productCode} />
+              <Term label="Barcode" value={product.barcode} />
+              <Term label="Internal reference" value={product.internalReference} />
+              <Term label="URL" value={`/product/${product.slug}`} />
+              <Term label="Tags" value={product.tags?.join(", ")} />
+              <Term label="Occasions" value={product.occasion?.join(", ")} />
+            </dl>
+            {product.shortDescription || product.description ? (
+              <div className="mt-6 space-y-3 border-t border-mist/60 pt-5">
+                {product.shortDescription ? (
+                  <p className="font-display text-lg italic text-graphite">{product.shortDescription}</p>
+                ) : null}
+                <p className="max-w-2xl font-ui text-sm leading-relaxed text-taupe">{product.description}</p>
+                {product.highlights?.length ? (
+                  <ul className="grid gap-1.5 pt-2 sm:grid-cols-2">
+                    {product.highlights.map((highlight) => (
+                      <li key={highlight} className="font-ui text-sm text-ink">✓ {highlight}</li>
+                    ))}
+                  </ul>
+                ) : null}
               </div>
-            ))}
-          </dl>
+            ) : null}
+          </AdminPanel>
 
-          <div className="mt-8 flex flex-wrap gap-3">
-            {product.status === "PUBLISHED" ? (
-              <AtelierButton variant="outline" onClick={() => setStatus("DRAFT")}>
-                Unpublish
-              </AtelierButton>
+          <AdminPanel eyebrow="Commerce" title="Pricing">
+            <dl className="grid gap-4 font-ui text-sm sm:grid-cols-2 lg:grid-cols-4">
+              <Term label="MRP" value={formatINR(computed.mrp)} />
+              <Term label="Selling price" value={formatINR(computed.sellingPrice)} />
+              <Term label="Discount" value={describeDiscount(product.pricing)} />
+              <Term label="Final price" value={formatINR(product.price)} />
+              <Term label="Tax mode" value={product.pricing.taxMode === "EXCLUSIVE" ? "Tax exclusive" : "Tax inclusive"} />
+              <Term label="GST rate" value={`${product.pricing.taxRate}%`} />
+              <Term label="Availability" value={product.availability} />
+              <Term label="Stock (placeholder)" value={String(product.stock ?? 0)} />
+            </dl>
+
+            {product.priceHistory?.length ? (
+              <div className="mt-6 border-t border-mist/60 pt-5">
+                <p className="font-ui text-[10px] uppercase tracking-[.18em] text-taupe">Price history</p>
+                <ul className="mt-3 divide-y divide-mist/60 border border-mist/70 bg-canvas">
+                  {product.priceHistory.map((entry) => (
+                    <li key={entry.at} className="flex flex-wrap items-center justify-between gap-2 px-3 py-2.5 font-ui text-sm">
+                      <span className="text-ink">
+                        {formatINR(entry.from)} → {formatINR(entry.to)}
+                      </span>
+                      <span className="text-[11px] text-taupe">
+                        {entry.by} · {formatEmployeeDateTime(entry.at)}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+          </AdminPanel>
+
+          <AdminPanel eyebrow="Commerce" title={`Variants (${product.variants.length})`}>
+            {product.variants.length ? (
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[640px] text-left">
+                  <thead>
+                    <tr className="border-b border-mist font-ui text-[10px] uppercase tracking-widest text-taupe">
+                      {["SKU", "Colour", "Size", "Price", "Stock", "Barcode", "Status"].map((heading) => (
+                        <th key={heading} className="px-3 py-2.5" scope="col">{heading}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {product.variants.map((variant) => (
+                      <tr key={variant.id} className="border-b border-mist/60 font-ui text-sm">
+                        <td className="px-3 py-3 text-taupe">{variant.sku || "—"}</td>
+                        <td className="px-3 py-3">{variant.color || "—"}</td>
+                        <td className="px-3 py-3">{variant.size || "—"}</td>
+                        <td className="px-3 py-3">
+                          {formatINR(resolveVariantPrice(variant, product.pricing))}
+                          {variant.priceOverride ? <span className="ml-1 text-[10px] uppercase text-taupe">override</span> : null}
+                        </td>
+                        <td className="px-3 py-3">{variant.stock}</td>
+                        <td className="px-3 py-3 text-taupe">{variant.barcode || "—"}</td>
+                        <td className="px-3 py-3">
+                          <StatusBadge label={variant.status === "ACTIVE" ? "Active" : "Inactive"} tone={variant.status === "ACTIVE" ? "ink" : "muted"} />
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             ) : (
-              <AtelierButton onClick={() => setStatus("PUBLISHED")}>Publish</AtelierButton>
+              <p className="font-ui text-sm text-taupe">No variants — the product sells in its base colour and size.</p>
             )}
-            {product.status === "ARCHIVED" ? (
-              <AtelierButton variant="outline" onClick={() => setStatus("DRAFT")}>
-                Restore
-              </AtelierButton>
+          </AdminPanel>
+
+          <AdminPanel eyebrow="Product record" title="Attributes">
+            <dl className="grid gap-4 font-ui text-sm sm:grid-cols-2 lg:grid-cols-3">
+              <Term label="Fabric" value={product.fabric} />
+              <Term label="Material" value={product.material} />
+              <Term label="Primary colour" value={product.primaryColor} />
+              <Term label="Secondary colour" value={product.secondaryColor} />
+              <Term label="Colours" value={product.colors?.join(", ")} />
+              <Term label="Sizes" value={product.sizes?.join(", ")} />
+              <Term label="Patterns" value={product.patterns?.join(", ")} />
+              <Term label="Work" value={product.work?.join(", ")} />
+              <Term label="Season" value={product.season} />
+              <Term label="Fit" value={product.fit} />
+              <Term label="Length" value={product.length} />
+              <Term label="Inventory tracked" value={product.inventoryTracked ? "Yes" : "No"} />
+              <Term label="Low stock threshold" value={String(product.lowStockThreshold)} />
+            </dl>
+            {product.careInstructions?.length ? (
+              <div className="mt-5 border-t border-mist/60 pt-4">
+                <p className="font-ui text-[10px] uppercase tracking-[.18em] text-taupe">Care</p>
+                <ul className="mt-2 space-y-1 font-ui text-sm text-ink">
+                  {product.careInstructions.map((line) => <li key={line}>· {line}</li>)}
+                </ul>
+              </div>
+            ) : null}
+            {product.deliveryInfo ? (
+              <div className="mt-4 border-t border-mist/60 pt-4">
+                <p className="font-ui text-[10px] uppercase tracking-[.18em] text-taupe">Delivery</p>
+                <p className="mt-2 font-ui text-sm text-ink">{product.deliveryInfo}</p>
+              </div>
+            ) : null}
+            {product.returnInfo ? (
+              <div className="mt-4 border-t border-mist/60 pt-4">
+                <p className="font-ui text-[10px] uppercase tracking-[.18em] text-taupe">Returns</p>
+                <p className="mt-2 font-ui text-sm text-ink">{product.returnInfo}</p>
+              </div>
+            ) : null}
+          </AdminPanel>
+
+          <AdminPanel eyebrow="Discovery" title="SEO">
+            <dl className="grid gap-4 font-ui text-sm sm:grid-cols-2">
+              <Term label="SEO title" value={product.seo.title || `${product.name} (default)`} />
+              <Term label="URL slug" value={product.slug} />
+            </dl>
+            {product.seo.description ? (
+              <p className="mt-3 font-ui text-sm leading-relaxed text-taupe">{product.seo.description}</p>
+            ) : null}
+          </AdminPanel>
+
+          <AdminPanel eyebrow="House diary" title={`Activity (${productActivity.length})`}>
+            {productActivity.length ? (
+              <ol className="divide-y divide-mist/70">
+                {productActivity.slice(0, 20).map((entry) => (
+                  <li key={entry.id} className="px-1 py-3">
+                    <p className="font-ui text-[10px] uppercase tracking-[.16em] text-accent">{getActivityLabel(entry.action)}</p>
+                    <p className="mt-1 font-ui text-sm text-ink">{entry.summary}</p>
+                    <p className="mt-1 font-ui text-[11px] text-taupe">
+                      {entry.actorName} · {formatEmployeeDateTime(entry.at)}
+                    </p>
+                  </li>
+                ))}
+              </ol>
             ) : (
-              <AtelierButton variant="outline" onClick={() => setStatus("ARCHIVED")}>
-                Archive
-              </AtelierButton>
+              <p className="font-ui text-sm text-taupe">No product activity recorded yet.</p>
             )}
-          </div>
-        </AdminPanel>
+          </AdminPanel>
+        </div>
       </div>
     </AdminPage>
   );

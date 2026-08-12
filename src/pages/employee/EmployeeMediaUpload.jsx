@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { ArrowLeft, ShieldAlert } from "lucide-react";
 import EmployeePage from "../../components/employee/EmployeePage";
 import MediaUploadForm from "../../components/media/MediaUploadForm";
@@ -9,6 +9,9 @@ import { PERMISSIONS } from "../../config/employeePermissions";
 export default function EmployeeMediaUpload() {
   const { hasPermission } = useEmployeeAuth();
   const canUpload = hasPermission(PERMISSIONS.MEDIA_UPLOAD);
+  /* Phase 13 — the product editor links here with a pre-targeted product. */
+  const [searchParams] = useSearchParams();
+  const initialProductId = searchParams.get("product") || null;
 
   if (!canUpload) {
     return (
@@ -54,7 +57,11 @@ export default function EmployeeMediaUpload() {
       }
     >
       <div className="border border-mist/80 bg-canvas p-4 sm:p-6">
-        <MediaUploadForm portalType="employee" onSuccessRedirect="/employee/media" />
+        <MediaUploadForm
+          portalType="employee"
+          onSuccessRedirect="/employee/media"
+          initialProductId={initialProductId}
+        />
       </div>
     </EmployeePage>
   );

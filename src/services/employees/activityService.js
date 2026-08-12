@@ -38,6 +38,22 @@ export const ACTIVITY_ACTIONS = {
   MEDIA_REMOVED: "MEDIA_REMOVED",
   MARKETING_MEDIA_ACTIVATED: "MARKETING_MEDIA_ACTIVATED",
   MARKETING_MEDIA_ARCHIVED: "MARKETING_MEDIA_ARCHIVED",
+
+  /* Products — Phase 13. Recorded in this same diary, never a second log. */
+  PRODUCT_CREATED: "PRODUCT_CREATED",
+  PRODUCT_EDITED: "PRODUCT_EDITED",
+  PRODUCT_PRICE_CHANGED: "PRODUCT_PRICE_CHANGED",
+  PRODUCT_VARIANT_ADDED: "PRODUCT_VARIANT_ADDED",
+  PRODUCT_VARIANT_UPDATED: "PRODUCT_VARIANT_UPDATED",
+  PRODUCT_SUBMITTED: "PRODUCT_SUBMITTED",
+  PRODUCT_APPROVED: "PRODUCT_APPROVED",
+  PRODUCT_REJECTED: "PRODUCT_REJECTED",
+  PRODUCT_PUBLISHED: "PRODUCT_PUBLISHED",
+  PRODUCT_UNPUBLISHED: "PRODUCT_UNPUBLISHED",
+  PRODUCT_ARCHIVED: "PRODUCT_ARCHIVED",
+  PRODUCT_RESTORED: "PRODUCT_RESTORED",
+  PRODUCT_DUPLICATED: "PRODUCT_DUPLICATED",
+  PRODUCT_BULK_UPDATED: "PRODUCT_BULK_UPDATED",
 };
 
 const ACTION_LABELS = {
@@ -64,9 +80,26 @@ const ACTION_LABELS = {
   [ACTIVITY_ACTIONS.MEDIA_REMOVED]: "Media removed",
   [ACTIVITY_ACTIONS.MARKETING_MEDIA_ACTIVATED]: "Marketing media activated",
   [ACTIVITY_ACTIONS.MARKETING_MEDIA_ARCHIVED]: "Marketing media archived",
+  [ACTIVITY_ACTIONS.PRODUCT_CREATED]: "Product created",
+  [ACTIVITY_ACTIONS.PRODUCT_EDITED]: "Product edited",
+  [ACTIVITY_ACTIONS.PRODUCT_PRICE_CHANGED]: "Product price changed",
+  [ACTIVITY_ACTIONS.PRODUCT_VARIANT_ADDED]: "Product variant added",
+  [ACTIVITY_ACTIONS.PRODUCT_VARIANT_UPDATED]: "Product variant updated",
+  [ACTIVITY_ACTIONS.PRODUCT_SUBMITTED]: "Product submitted for review",
+  [ACTIVITY_ACTIONS.PRODUCT_APPROVED]: "Product approved",
+  [ACTIVITY_ACTIONS.PRODUCT_REJECTED]: "Product rejected",
+  [ACTIVITY_ACTIONS.PRODUCT_PUBLISHED]: "Product published",
+  [ACTIVITY_ACTIONS.PRODUCT_UNPUBLISHED]: "Product unpublished",
+  [ACTIVITY_ACTIONS.PRODUCT_ARCHIVED]: "Product archived",
+  [ACTIVITY_ACTIONS.PRODUCT_RESTORED]: "Product restored",
+  [ACTIVITY_ACTIONS.PRODUCT_DUPLICATED]: "Product duplicated",
+  [ACTIVITY_ACTIONS.PRODUCT_BULK_UPDATED]: "Products updated in bulk",
 };
 
 export const getActivityLabel = (action) => ACTION_LABELS[action] ?? "Activity";
+
+/** Announced whenever the diary is written, so live views can re-sync. */
+export const ACTIVITY_CHANGED_EVENT = "pratikshya-activity-changed";
 
 const normaliseEntry = (entry) => {
   if (!entry || typeof entry !== "object" || !entry.id) return null;
@@ -76,6 +109,8 @@ const normaliseEntry = (entry) => {
     actorEmployeeId: entry.actorEmployeeId || null,
     actorName: entry.actorName || "System",
     targetEmployeeId: entry.targetEmployeeId || null,
+    /* Phase 13 — product events reference the product they acted on. */
+    targetProductId: entry.targetProductId || null,
     action: entry.action || ACTIVITY_ACTIONS.EMPLOYEE_UPDATED,
     summary: String(entry.summary || getActivityLabel(entry.action)),
   };
@@ -96,6 +131,10 @@ export const saveActivity = (entries) => {
     EMPLOYEE_STORAGE_KEYS.ACTIVITY,
     (Array.isArray(entries) ? entries : []).map(normaliseEntry).filter(Boolean)
   );
+  /* Both portals keep live copies in context state; let them re-sync. */
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new Event(ACTIVITY_CHANGED_EVENT));
+  }
 };
 
 export const recordActivity = (entries, draft) => {
@@ -116,8 +155,28 @@ export const activityForEmployee = (entries, employeeId) =>
       entry.targetEmployeeId === employeeId || entry.actorEmployeeId === employeeId
   );
 
+/** Phase 13 — the product-detail activity panel reads through this. */
+export const activityForProduct = (entries, productId) =>
+  entries.filter((entry) => entry.targetProductId === productId);
+
+/**
+ * Signs an entry for whoever acted. Employees carry `employeeId`; the
+ * Admin Portal carries `adminId` and is its own authentication boundary.
+ */
 export const describeActor = (actor) => {
   if (!actor) return { actorEmployeeId: null, actorName: "System" };
+  if (actor.adminId) {
+    return {
+      actorEmployeeId: null,
+      actorName: actor.name ? `${actor.name} · ${actor.adminId}` : actor.adminId,
+    };
+  }
+  if (actor.label) {
+    return {
+      actorEmployeeId: actor.employeeId || null,
+      actorName: actor.employeeId ? `${actor.label} · ${actor.employeeId}` : actor.label,
+    };
+  }
   return {
     actorEmployeeId: actor.employeeId || null,
     actorName: employeeFullName(actor),
@@ -126,10 +185,12 @@ export const describeActor = (actor) => {
 
 export default {
   ACTIVITY_ACTIONS,
+  ACTIVITY_CHANGED_EVENT,
   getActivityLabel,
   loadActivity,
   saveActivity,
   recordActivity,
   activityForEmployee,
+  activityForProduct,
   describeActor,
 };
