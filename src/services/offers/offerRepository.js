@@ -510,7 +510,7 @@ const readRaw = () => {
   return null;
 };
 
-const persist = (items) => {
+const persist = (items, { quiet = false } = {}) => {
   const payload = Array.isArray(items) ? items : [];
   writeStorage(OFFER_STORAGE_KEY, payload);
   try {
@@ -518,7 +518,7 @@ const persist = (items) => {
   } catch {
     /* ignore */
   }
-  if (typeof window !== "undefined") {
+  if (!quiet && typeof window !== "undefined") {
     window.dispatchEvent(new Event(OFFERS_CHANGED_EVENT));
   }
   return payload;
@@ -541,7 +541,9 @@ const allNormalised = () => {
     if (stored.length === 0) return [];
   }
   const seeded = SEED_OFFERS.map((entry) => normaliseOffer(entry));
-  persist(seeded);
+  /* First read seeds the demo desk. That is a backfill, not an edit, so it
+     stays quiet: announcing here would update subscribers mid-render. */
+  persist(seeded, { quiet: true });
   return seeded;
 };
 

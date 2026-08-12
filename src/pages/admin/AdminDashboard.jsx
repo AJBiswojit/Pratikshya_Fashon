@@ -57,7 +57,7 @@ export default function AdminDashboard() {
   const { admin } = useAdminAuth();
   const { employees } = useEmployeeManagement();
   const { revision } = useWorkforce();
-  const { getOrders } = useOrder();
+  const { getOrders, allOrders } = useOrder();
   const attendanceToday = useMemo(() => todayHouseSummary(admin), [admin, revision]);
   const performanceToday = useMemo(() => housePerformanceSummary(admin), [admin, revision]);
   const leavePending = useMemo(() => pendingLeaveCount(admin), [admin, revision]);

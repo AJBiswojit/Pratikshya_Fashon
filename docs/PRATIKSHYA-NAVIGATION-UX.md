@@ -262,3 +262,107 @@ rather than fake counts.
 - `npm run build` — passes.
 - `npm test` — all existing tests pass (36/36).
 - `git diff --check` — clean.
+
+---
+
+## 17. Phase 21.3.1 — portal blank-page regression fix
+
+After Phase 21.3 shipped, every authenticated Admin and Employee route rendered
+a blank page. The navigation design itself was sound; four independent runtime
+errors were unmasked by it. Each was reproduced first, then fixed at the root.
+Nothing in Phase 21.3 was reverted, and no error boundary was used to mask a
+crash.
+
+### 17.1 Root cause 1 — sidebar seeded expansion from `null`
+
+`src/components/navigation/PortalSidebar.jsx`, `expanded` state initialiser.
+`readPersistedGroups()` returns `null` when no sidebar preference is stored, but
+the initialiser called `seed.add(...)` on that value:
+
+```js
+const seed = readPersistedGroups(storageKey);
+if (!seed) {
+  const overview = groups?.find((group) => group.id === "overview");
+  if (overview) seed.add(overview.id);   // seed is null here
+}
+```
+
+`TypeError: Cannot read properties of null (reading 'add')` threw during render,
+so React unmounted the whole tree and the portal painted blank.
+
+**Affected:** every authenticated Admin and Employee route, on a first visit or
+after clearing site data. Unauthenticated `/employee/login` was unaffected,
+which is why the regression was easy to miss.
+
+**Fix:** the reader now consistently returns `null` for "nothing usable stored"
+and the caller supplies its own default:
+
+```js
+const persisted = readPersistedGroups(storageKey);
+const seed = persisted ?? new Set(defaultOpenGroupIds(normalizeGroups(groups)));
+if (activeGroupId) seed.add(activeGroupId);
+```
+
+The same commit establishes **one navigation data contract** in this file
+(`normalizeGroups`) rather than scattering null checks through the render tree,
+plus `makeIconResolver` (an unknown icon key resolves to an inert placeholder,
+never `undefined`), `defaultOpenGroupIds`, and `isPathActive` for footer links.
+Both storage helpers now guard `typeof localStorage === "undefined"`.
+`PortalSidebar` remains purely presentational.
+
+### 17.2 Root cause 2 — `allOrders` never destructured
+
+`src/pages/admin/AdminDashboard.jsx` used `allOrders` inside the
+`getBusinessMetrics` memo and its dependency array, but destructured only
+`const { getOrders } = useOrder()`. `ReferenceError: allOrders is not defined`
+blanked `/admin` and `/admin/dashboard` even after 17.1 was fixed.
+`OrderContext` already exposes `allOrders`, so the fix is the destructure:
+`const { getOrders, allOrders } = useOrder();`.
+
+### 17.3 Root cause 3 — `reviewError` never declared
+
+`src/components/workforce/LeavePanel.jsx`, `LeaveTable`. The component rendered
+`reviewError` in three places but never declared the state, crashing
+`/admin/attendance` with `ReferenceError: reviewError is not defined`. The state
+now exists and is wired to the rejection path the service already supports:
+`reviewLeave()` returns `{ ok: false, message }` when a rejection reason is
+missing, and the desk keeps the dialog open and shows that message instead of
+silently discarding the decision.
+
+### 17.4 Root cause 4 — read-path seeding announced a change mid-render
+
+Two service read paths lazily seeded storage and broadcast a change event
+synchronously, so a dashboard reading them during render updated a provider
+while rendering — `Cannot update a component (WorkforceProvider / CartProvider)
+while rendering a different component (AdminDashboard)`.
+
+- `performanceService.ensurePeriodRecord()` → `upsertPerformance()` →
+  `savePerformance()` → `writeList()` → `WORKFORCE_CHANGED_EVENT`.
+- `offerRepository.allNormalised()` → `persist()` → `OFFERS_CHANGED_EVENT`.
+
+Both now use the codebase's existing `{ quiet: true }` convention — already used
+by `ensureWorkforceSeeded`, `ensureLeaveSeeded`, `ensurePerformanceSeeded` and
+`loadAttendance` — because a backfill on read is not a user edit.
+`upsertPerformance(draft, options)` and `persist(items, { quiet })` simply
+forward the flag; genuine user edits still announce as before. No business logic
+or stored data shape changed.
+
+### 17.5 Verification
+
+No headless browser is installable in this environment (the Playwright and
+Chromium CDNs are unreachable), so verification used a **real-DOM render
+harness**: jsdom plus Vite's SSR module loader mounting the actual `App.jsx`
+with `react-dom/client`, seeding real admin/employee sessions into
+`localStorage`, then capturing rendered HTML and every `console.error` per
+route. This executes the real components, routers, contexts and services — it is
+not a build-output inspection. The harness was a temporary file and is not part
+of this commit.
+
+| Surface | Routes | Result |
+| --- | --- | --- |
+| Admin | all 40+ routes incl. login, dashboard, products, categories, collections, media, orders, customers, returns, inventory (+6 sub-routes), warehouses, offers, attendance, performance, analytics (+7 sub-routes), ai-assistant, settings, employees, roles, activity, profile, dynamic `:id` routes, unknown route | render, sidebar present, 0 console errors |
+| Employee | all 50+ routes incl. login, dashboard, orders, orders/:id, inventory (+8), media, media/upload, products, offers, attendance, attendance/leave, performance, warehouse (+5), support (+3), styling (+5), team, reports, management (+4), profile | render, sidebar present, 0 console errors |
+| Roles | Super Admin, Store Manager, Inventory Manager, Warehouse Staff, Fashion Stylist, Sales Executive, Customer Support | all render; nav differs per role, so permission filtering still applies |
+| Customer | `/`, `/shop`, `/cart`, `/checkout`, `/account`, `/account/ai-mirror`, `/account/ai-shopping` | unchanged, 0 console errors |
+
+`npm run build` passes, `npm test` passes 36/36, `git diff --check` is clean.

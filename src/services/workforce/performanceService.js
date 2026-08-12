@@ -151,22 +151,27 @@ const teamTargetAverage = (actor, periodKey) => {
 export const ensurePeriodRecord = (employee, period = periodFromDate()) => {
   const existing = findPerformance(employee.employeeId, period.key);
   if (existing) return existing;
-  const created = upsertPerformance({
-    employeeId: employee.employeeId,
-    employeeNameSnapshot: employeeFullName(employee),
-    period: period.key,
-    periodType: period.type,
-    department: employee.department,
-    role: employee.role,
-    targets: targetsForRole(employee.role).map((item) => ({
-      ...item,
+  const created = upsertPerformance(
+    {
       employeeId: employee.employeeId,
+      employeeNameSnapshot: employeeFullName(employee),
       period: period.key,
-      createdBy: "system",
-      createdAt: new Date().toISOString(),
-    })),
-    status: PERFORMANCE_STATUS.IN_PROGRESS,
-  });
+      periodType: period.type,
+      department: employee.department,
+      role: employee.role,
+      targets: targetsForRole(employee.role).map((item) => ({
+        ...item,
+        employeeId: employee.employeeId,
+        period: period.key,
+        createdBy: "system",
+        createdAt: new Date().toISOString(),
+      })),
+      status: PERFORMANCE_STATUS.IN_PROGRESS,
+    },
+    // Seeding a period row is a read-side backfill, not a user edit. Announcing
+    // it would bump WorkforceContext while a dashboard is still rendering.
+    { quiet: true }
+  );
   return created.record;
 };
 
