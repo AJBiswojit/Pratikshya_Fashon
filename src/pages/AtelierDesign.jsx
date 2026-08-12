@@ -1,7 +1,6 @@
 import { motion } from "framer-motion";
 import { useState } from "react";
 import { imageRef } from "../data/pratikshyaImageManifest";
-import { editorialCollections } from "../data/pratikshyaMockData";
 import { MARKETING_PLACEMENTS } from "../config/mediaTypes";
 import { useActivePlacementMedia } from "../hooks/useMedia";
 import { resolvePlacementImage } from "../services/media/marketingMediaSource";
@@ -9,6 +8,7 @@ import HeroCarousel from "../components/storefront/HeroCarousel";
 import ShopByCategory from "../components/storefront/ShopByCategory";
 import NewArrivals from "../components/storefront/NewArrivals";
 import SaleBanner from "../components/storefront/SaleBanner";
+import CelebrationEdit from "../components/storefront/CelebrationEdit";
 import {
   Accent,
   AtelierButton,
@@ -34,7 +34,6 @@ const fabricDetails = {
 export default function AtelierDesign() {
   const [selectedFabric, setSelectedFabric] = useState("Silk");
   const tileReveal = useReveal(distance.short);
-  const articleReveal = useReveal(distance.medium);
 
   /* Phase 12 seams. Each of these is the *same* frame the page has always
      had — only the picture inside it can now be replaced from the Admin
@@ -146,26 +145,7 @@ export default function AtelierDesign() {
         </div>
       </AtelierSection>
 
-      <AtelierSection id="bridal" rhythm="spacious">
-        <EditorialHeading
-          size="feature"
-          description="A composed wardrobe for weddings and every gathering around them."
-          descriptionClassName={`${body.base} text-taupe max-w-xl`}
-          spacing={{ title: "mb-4", description: "mb-16" }}
-        >
-          The <Accent>Celebration</Accent> Edit
-        </EditorialHeading>
-        <div className={`${grid.pair} ${gap.editorial}`}>
-          {editorialCollections.map((collection) => (
-            <motion.article id={collection.anchor} key={collection.title} {...articleReveal} className="group">
-              <MediaFrame image={collection.image} alt={collection.title} aspect="landscape" zoom="soft" className="mb-6" />
-              <p className={`${eyebrow.editorial} text-accent mb-3`}>{collection.eyebrow}</p>
-              <h3 className={`${heading.lg} mb-3`}>{collection.title}</h3>
-              <p className={`${body.editorial} text-taupe max-w-md`}>{collection.description}</p>
-            </motion.article>
-          ))}
-        </div>
-      </AtelierSection>
+      <CelebrationEdit />
 
       <ShopByCategory />
 
