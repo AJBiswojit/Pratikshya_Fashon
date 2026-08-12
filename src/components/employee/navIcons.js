@@ -3,16 +3,28 @@ import {
   ArrowLeftRight,
   BadgeCheck,
   BarChart3,
+  Box,
   Boxes,
   Calendar,
+  CalendarDays,
+  ChartNoAxesCombined,
+  ChevronDown,
+  ChevronRight,
   Clock3,
+  FileBarChart,
   Film,
   Gem,
+  HandHelping,
   Headphones,
   Image as ImageIcon,
+  Inbox,
   LayoutDashboard,
+  LogOut,
+  Menu,
   Package,
   Plus,
+  RotateCcw,
+  Shirt,
   ShoppingBag,
   SlidersHorizontal,
   Sparkles,
@@ -21,13 +33,20 @@ import {
   TrendingUp,
   Truck,
   User,
+  UserRoundPlus,
   Users,
   Warehouse,
   Wand2,
-  Inbox,
-  RotateCcw,
+  X,
 } from "lucide-react";
 
+/**
+ * PRATIKSHYA FASHON — Employee navigation icon map.
+ *
+ * Icons come from the project's single icon dependency (lucide-react).
+ * Keys here are referenced by the employee navigation configuration. The
+ * icon is decorative when a label is present, so it is always aria-hidden.
+ */
 export const NAV_ICONS = {
   layout: LayoutDashboard,
   image: ImageIcon,
@@ -38,6 +57,7 @@ export const NAV_ICONS = {
   plus: Plus,
   tag: Tag,
   boxes: Boxes,
+  box: Box,
   swap: ArrowLeftRight,
   truck: Truck,
   alert: AlertTriangle,
@@ -48,15 +68,26 @@ export const NAV_ICONS = {
   undo: RotateCcw,
   headset: Headphones,
   wand: Wand2,
+  shirt: Shirt,
   calendar: Calendar,
+  calendarDays: CalendarDays,
   gem: Gem,
   trend: TrendingUp,
   team: Users,
   chart: BarChart3,
+  fileBarChart: FileBarChart,
+  chartNoAxes: ChartNoAxesCombined,
   badge: BadgeCheck,
   target: Target,
   clock: Clock3,
   user: User,
+  userPlus: UserRoundPlus,
+  handHelping: HandHelping,
+  chevronDown: ChevronDown,
+  chevronRight: ChevronRight,
+  logout: LogOut,
+  menu: Menu,
+  close: X,
 };
 
 export const navIcon = (name) => NAV_ICONS[name] ?? LayoutDashboard;

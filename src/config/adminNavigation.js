@@ -1,10 +1,13 @@
 /**
  * PRATIKSHYA FASHON — Admin Portal navigation.
  *
- * One catalogue of business modules, grouped the way the house is run.
- * Phase 10.1 ships Dashboard, Employees, Roles & Permissions, Activity and
- * Profile as working surfaces. Everything else is a clearly-marked
- * placeholder so the portal reads as complete rather than broken.
+ * One catalogue of business modules grouped the way the house is run. All
+ * modules listed here are implemented and routed (see App.jsx). The single
+ * Admin role (SUPER_ADMIN) may access every module, so the sidebar does not
+ * filter by permission — authorization is enforced by AdminProtectedRoute.
+ *
+ * This is the ONE centralized Admin navigation definition used by the
+ * sidebar; there is no second Admin nav elsewhere.
  */
 
 export const ADMIN_BRAND = {
@@ -15,86 +18,147 @@ export const ADMIN_BRAND = {
   login: "/admin/login",
 };
 
-/** Module readiness — drives the SOON marker and the placeholder page. */
+/** Module readiness — retained for compatibility. Every listed module is READY. */
 export const MODULE_STATUS = {
   READY: "READY",
   SOON: "SOON",
 };
 
+/**
+ * Grouped Admin navigation. Operational sub-routes are kept as `children`
+ * inside their parent section so the sidebar stays clean while every
+ * existing destination remains reachable.
+ */
 export const ADMIN_NAV_GROUPS = [
   {
     id: "overview",
     label: "Overview",
+    icon: "layout",
+    items: [
+      { id: "dashboard", label: "Dashboard", to: "/admin", icon: "layout", exact: true },
+      { id: "analytics", label: "Analytics", to: "/admin/analytics", icon: "chartNoAxes" },
+      { id: "ai-assistant", label: "AI Assistant", to: "/admin/ai-assistant", icon: "sparkles" },
+    ],
+  },
+  {
+    id: "catalogue",
+    label: "Catalogue & Content",
+    icon: "package",
     items: [
       {
-        id: "dashboard",
-        label: "Dashboard",
-        to: "/admin",
-        icon: "layout",
-        exact: true,
-        status: MODULE_STATUS.READY,
+        id: "products",
+        label: "Products",
+        to: "/admin/products",
+        icon: "package",
+        children: [
+          { id: "product-review", label: "Product Review", to: "/admin/products/review", icon: "check" },
+        ],
       },
+      { id: "categories", label: "Categories", to: "/admin/categories", icon: "tags" },
+      { id: "collections", label: "Collections", to: "/admin/collections", icon: "layers" },
+      { id: "offers", label: "Offers", to: "/admin/offers", icon: "tag" },
       {
-        id: "ai-assistant",
-        label: "AI Assistant",
-        to: "/admin/ai-assistant",
-        icon: "sparkles",
-        status: MODULE_STATUS.READY,
+        id: "media",
+        label: "Media Management",
+        to: "/admin/media",
+        icon: "image",
+        children: [
+          { id: "marketing-media", label: "Marketing Media", to: "/admin/media/marketing", icon: "imagePlay" },
+        ],
       },
     ],
   },
   {
-    id: "business",
-    label: "Business",
+    id: "orders",
+    label: "Orders & Customers",
+    icon: "bag",
     items: [
-      { id: "products", label: "Products", to: "/admin/products", icon: "sparkles", status: MODULE_STATUS.READY },
-      { id: "product-review", label: "Product Review", to: "/admin/products/review", icon: "check", status: MODULE_STATUS.READY },
-      { id: "categories", label: "Categories", to: "/admin/categories", icon: "grid", status: MODULE_STATUS.READY },
-      { id: "collections", label: "Collections", to: "/admin/collections", icon: "layers", status: MODULE_STATUS.READY },
-      { id: "offers", label: "Offers", to: "/admin/offers", icon: "tag", status: MODULE_STATUS.READY },
-      { id: "media", label: "Media Management", to: "/admin/media", icon: "image", status: MODULE_STATUS.READY },
-      { id: "marketing-media", label: "Marketing Media", to: "/admin/media/marketing", icon: "film", status: MODULE_STATUS.READY },
-      { id: "inventory", label: "Inventory", to: "/admin/inventory", icon: "boxes", status: MODULE_STATUS.READY },
-      { id: "analytics", label: "Analytics", to: "/admin/analytics", icon: "chart", status: MODULE_STATUS.READY },
+      { id: "orders", label: "Orders", to: "/admin/orders", icon: "bag" },
+      { id: "customers", label: "Customers", to: "/admin/customers", icon: "users" },
+      { id: "returns", label: "Returns", to: "/admin/returns", icon: "undo" },
     ],
   },
   {
-    id: "sales",
-    label: "Sales",
+    id: "inventory",
+    label: "Inventory & Operations",
+    icon: "boxes",
     items: [
-      { id: "orders", label: "Orders", to: "/admin/orders", icon: "bag", status: MODULE_STATUS.READY },
-      { id: "customers", label: "Customers", to: "/admin/customers", icon: "users", status: MODULE_STATUS.READY },
-      { id: "returns", label: "Returns", to: "/admin/returns", icon: "undo", status: MODULE_STATUS.READY },
+      {
+        id: "inventory",
+        label: "Inventory",
+        to: "/admin/inventory",
+        icon: "boxes",
+        children: [
+          { id: "receive", label: "Receive", to: "/admin/inventory/receive", icon: "inbox" },
+          { id: "adjust", label: "Adjust", to: "/admin/inventory/adjust", icon: "sliders" },
+          { id: "transfers", label: "Transfers", to: "/admin/inventory/transfers", icon: "swap" },
+          { id: "movements", label: "Movements", to: "/admin/inventory/movements", icon: "list" },
+          { id: "low-stock", label: "Low Stock", to: "/admin/inventory/low-stock", icon: "alert" },
+        ],
+      },
     ],
   },
   {
-    id: "people",
-    label: "People",
+    id: "workforce",
+    label: "Workforce",
+    icon: "usersRound",
     items: [
-      { id: "employees", label: "Employees", to: "/admin/employees", icon: "badge", status: MODULE_STATUS.READY },
-      { id: "roles", label: "Roles & Permissions", to: "/admin/roles", icon: "shield", status: MODULE_STATUS.READY },
-      { id: "attendance", label: "Attendance", to: "/admin/attendance", icon: "clock", status: MODULE_STATUS.READY },
-      { id: "performance", label: "Performance", to: "/admin/performance", icon: "target", status: MODULE_STATUS.READY },
+      { id: "employees", label: "Employees", to: "/admin/employees", icon: "usersRound" },
+      { id: "attendance", label: "Attendance", to: "/admin/attendance", icon: "clock" },
+      { id: "performance", label: "Performance", to: "/admin/performance", icon: "target" },
+      { id: "roles", label: "Roles", to: "/admin/roles", icon: "shield" },
     ],
   },
   {
     id: "system",
     label: "System",
+    icon: "sliders",
     items: [
-      { id: "activity", label: "Activity Logs", to: "/admin/activity", icon: "list", status: MODULE_STATUS.READY },
-      { id: "settings", label: "Settings", to: "/admin/settings", icon: "sliders", status: MODULE_STATUS.READY },
-      { id: "profile", label: "Profile", to: "/admin/profile", icon: "user", status: MODULE_STATUS.READY },
+      { id: "activity", label: "Activity", to: "/admin/activity", icon: "list" },
+      { id: "settings", label: "Settings", to: "/admin/settings", icon: "sliders" },
     ],
   },
 ];
 
-export const ADMIN_NAV_ITEMS = ADMIN_NAV_GROUPS.flatMap((group) => group.items);
+/** Every Admin link (parents + children) for active-route resolution. */
+export const flattenAdminNavLinks = (groups = ADMIN_NAV_GROUPS) => {
+  const links = [];
+  for (const group of groups) {
+    for (const item of group.items) {
+      links.push({ id: item.id, to: item.to, exact: Boolean(item.exact) });
+      if (Array.isArray(item.children)) {
+        for (const child of item.children) {
+          links.push({ id: child.id, to: child.to, exact: Boolean(child.exact) });
+        }
+      }
+    }
+  }
+  return links;
+};
 
 /**
- * The nav item a path belongs to.
- *
- * The most specific destination wins, so a nested module such as
- * `/admin/media/marketing` resolves to itself rather than to its parent.
+ * Resolve which Admin link owns a pathname using longest-prefix matching.
+ * Returns the item id, or null when nothing matches.
+ */
+export const resolveActiveNavId = (pathname, groups = ADMIN_NAV_GROUPS) => {
+  if (!pathname) return null;
+  const cleaned = pathname.split("?")[0];
+  let best = null;
+  for (const link of flattenAdminNavLinks(groups)) {
+    const matches = link.exact
+      ? cleaned === link.to
+      : cleaned === link.to || cleaned.startsWith(`${link.to}/`);
+    if (matches && (!best || link.to.length > best.to.length)) best = link;
+  }
+  return best ? best.id : null;
+};
+
+/** Flat list of every Admin nav item (parents + children) — compatibility. */
+export const ADMIN_NAV_ITEMS = flattenAdminNavLinks(ADMIN_NAV_GROUPS);
+
+/**
+ * The nav item a path belongs to (longest-prefix). Most-specific wins so a
+ * nested destination such as `/admin/media/marketing` resolves to itself.
  */
 export const findAdminNavItem = (pathname) => {
   if (!pathname || typeof pathname !== "string") return null;
@@ -106,7 +170,9 @@ export const findAdminNavItem = (pathname) => {
   );
 };
 
-/** Copy for a module that is navigable but not implemented in this phase. */
+/** Copy for modules that were historically placeholders — retained for the
+ *  un-routed AdminModulePlaceholder compatibility. All listed modules are
+ *  now implemented, so this is unused by the live sidebar. */
 export const ADMIN_PLACEHOLDER_COPY = {
   products: "Product creation, editing and merchandising move here in a later phase.",
   categories: "Category structure and taxonomy management arrive with the product module.",
@@ -145,8 +211,10 @@ export default {
   ADMIN_BRAND,
   MODULE_STATUS,
   ADMIN_NAV_GROUPS,
+  flattenAdminNavLinks,
+  resolveActiveNavId,
   ADMIN_NAV_ITEMS,
-  ADMIN_PLACEHOLDER_COPY,
   findAdminNavItem,
+  ADMIN_PLACEHOLDER_COPY,
   sanitizeAdminReturnUrl,
 };
