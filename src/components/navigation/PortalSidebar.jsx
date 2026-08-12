@@ -30,16 +30,28 @@ export default function PortalSidebar({
   storageKey,
   iconResolver,
 }) {
-  const { pathname } = useLocation();
+  const location = useLocation();
+  const pathname = location?.pathname ?? "";
 
-  const activeId = useMemo(
-    () => resolveActiveId(pathname, groups),
-    [pathname, groups, resolveActiveId]
-  );
+  /* The navigation data contract: an array of groups, each with an items
+     array. Both portals satisfy it, but a portal may hand over an empty or
+     still-loading configuration, so it is normalised once, here. */
+  const navGroups = useMemo(() => normalizeGroups(groups), [groups]);
+
+  const resolveIcon = useMemo(() => makeIconResolver(iconResolver), [iconResolver]);
+
+  const activeId = useMemo(() => {
+    if (typeof resolveActiveId !== "function") return null;
+    try {
+      return resolveActiveId(pathname, navGroups) ?? null;
+    } catch {
+      /* An unmatched or unexpected pathname must never break the portal. */
+      return null;
+    }
+  }, [pathname, navGroups, resolveActiveId]);
 
   const activeGroupId = useMemo(() => {
-    if (!groups) return null;
-    for (const group of groups) {
+    for (const group of navGroups) {
       const hasActive = group.items.some(
         (item) =>
           item.id === activeId ||
@@ -49,16 +61,14 @@ export default function PortalSidebar({
       if (hasActive) return group.id;
     }
     return null;
-  }, [groups, activeId]);
+  }, [navGroups, activeId]);
 
   const [expanded, setExpanded] = useState(() => {
-    const seed = readPersistedGroups(storageKey);
-    if (!seed) {
-      /* Fresh visitors see the Overview group open; everything else stays
-         compact so the sidebar does not create excessive height. */
-      const overview = groups?.find((group) => group.id === "overview");
-      if (overview) seed.add(overview.id);
-    }
+    const persisted = readPersistedGroups(storageKey);
+    /* Fresh visitors (no stored preference) see the Overview group open;
+       everything else stays compact so the sidebar does not create
+       excessive height. */
+    const seed = persisted ?? new Set(defaultOpenGroupIds(normalizeGroups(groups)));
     if (activeGroupId) seed.add(activeGroupId);
     return seed;
   });
@@ -89,15 +99,27 @@ export default function PortalSidebar({
   };
 
   const isOpen = (groupId) => expanded.has(groupId);
-  const UserIcon = iconResolver("user");
-  const LogoutIcon = iconResolver("logout");
+  const LogoutIcon = resolveIcon("logout");
+
+  const footerItems = Array.isArray(footerLinks)
+    ? footerLinks.filter((link) => link && link.id && link.to)
+    : [];
+
+  /* Sign out stays a handler, never a route. */
+  const handleSignOut = typeof signOut === "function" ? signOut : undefined;
+
+  /* Identity may still be hydrating on the first paint, so every field has a
+     rendering-only fallback. No real person is ever hardcoded. */
+  const displayName = identity?.name || "Team member";
+  const displayRole = identity?.roleLabel || "Team member";
+  const displayInitials = identity?.initials || "PF";
 
   return (
     <div className="flex h-full min-h-0 flex-col bg-canvas">
       {/* ------------------------------------------------ identity */}
       <div className="border-b border-mist/70 px-4 py-4">
         <div className="flex items-center gap-3">
-          {identity.avatar ? (
+          {identity?.avatar ? (
             <img
               src={identity.avatar}
               alt=""
@@ -108,15 +130,15 @@ export default function PortalSidebar({
               aria-hidden="true"
               className="flex h-10 w-10 shrink-0 items-center justify-center bg-ink font-display text-sm font-light text-ivory"
             >
-              {identity.initials}
+              {displayInitials}
             </span>
           )}
           <div className="min-w-0">
             <p className="truncate font-display text-base font-medium leading-tight text-ink">
-              {identity.name}
+              {displayName}
             </p>
             <p className="mt-0.5 font-ui text-[10px] uppercase tracking-[.16em] text-taupe">
-              {identity.roleLabel}
+              {displayRole}
             </p>
           </div>
         </div>
@@ -128,8 +150,8 @@ export default function PortalSidebar({
         aria-label={ariaLabel}
         className="min-h-0 flex-1 overflow-y-auto px-2 py-3"
       >
-        {groups.map((group) => {
-          const GroupIcon = iconResolver(group.icon);
+        {navGroups.map((group) => {
+          const GroupIcon = resolveIcon(group.icon);
           const open = isOpen(group.id);
           return (
             <section key={group.id} className="mb-3 last:mb-0">
@@ -152,7 +174,7 @@ export default function PortalSidebar({
                       {group.label}
                     </span>
                   </span>
-                  <Chevron iconResolver={iconResolver} open={open} />
+                  <Chevron iconResolver={resolveIcon} open={open} />
                 </button>
               </h2>
 
@@ -163,9 +185,9 @@ export default function PortalSidebar({
                       key={item.id}
                       item={item}
                       activeId={activeId}
-                      badge={badges[item.id]}
+                      badge={badges?.[item.id]}
                       onNavigate={onNavigate}
-                      iconResolver={iconResolver}
+                      iconResolver={resolveIcon}
                     />
                   ))}
                 </ul>
@@ -178,10 +200,11 @@ export default function PortalSidebar({
       {/* ------------------------------------------------ footer */}
       <div className="border-t border-mist/70 px-3 py-3">
         <ul className="space-y-0.5">
-          {footerLinks.map((link) => {
-            const Icon = iconResolver(link.icon);
-            const linkActive =
-              pathname === link.to || pathname.startsWith(`${link.to}/`);
+          {footerItems.map((link) => {
+            const Icon = resolveIcon(link.icon);
+            /* Footer destinations are NOT part of the navigation groups, so
+               their active state is resolved from the pathname directly. */
+            const linkActive = isPathActive(pathname, link.to);
             return (
               <li key={link.id}>
                 <Link
@@ -204,7 +227,7 @@ export default function PortalSidebar({
           <li>
             <button
               type="button"
-              onClick={signOut}
+              onClick={handleSignOut}
               className="flex w-full items-center gap-3 px-3 py-2 text-left font-ui text-[11px] uppercase tracking-[.14em] text-taupe hover:bg-surface hover:text-ink"
             >
               <LogoutIcon aria-hidden="true" size={14} strokeWidth={1.5} />
@@ -310,18 +333,91 @@ function ChildLink({ child, activeId, onNavigate, iconResolver }) {
   );
 }
 
+/**
+ * THE NAVIGATION DATA CONTRACT.
+ *
+ * PortalSidebar renders `groups`: an array of
+ *   { id, label, icon, items: [{ id, label, to, icon, children? }] }
+ *
+ * Admin passes ADMIN_NAV_GROUPS and Employee passes the permission-filtered
+ * result of navigationForRole — both already satisfy this shape. Normalising
+ * once here means the render tree below can iterate without null checks, and
+ * a portal whose configuration is momentarily empty renders an empty nav
+ * instead of crashing the whole layout.
+ */
+function normalizeGroups(groups) {
+  if (!Array.isArray(groups)) return [];
+  return groups
+    .filter((group) => group && group.id)
+    .map((group) => ({
+      ...group,
+      items: Array.isArray(group.items)
+        ? group.items
+            .filter((item) => item && item.id && item.to)
+            .map((item) => ({
+              ...item,
+              children: Array.isArray(item.children)
+                ? item.children.filter((child) => child && child.id && child.to)
+                : undefined,
+            }))
+        : [],
+    }))
+    .filter((group) => group.items.length > 0);
+}
+
+/**
+ * Every icon is resolved through the portal's own lucide-react map. A missing
+ * or unknown key must never render `undefined` as a component — that alone
+ * would crash the sidebar — so an inert placeholder is the last resort.
+ */
+function makeIconResolver(iconResolver) {
+  return (name) => {
+    if (typeof iconResolver !== "function") return FallbackIcon;
+    try {
+      return iconResolver(name) || FallbackIcon;
+    } catch {
+      return FallbackIcon;
+    }
+  };
+}
+
+function FallbackIcon(props) {
+  return <span aria-hidden="true" {...props} />;
+}
+
+/** Fresh visitors open Overview only; fall back to the first group. */
+function defaultOpenGroupIds(groups) {
+  if (!groups.length) return [];
+  const overview = groups.find((group) => group.id === "overview");
+  return [overview ? overview.id : groups[0].id];
+}
+
+/** Exact match, or a nested path under it. Safe for undefined pathnames. */
+function isPathActive(pathname, to) {
+  if (!pathname || !to) return false;
+  return pathname === to || pathname.startsWith(`${to}/`);
+}
+
+/**
+ * Returns the stored preference, or null when there is nothing usable stored
+ * (first visit, corrupted value, or storage unavailable) so the caller can
+ * apply its own default.
+ */
 function readPersistedGroups(key) {
+  if (!key || typeof localStorage === "undefined") return null;
   try {
     const raw = localStorage.getItem(key);
     if (!raw) return null;
     const parsed = JSON.parse(raw);
-    return new Set(Array.isArray(parsed) ? parsed.filter(Boolean) : []);
+    if (!Array.isArray(parsed)) return null;
+    return new Set(parsed.filter((id) => typeof id === "string" && id));
   } catch {
     return null;
   }
 }
 
 function writePersistedGroups(key, groups) {
+  if (!key || typeof localStorage === "undefined") return;
   try {
     localStorage.setItem(key, JSON.stringify([...groups]));
   } catch {

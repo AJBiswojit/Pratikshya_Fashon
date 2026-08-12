@@ -89,20 +89,26 @@ export function LeaveTable({ rows, actor, showEmployee = false, onChanged }) {
   const { hasPermission } = useEmployeeAuth();
   const [pending, setPending] = useState(null);
   const [rejectNote, setRejectNote] = useState("");
+  const [reviewError, setReviewError] = useState("");
   const canReview = hasPermission(PERMISSIONS.LEAVE_APPROVE) || hasPermission(PERMISSIONS.LEAVE_REJECT) || hasPermission(PERMISSIONS.LEAVE_MANAGE);
 
   const confirm = () => {
     if (!pending) return;
-    if (pending.action === "cancel") {
-      cancelLeave({ leaveId: pending.leaveId, actor });
-    } else {
-      reviewLeave({
-        leaveId: pending.leaveId,
-        actor,
-        decision: pending.action === "approve" ? LEAVE_STATUS.APPROVED : LEAVE_STATUS.REJECTED,
-        reviewNote: rejectNote,
-      });
+    const result =
+      pending.action === "cancel"
+        ? cancelLeave({ leaveId: pending.leaveId, actor })
+        : reviewLeave({
+            leaveId: pending.leaveId,
+            actor,
+            decision: pending.action === "approve" ? LEAVE_STATUS.APPROVED : LEAVE_STATUS.REJECTED,
+            reviewNote: rejectNote,
+          });
+    if (result && result.ok === false) {
+      /* The desk keeps the request open so the reason can be supplied. */
+      setReviewError(result.message || "That decision could not be recorded.");
+      return;
     }
+    setReviewError("");
     setPending(null);
     setRejectNote("");
     onChanged?.();
@@ -180,7 +186,10 @@ export function LeaveTable({ rows, actor, showEmployee = false, onChanged }) {
         confirmLabel="Confirm"
         cancelLabel="Keep"
         onConfirm={confirm}
-        onCancel={() => setPending(null)}
+        onCancel={() => {
+          setPending(null);
+          setReviewError("");
+        }}
       />
       {pending?.action === "reject" ? (
         <div className="mt-4">

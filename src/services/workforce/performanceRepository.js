@@ -113,7 +113,7 @@ export const performanceForEmployee = (employeeId, records = loadPerformance()) 
     .filter((entry) => entry.employeeId === employeeId)
     .sort((a, b) => String(b.period).localeCompare(String(a.period)));
 
-export const upsertPerformance = (draft) => {
+export const upsertPerformance = (draft, options) => {
   const records = [...loadPerformance()];
   const next = normalisePerformance({
     performanceId: draft.performanceId || makeId("perf"),
@@ -129,11 +129,11 @@ export const upsertPerformance = (draft) => {
   );
   if (index >= 0) {
     records[index] = { ...records[index], ...next, performanceId: records[index].performanceId };
-    savePerformance(records);
+    savePerformance(records, options);
     return { ok: true, record: records[index], records };
   }
   const created = [next, ...records];
-  savePerformance(created);
+  savePerformance(created, options);
   return { ok: true, record: next, records: created };
 };
 
