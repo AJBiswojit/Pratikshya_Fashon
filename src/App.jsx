@@ -10,10 +10,13 @@ import { CheckoutProvider } from "./context/CheckoutContext";
 import { OrderProvider } from "./context/OrderContext";
 import { EmployeeAuthProvider } from "./context/EmployeeAuthContext";
 import { EmployeeManagementProvider } from "./context/EmployeeManagementContext";
+import { AdminAuthProvider } from "./context/AdminAuthContext";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 import EmployeeProtectedRoute from "./components/employee/EmployeeProtectedRoute";
+import AdminProtectedRoute from "./components/admin/AdminProtectedRoute";
 import CustomerLayout from "./layouts/CustomerLayout";
 import EmployeeLayout from "./layouts/EmployeeLayout";
+import AdminLayout from "./layouts/AdminLayout";
 import AtelierDesign from "./pages/AtelierDesign";
 import CatalogueListing from "./pages/CatalogueListing";
 import CategoryPage from "./pages/CategoryPage";
@@ -65,6 +68,20 @@ const EmployeeDetail = lazy(() => import("./pages/employee/management/EmployeeDe
 const EmployeeEdit = lazy(() => import("./pages/employee/management/EmployeeEdit"));
 const ActivityLog = lazy(() => import("./pages/employee/management/ActivityLog"));
 
+/* Admin Portal */
+const AdminLogin = lazy(() => import("./pages/admin/AdminLogin"));
+const AdminDashboard = lazy(() => import("./pages/admin/AdminDashboard"));
+const AdminEmployeeList = lazy(() => import("./pages/admin/employees/AdminEmployeeList"));
+const AdminEmployeeCreate = lazy(() => import("./pages/admin/employees/AdminEmployeeCreate"));
+const AdminEmployeeDetail = lazy(() => import("./pages/admin/employees/AdminEmployeeDetail"));
+const AdminEmployeeEdit = lazy(() => import("./pages/admin/employees/AdminEmployeeEdit"));
+const AdminRoles = lazy(() => import("./pages/admin/AdminRoles"));
+const AdminRoleDetail = lazy(() => import("./pages/admin/AdminRoleDetail"));
+const AdminActivity = lazy(() => import("./pages/admin/AdminActivity"));
+const AdminProfile = lazy(() => import("./pages/admin/AdminProfile"));
+const AdminModulePlaceholder = lazy(() => import("./pages/admin/AdminModulePlaceholder"));
+const AdminNotFound = lazy(() => import("./pages/admin/AdminNotFound"));
+
 /** Paths owned by dedicated pages rather than the generic interior shell. */
 const dedicatedPaths = new Set([
   "/search",
@@ -99,6 +116,12 @@ const dedicatedPaths = new Set([
  *             └── CheckoutProvider
  *                 └── EmployeeAuthProvider
  *                     └── EmployeeManagementProvider
+ *                         └── AdminAuthProvider
+ *
+ * The three authentication boundaries are siblings, never nested in
+ * meaning: customer, employee and admin each own their own storage key and
+ * their own guard. EmployeeManagementProvider sits above AdminAuthProvider
+ * only so both portals administer one shared employee register.
  */
 export default function App() {
   return (
@@ -110,12 +133,56 @@ export default function App() {
               <CheckoutProvider>
                 <EmployeeAuthProvider>
                   <EmployeeManagementProvider>
+                    <AdminAuthProvider>
                     <Suspense fallback={<LoadingState label="Opening PRATIKSHYA FASHON" />}>
                     <Routes>
                       {/*
+                        Admin Portal — its own door, its own session, its own shell.
+                        It consumes EmployeeManagementContext for people administration
+                        so both portals write to one employee register.
+                      */}
+                      <Route path="/admin/login" element={<AdminLogin />} />
+
+                      <Route element={<AdminProtectedRoute />}>
+                        <Route element={<AdminLayout />}>
+                          <Route path="/admin" element={<AdminDashboard />} />
+                          <Route path="/admin/dashboard" element={<Navigate to="/admin" replace />} />
+
+                          {/* People — live in this phase */}
+                          <Route path="/admin/employees" element={<AdminEmployeeList />} />
+                          <Route path="/admin/employees/new" element={<AdminEmployeeCreate />} />
+                          <Route path="/admin/employees/:employeeId" element={<AdminEmployeeDetail />} />
+                          <Route path="/admin/employees/:employeeId/edit" element={<AdminEmployeeEdit />} />
+                          <Route path="/admin/roles" element={<AdminRoles />} />
+                          <Route path="/admin/roles/:roleId" element={<AdminRoleDetail />} />
+                          <Route path="/admin/activity" element={<AdminActivity />} />
+                          <Route path="/admin/profile" element={<AdminProfile />} />
+
+                          {/* Business modules — navigable placeholders until their phase lands */}
+                          <Route path="/admin/products" element={<AdminModulePlaceholder />} />
+                          <Route path="/admin/categories" element={<AdminModulePlaceholder />} />
+                          <Route path="/admin/collections" element={<AdminModulePlaceholder />} />
+                          <Route path="/admin/offers" element={<AdminModulePlaceholder />} />
+                          <Route path="/admin/orders" element={<AdminModulePlaceholder />} />
+                          <Route path="/admin/customers" element={<AdminModulePlaceholder />} />
+                          <Route path="/admin/returns" element={<AdminModulePlaceholder />} />
+                          <Route path="/admin/inventory" element={<AdminModulePlaceholder />} />
+                          <Route path="/admin/warehouses" element={<AdminModulePlaceholder />} />
+                          <Route path="/admin/stock-movements" element={<AdminModulePlaceholder />} />
+                          <Route path="/admin/attendance" element={<AdminModulePlaceholder />} />
+                          <Route path="/admin/performance" element={<AdminModulePlaceholder />} />
+                          <Route path="/admin/analytics/sales" element={<AdminModulePlaceholder />} />
+                          <Route path="/admin/analytics/products" element={<AdminModulePlaceholder />} />
+                          <Route path="/admin/analytics/customers" element={<AdminModulePlaceholder />} />
+                          <Route path="/admin/analytics/inventory" element={<AdminModulePlaceholder />} />
+                          <Route path="/admin/settings" element={<AdminModulePlaceholder />} />
+
+                          <Route path="/admin/*" element={<AdminNotFound />} />
+                        </Route>
+                      </Route>
+
+                      {/*
                         Employee portal — never rendered through customer auth or shell.
-                        Future Admin Portal will live at /admin/* and can reuse
-                        EmployeeManagementContext + employeeService without rewriting this tree.
                       */}
                       <Route path="/employee/login" element={<EmployeeLogin />} />
                       <Route path="/employee/forgot-password" element={<EmployeeForgotPassword />} />
@@ -240,6 +307,7 @@ export default function App() {
                       </Route>
                     </Routes>
                     </Suspense>
+                    </AdminAuthProvider>
                   </EmployeeManagementProvider>
                 </EmployeeAuthProvider>
               </CheckoutProvider>
