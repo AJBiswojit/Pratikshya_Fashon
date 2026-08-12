@@ -8,8 +8,8 @@
  */
 
 import { useMemo, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import { Pencil, Plus, Search, UploadCloud } from "lucide-react";
+import { Link } from "react-router-dom";
+import { Eye, Pencil, Plus, Search, UploadCloud } from "lucide-react";
 import EmployeePage from "../../components/employee/EmployeePage";
 import DataTable from "../../components/employee/DataTable";
 import StatusBadge from "../../components/employee/StatusBadge";
@@ -21,7 +21,7 @@ import { useEmployeeAuth } from "../../context/EmployeeAuthContext";
 import { PERMISSIONS } from "../../config/employeePermissions";
 import { formatINR } from "../../utils/shopping";
 import { employeeInputClass } from "../../components/employee/EmployeeField";
-import { getProductStatusLabel } from "../../config/productCatalogConfig";
+import { CATEGORY_OPTIONS, getProductStatusLabel } from "../../config/productCatalogConfig";
 import { categoryLabels } from "../../data/products/taxonomy";
 
 const statusTone = {
@@ -36,7 +36,6 @@ const statusTone = {
 /* ------------------------------------------------------------------ */
 
 function ProductWorkspace() {
-  const navigate = useNavigate();
   const { employee, hasPermission } = useEmployeeAuth();
   const actor = employee
     ? {
@@ -48,6 +47,7 @@ function ProductWorkspace() {
   const items = useProducts();
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState("ALL");
+  const [category, setCategory] = useState("ALL");
   const [notice, setNotice] = useState(null);
 
   const canManage = hasPermission(PERMISSIONS.PRODUCTS_MANAGE);
@@ -56,13 +56,22 @@ function ProductWorkspace() {
     const term = query.trim().toLowerCase();
     return items.filter((product) => {
       if (status !== "ALL" && product.status !== status) return false;
+      if (category !== "ALL" && product.category !== category) return false;
       if (!term) return true;
-      return [product.name, product.sku, product.category, product.subcategory, product.fabric, product.collection]
+      return [
+        product.name,
+        product.sku,
+        product.category,
+        categoryLabels[product.category] ?? "",
+        product.subcategory,
+        product.fabric,
+        product.collection,
+      ]
         .join(" ")
         .toLowerCase()
         .includes(term);
     });
-  }, [items, query, status]);
+  }, [items, query, status, category]);
 
   const counts = useMemo(
     () => ({
@@ -77,7 +86,7 @@ function ProductWorkspace() {
   const submit = (product) => {
     const result = catalogRepository.submitForReview(product.id, actor);
     if (result.ok) setNotice(`“${product.name}” submitted for review.`);
-    else setNotice(result.error || "Could not submit for review.");
+    else setNotice((result.errors ?? [result.error]).join(" "));
   };
 
   return (
@@ -130,6 +139,22 @@ function ProductWorkspace() {
           />
         </label>
         <label>
+          <span className="sr-only">Filter by category</span>
+          <select
+            aria-label="Filter by category"
+            className={employeeInputClass()}
+            value={category}
+            onChange={(event) => setCategory(event.target.value)}
+          >
+            <option value="ALL">All categories</option>
+            {CATEGORY_OPTIONS.map((cat) => (
+              <option key={cat.id} value={cat.id}>
+                {cat.label}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label>
           <span className="sr-only">Filter by status</span>
           <select
             aria-label="Filter by status"
@@ -158,21 +183,26 @@ function ProductWorkspace() {
               <div>
                 <Link
                   to={`/employee/products/${row.id}/edit`}
-                  className="font-ui text-sm underline-offset-4 hover:text-accent hover:underline"
+                  className="font-ui text-sm font-medium underline-offset-4 hover:text-accent hover:underline"
                 >
                   {row.name}
                 </Link>
-                {row.review.state === "REJECTED" && row.review.rejectionReason ? (
-                  <p className="mt-1 text-[11px] text-accent">Rejected — {row.review.rejectionReason}</p>
+                {row.review?.state === "REJECTED" && row.review.rejectionReason ? (
+                  <p className="mt-1 text-[11px] text-accent font-medium">Rejected: {row.review.rejectionReason}</p>
                 ) : null}
               </div>
             ),
           },
-          { id: "sku", label: "SKU" },
+          { id: "sku", label: "SKU", render: (row) => <span className="font-mono text-xs text-taupe">{row.sku}</span> },
           {
             id: "category",
             label: "Category",
-            render: (row) => categoryLabels[row.category] ?? row.category ?? "—",
+            render: (row) => (
+              <span>
+                {categoryLabels[row.category] ?? row.category ?? "—"}
+                {row.subcategory ? <span className="block text-[11px] text-taupe">{row.subcategory}</span> : null}
+              </span>
+            ),
           },
           { id: "price", label: "Price", render: (row) => formatINR(row.price) },
           {
@@ -198,11 +228,19 @@ function ProductWorkspace() {
                   <button
                     type="button"
                     onClick={() => submit(row)}
-                    className="inline-flex items-center gap-1 font-ui text-[11px] uppercase tracking-widest text-brass-deep underline-offset-4 hover:text-accent hover:underline"
+                    className="inline-flex items-center gap-1 font-ui text-[11px] uppercase tracking-widest text-accent underline-offset-4 hover:text-ink hover:underline"
                   >
                     <UploadCloud size={12} aria-hidden="true" /> Submit
                   </button>
                 ) : null}
+                <a
+                  href={`/product/${row.slug}?preview=1`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-1 font-ui text-[11px] uppercase tracking-widest text-taupe underline-offset-4 hover:text-ink hover:underline"
+                >
+                  <Eye size={12} aria-hidden="true" /> Preview
+                </a>
               </div>
             ),
           },

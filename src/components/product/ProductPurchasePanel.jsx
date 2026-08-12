@@ -244,6 +244,20 @@ export default function ProductPurchasePanel({ product }) {
         {availabilityCopy(product)}
       </div>
 
+      {product.highlights?.length ? (
+        <div className="mt-6 border-b border-mist/80 pb-6">
+          <p className="font-ui text-[10px] uppercase tracking-[.18em] text-ink mb-2.5 font-medium">Piece Highlights</p>
+          <ul className="space-y-1.5 font-ui text-xs text-graphite">
+            {product.highlights.map((highlight, idx) => (
+              <li key={`${highlight}-${idx}`} className="flex items-start gap-2">
+                <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-accent" aria-hidden="true" />
+                <span>{highlight}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+
       {product.colors.length ? (
         <fieldset className="mt-8">
           <legend className="font-ui text-[10px] uppercase tracking-[.18em] text-ink">

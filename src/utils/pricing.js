@@ -59,6 +59,8 @@ export const computePricing = (pricing = {}) => {
   const sellingPrice = toNumber(pricing.sellingPrice);
   const discountType = pricing.discountType || DISCOUNT_TYPES.NONE;
   const discountValue = toNumber(pricing.discountValue ?? 0);
+  const taxRate = toNumber(pricing.taxRate ?? 0);
+  const taxMode = pricing.taxMode || "INCLUSIVE";
 
   const errors = [];
 
@@ -94,6 +96,10 @@ export const computePricing = (pricing = {}) => {
     }
   }
 
+  if (Number.isFinite(taxRate) && (taxRate < 0 || taxRate > 100)) {
+    errors.push("GST rate must be between 0% and 100%.");
+  }
+
   const base = Number.isFinite(sellingPrice) ? sellingPrice : 0;
   const finalPrice = Math.max(0, roundINR(base - discountAmount));
 
@@ -101,14 +107,24 @@ export const computePricing = (pricing = {}) => {
     errors.push("Final price must never be negative.");
   }
 
+  const mrpVal = Number.isFinite(mrp) ? roundINR(mrp) : 0;
+  const savings = mrpVal > 0 ? Math.max(0, mrpVal - finalPrice) : 0;
+  const effectiveDiscountPercent =
+    mrpVal > 0 && savings > 0
+      ? Number(((savings / mrpVal) * 100).toFixed(2))
+      : 0;
+
   return {
-    mrp: Number.isFinite(mrp) ? roundINR(mrp) : 0,
+    mrp: mrpVal,
     sellingPrice: Number.isFinite(sellingPrice) ? roundINR(sellingPrice) : 0,
     discountType,
     discountValue: Number.isFinite(discountValue) ? discountValue : 0,
     discountAmount: roundINR(discountAmount),
     finalPrice,
-    savings: Number.isFinite(mrp) ? Math.max(0, roundINR(mrp) - finalPrice) : 0,
+    savings,
+    effectiveDiscountPercent,
+    taxMode,
+    taxRate: Number.isFinite(taxRate) ? taxRate : 0,
     errors,
   };
 };
@@ -144,7 +160,8 @@ export const resolveVariantPrice = (variant, productPricing) => {
 
 /** Human-readable discount summary for tables: `10% off` / `₹500 off`. */
 export const describeDiscount = (pricing) => {
-  const { discountType, discountValue, discountAmount } = computePricing(pricing);
+  const { discountType, discountValue, discountAmount, effectiveDiscountPercent, savings } =
+    computePricing(pricing);
   if (discountType === DISCOUNT_TYPES.PERCENTAGE && discountValue > 0) {
     return `${roundINR(discountValue)}% off`;
   }
@@ -152,6 +169,8 @@ export const describeDiscount = (pricing) => {
     return `₹${roundINR(discountValue)} off`;
   }
   if (discountAmount > 0) return `₹${discountAmount} off`;
+  if (effectiveDiscountPercent > 0) return `${effectiveDiscountPercent}% off`;
+  if (savings > 0) return `₹${savings} off`;
   return "—";
 };
 

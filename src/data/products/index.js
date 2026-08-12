@@ -22,6 +22,7 @@
 
 import { imageRef } from "../pratikshyaImageManifest";
 import catalogue from "./catalogue";
+import catalogRepository, { slugify } from "../../services/catalogRepository";
 import {
   getCareInstructions,
   getDeliveryInfo,
@@ -33,13 +34,7 @@ import {
 } from "./details";
 import { categoryLabels, getCategory } from "./taxonomy";
 
-/** `Sambalpuri Pato Silk Saree` → `sambalpuri-pato-silk-saree` */
-export const slugify = (value) =>
-  String(value)
-    .toLowerCase()
-    .replace(/&/g, " and ")
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-|-$/g, "");
+export { slugify };
 
 /**
  * Reduces a string to lower-case words separated by single spaces.
@@ -126,7 +121,7 @@ const availabilityLabels = {
 export const toStorefrontProduct = (product, index = 0) => {
   const id = product.id ?? `pf-${String(index + 1).padStart(3, "0")}`;
   const slug = product.slug || slugify(product.name ?? id);
-  const sku = product.sku ?? `PF-${product.category.slice(0, 4).toUpperCase()}-${String(index + 1).padStart(3, "0")}`;
+  const sku = product.sku ?? `PF-${String(product.category || "item").slice(0, 4).toUpperCase()}-${String(index + 1).padStart(3, "0")}`;
 
   /* Variants authored in the workspace supply colours and sizes. Active
      variants are selectable; inactive ones are excluded, never deleted. */
@@ -199,6 +194,8 @@ export const toStorefrontProduct = (product, index = 0) => {
 
     /* Product story — authored values win over category-aware defaults. */
     description: getProductDescription(product),
+    shortDescription: product.shortDescription || "",
+    highlights: Array.isArray(product.highlights) ? product.highlights : [],
     details: getProductDetails(product),
     careInstructions: getCareInstructions(product),
     specifications: getProductSpecifications(product, sku),
@@ -258,39 +255,47 @@ const isCustomerVisible = (record) => {
   return record.published !== false;
 };
 
-const persistedProducts = (() => {
+export const getLiveStorefrontProducts = () => {
   try {
-    const value = JSON.parse(window.localStorage.getItem("pratikshya_products"));
-    if (!Array.isArray(value) || !value.length) return null;
-
-    /* Slugs stay unique across the shelf — a collision borrows the id. */
-    const seenSlugs = new Set();
-    return value
-      .filter(isCustomerVisible)
-      .map((record, index) => withSearchText(toStorefrontProduct(record, index)))
-      .map((product) => {
-        let slug = product.slug;
-        if (seenSlugs.has(slug)) slug = `${slug}-${String(product.id).slice(-4)}`;
-        seenSlugs.add(slug);
-        return slug === product.slug ? product : { ...product, slug };
-      });
+    const list = catalogRepository.all();
+    if (Array.isArray(list) && list.length > 0) {
+      const seenSlugs = new Set();
+      return list
+        .filter(isCustomerVisible)
+        .map((record, index) => withSearchText(toStorefrontProduct(record, index)))
+        .map((product) => {
+          let slug = product.slug;
+          if (seenSlugs.has(slug)) slug = `${slug}-${String(product.id).slice(-4)}`;
+          seenSlugs.add(slug);
+          return slug === product.slug ? product : { ...product, slug };
+        });
+    }
   } catch {
-    return null;
+    /* fallback to seeded */
   }
-})();
+  return seededProducts;
+};
 
-export const products = persistedProducts || seededProducts;
+export const products = getLiveStorefrontProducts();
 
 /* ------------------------------------------------------------------ */
 /* Lookups                                                             */
 /* ------------------------------------------------------------------ */
 
-const bySlug = new Map(products.map((product) => [product.slug, product]));
-const byId = new Map(products.map((product) => [product.id, product]));
+export const getProductBySlug = (slug) => {
+  const current = getLiveStorefrontProducts();
+  return current.find((p) => p.slug === slug) ?? null;
+};
 
-export const getProductBySlug = (slug) => bySlug.get(slug) ?? null;
-export const getProductById = (id) => byId.get(id) ?? null;
-export const getProductByIdentifier = (value) => bySlug.get(value) ?? byId.get(value) ?? null;
+export const getProductById = (id) => {
+  const current = getLiveStorefrontProducts();
+  return current.find((p) => String(p.id) === String(id)) ?? null;
+};
+
+export const getProductByIdentifier = (value) => {
+  const current = getLiveStorefrontProducts();
+  return current.find((p) => p.slug === value || String(p.id) === String(value)) ?? null;
+};
 
 /** Canonical URL for the reusable product-detail route. */
 export const productHref = (product) => `/product/${product.slug}`;
@@ -305,8 +310,9 @@ export const productHref = (product) => `/product/${product.slug}`;
  * data means the filter panel can never offer a value that matches nothing.
  */
 const distinct = (field, { multiple = false } = {}) => {
+  const current = getLiveStorefrontProducts();
   const seen = new Set();
-  products.forEach((product) => {
+  current.forEach((product) => {
     const value = product[field];
     if (multiple) (value ?? []).forEach((entry) => seen.add(entry));
     else if (value) seen.add(value);

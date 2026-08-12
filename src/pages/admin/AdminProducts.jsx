@@ -2,15 +2,16 @@
  * /admin/products
  *
  * The merchandising desk: repository-derived metrics, search, status
- * filtering, bulk merchandising and the full product table. Every row
- * reads the shared catalogue repository; media summaries come from the
- * Phase 12 register. Covers only — the table never loads video.
+ * filtering, category filtering, bulk merchandising and the full product table.
+ * Every row reads the shared catalogue repository; media summaries come from
+ * the Phase 12 register. Covers only — the table never loads video.
  */
 
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   Archive,
+  Check,
   ClipboardCheck,
   Copy,
   Eye,
@@ -33,7 +34,8 @@ import { useAdminAuth } from "../../context/AdminAuthContext";
 import { resolveProductCover } from "../../services/media/productMediaSource";
 import { describeDiscount } from "../../utils/pricing";
 import { formatINR } from "../../utils/shopping";
-import { getProductStatusLabel } from "../../config/productCatalogConfig";
+import { CATEGORY_OPTIONS, getProductStatusLabel } from "../../config/productCatalogConfig";
+import { categoryLabels } from "../../data/products/taxonomy";
 
 /**
  * The discount column: an authored markdown (MRP above the selling price)
@@ -70,6 +72,7 @@ export default function AdminProducts() {
   const items = useProducts();
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState("ALL");
+  const [category, setCategory] = useState("ALL");
   const [selected, setSelected] = useState([]);
   const [notice, setNotice] = useState(null);
 
@@ -86,11 +89,13 @@ export default function AdminProducts() {
     const term = query.trim().toLowerCase();
     return items.filter((product) => {
       if (status !== "ALL" && product.status !== status) return false;
+      if (category !== "ALL" && product.category !== category) return false;
       if (!term) return true;
       return [
         product.name,
         product.sku,
         product.category,
+        categoryLabels[product.category] ?? "",
         product.subcategory,
         product.brand,
         product.fabric,
@@ -101,7 +106,7 @@ export default function AdminProducts() {
         .toLowerCase()
         .includes(term);
     });
-  }, [items, query, status]);
+  }, [items, query, status, category]);
 
   const metrics = useMemo(() => catalogMetrics(items), [items]);
 
@@ -124,6 +129,15 @@ export default function AdminProducts() {
       }.`
     );
     setSelected([]);
+  };
+
+  const publishQuick = (product) => {
+    const result = catalogRepository.publishProduct(product.id, actor);
+    if (result.ok) {
+      setNotice(`Published “${product.name}” — now visible to customers.`);
+    } else {
+      setNotice(`Could not publish “${product.name}”: ${(result.errors ?? [result.error]).join(" ")}`);
+    }
   };
 
   const clearNotice = () => setNotice(null);
@@ -154,29 +168,29 @@ export default function AdminProducts() {
         </>
       }
     >
-      {/* Metrics — always computed from the repository */}
+      {/* 10 Metrics — always computed directly from the repository */}
       <div className="mb-8 grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-5">
-        <AdminMetricCard label="Total" value={metrics.total} hint="Every record" />
+        <AdminMetricCard label="Total" value={metrics.total} hint="Every product record" />
         <AdminMetricCard label="Published" value={metrics.published} hint="Visible to customers" />
-        <AdminMetricCard label="Drafts" value={metrics.drafts} hint="In progress" />
+        <AdminMetricCard label="Draft" value={metrics.drafts} hint="In progress" />
         <AdminMetricCard
-          label="Pending review"
+          label="Pending Review"
           value={metrics.pendingReview}
           hint="Awaiting approval"
           tone={metrics.pendingReview ? "alert" : "default"}
         />
         <AdminMetricCard label="Archived" value={metrics.archived} hint="Retired, order-safe" />
         <AdminMetricCard label="Featured" value={metrics.featured} hint="House selection" />
-        <AdminMetricCard label="Bestsellers" value={metrics.bestsellers} hint="Proven favourites" />
-        <AdminMetricCard label="New arrivals" value={metrics.newArrivals} hint="Just-in edit" />
+        <AdminMetricCard label="Bestseller" value={metrics.bestsellers} hint="Proven favourites" />
+        <AdminMetricCard label="New Arrivals" value={metrics.newArrivals} hint="Just-in edit" />
         <AdminMetricCard
-          label="Needs media"
+          label="Needs Media"
           value={metrics.needsMedia}
           hint="Missing a cover"
           tone={metrics.needsMedia ? "alert" : "default"}
         />
         <AdminMetricCard
-          label="Pricing review"
+          label="Needs Pricing Review"
           value={metrics.needsPricingReview}
           hint="Incomplete or invalid"
           tone={metrics.needsPricingReview ? "alert" : "default"}
@@ -190,6 +204,7 @@ export default function AdminProducts() {
       ) : null}
 
       <AdminPanel eyebrow="Catalog" title="Products">
+        {/* Search, Status & Category Filters */}
         <div className="mb-5 flex flex-col gap-3 lg:flex-row lg:items-center">
           <label className="relative flex-1">
             <span className="sr-only">Search products</span>
@@ -202,6 +217,29 @@ export default function AdminProducts() {
               onChange={(event) => setQuery(event.target.value)}
             />
           </label>
+
+          {/* Category Filter */}
+          <div className="flex items-center gap-2">
+            <label htmlFor="admin-category-filter" className="sr-only">
+              Filter by category
+            </label>
+            <select
+              id="admin-category-filter"
+              aria-label="Filter by category"
+              value={category}
+              onChange={(event) => setCategory(event.target.value)}
+              className="border border-mist bg-canvas px-3 py-2.5 font-ui text-xs text-ink outline-none focus:border-accent"
+            >
+              <option value="ALL">All categories</option>
+              {CATEGORY_OPTIONS.map((cat) => (
+                <option key={cat.id} value={cat.id}>
+                  {cat.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Status Filters */}
           <div className="flex flex-wrap gap-1.5" role="radiogroup" aria-label="Status filter">
             {STATUS_FILTERS.map((option) => (
               <button
@@ -225,7 +263,7 @@ export default function AdminProducts() {
         {/* Bulk action bar */}
         {selected.length ? (
           <div className="mb-5 flex flex-wrap items-center gap-2 border border-mist/80 bg-canvas p-3">
-            <p className="mr-2 font-ui text-[11px] uppercase tracking-[.16em] text-ink">
+            <p className="mr-2 font-ui text-[11px] uppercase tracking-[.16em] text-ink font-medium">
               {selected.length} selected
             </p>
             <button type="button" onClick={() => runBulk({ status: "PUBLISHED" }, "Publish")} className="border border-mist px-3 py-1.5 font-ui text-[10px] uppercase tracking-[.14em] text-taupe transition-colors hover:border-ink hover:text-ink">
@@ -272,6 +310,7 @@ export default function AdminProducts() {
               {filtered.map((product) => {
                 const summary = mediaSummaries[product.id];
                 const cover = covers[product.id];
+                const canQuickPublish = product.status === "DRAFT" || product.status === "PENDING_REVIEW";
                 return (
                   <tr className="border-b border-mist/60 font-ui text-sm" key={product.id}>
                     <td className="px-3 py-4 align-top">
@@ -285,14 +324,14 @@ export default function AdminProducts() {
                     <td className="px-3 py-4">
                       <div className="flex items-center gap-3">
                         {cover?.src ? (
-                          <img src={cover.src} alt="" loading="lazy" className="h-12 w-10 shrink-0 object-cover" />
+                          <img src={cover.src} alt="" loading="lazy" className="h-12 w-10 shrink-0 object-cover border border-mist/60" />
                         ) : (
-                          <span className="h-12 w-10 shrink-0 bg-mist/60" aria-hidden="true" />
+                          <span className="h-12 w-10 shrink-0 bg-mist/60 flex items-center justify-center font-ui text-[9px] text-taupe">No img</span>
                         )}
                         <div className="min-w-0">
                           <Link
                             to={`/admin/products/${product.id}`}
-                            className="block max-w-56 truncate underline-offset-4 hover:text-accent hover:underline"
+                            className="block max-w-56 truncate font-medium text-ink underline-offset-4 hover:text-accent hover:underline"
                           >
                             {product.name}
                           </Link>
@@ -300,13 +339,13 @@ export default function AdminProducts() {
                         </div>
                       </div>
                     </td>
-                    <td className="px-3 py-4 align-top text-taupe">{product.sku}</td>
+                    <td className="px-3 py-4 align-top text-taupe font-mono text-xs">{product.sku}</td>
                     <td className="px-3 py-4 align-top">
-                      {product.category}
+                      <span className="font-medium text-ink">{categoryLabels[product.category] ?? product.category}</span>
                       {product.subcategory ? <span className="block text-[11px] text-taupe">{product.subcategory}</span> : null}
                     </td>
                     <td className="px-3 py-4 align-top">
-                      {formatINR(product.price)}
+                      <span className="font-medium text-ink">{formatINR(product.price)}</span>
                       {product.originalPrice > product.price ? (
                         <span className="block text-[11px] text-taupe line-through">
                           {formatINR(product.originalPrice)}
@@ -314,7 +353,7 @@ export default function AdminProducts() {
                       ) : null}
                     </td>
                     <td className="px-3 py-4 align-top text-taupe">{discountLabel(product)}</td>
-                    <td className="px-3 py-4 align-top">{product.variants.length || "—"}</td>
+                    <td className="px-3 py-4 align-top">{product.variants?.length || "—"}</td>
                     <td className="px-3 py-4 align-top">
                       {!summary || summary.isEmpty ? (
                         <Link
@@ -332,7 +371,7 @@ export default function AdminProducts() {
                             {summary.images} img · {summary.videos} vid
                           </span>
                           {summary.needsCover && !product.image ? (
-                            <span className="font-ui text-[10px] uppercase tracking-widest text-accent">Needs cover</span>
+                            <span className="font-ui text-[10px] uppercase tracking-widest text-accent font-semibold">Needs cover</span>
                           ) : null}
                         </Link>
                       )}
@@ -342,19 +381,30 @@ export default function AdminProducts() {
                     </td>
                     <td className="px-3 py-4 align-top text-[11px] text-taupe">
                       {product.updatedAt ? new Date(product.updatedAt).toLocaleDateString("en-IN") : "—"}
-                      {product.updatedBy ? <span className="block">{product.updatedBy}</span> : null}
+                      {product.updatedBy ? <span className="block text-[10px]">{product.updatedBy}</span> : null}
                     </td>
                     <td className="px-3 py-4 align-top">
-                      <div className="flex flex-wrap gap-2.5">
-                        <Link to={`/admin/products/${product.id}/edit`} aria-label={`Edit ${product.name}`} title="Edit">
-                          <Pencil size={15} aria-hidden="true" />
-                        </Link>
-                        <Link to={`/admin/products/${product.id}`} aria-label={`View ${product.name}`} title="View">
+                      <div className="flex flex-wrap items-center gap-2.5">
+                        <Link to={`/admin/products/${product.id}`} aria-label={`View ${product.name}`} title="View record" className="text-taupe hover:text-ink">
                           <Eye size={15} aria-hidden="true" />
                         </Link>
-                        <Link to={`/admin/products/${product.id}/media`} aria-label={`Manage media for ${product.name}`} title="Media">
+                        <Link to={`/admin/products/${product.id}/edit`} aria-label={`Edit ${product.name}`} title="Edit product" className="text-taupe hover:text-ink">
+                          <Pencil size={15} aria-hidden="true" />
+                        </Link>
+                        <Link to={`/admin/products/${product.id}/media`} aria-label={`Manage media for ${product.name}`} title="Manage Media" className="text-taupe hover:text-ink">
                           <Images size={15} aria-hidden="true" />
                         </Link>
+                        {canQuickPublish ? (
+                          <button
+                            type="button"
+                            aria-label={`Publish ${product.name}`}
+                            title="Publish product"
+                            onClick={() => publishQuick(product)}
+                            className="text-taupe hover:text-accent"
+                          >
+                            <Check size={15} aria-hidden="true" />
+                          </button>
+                        ) : null}
                         <button
                           type="button"
                           aria-label={`Duplicate ${product.name}`}
@@ -363,6 +413,7 @@ export default function AdminProducts() {
                             const result = catalogRepository.duplicateProduct(product.id, actor);
                             if (result.ok) setNotice(`Duplicated as “${result.product.name}” — review its SKU and slug.`);
                           }}
+                          className="text-taupe hover:text-ink"
                         >
                           <Copy size={15} aria-hidden="true" />
                         </button>
@@ -372,6 +423,7 @@ export default function AdminProducts() {
                             aria-label={`Restore ${product.name}`}
                             title="Restore"
                             onClick={() => catalogRepository.restoreProduct(product.id, actor)}
+                            className="text-taupe hover:text-ink"
                           >
                             <RotateCcw size={15} aria-hidden="true" />
                           </button>
@@ -381,6 +433,7 @@ export default function AdminProducts() {
                             aria-label={`Archive ${product.name}`}
                             title="Archive"
                             onClick={() => catalogRepository.archiveProduct(product.id, actor)}
+                            className="text-taupe hover:text-accent"
                           >
                             <Archive size={15} aria-hidden="true" />
                           </button>
