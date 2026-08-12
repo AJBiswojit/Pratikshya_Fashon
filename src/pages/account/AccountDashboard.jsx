@@ -263,6 +263,28 @@ export default function AccountDashboard() {
           </div>
         </section>
 
+        <section aria-labelledby="ai-shopping-dashboard-heading">
+          <div className="grid gap-6 border border-accent/30 bg-surface/40 px-6 py-8 sm:px-8 lg:grid-cols-[1fr_auto] lg:items-end lg:gap-12 lg:px-10">
+            <div className="max-w-2xl">
+              <p className="flex items-center gap-2 font-ui text-[10px] uppercase tracking-[.24em] text-accent">
+                <Sparkles size={14} aria-hidden="true" /> PRATIKSHYA AI · SHOPPING
+              </p>
+              <h2 id="ai-shopping-dashboard-heading" className="mt-4 font-display text-4xl font-light leading-[.92] text-ink sm:text-5xl">
+                Your personal fashion <span className="italic text-accent">companion.</span>
+              </h2>
+              <p className="mt-4 max-w-xl font-ui text-sm leading-relaxed text-taupe">
+                Tell the assistant the occasion, the colour or the budget — it walks you through the current atelier edit, grounded in the live catalogue.
+              </p>
+            </div>
+            <div className="flex flex-col items-start gap-3 lg:items-end">
+              <AtelierButton as={Link} to="/account/ai-shopping" variant="primary" size="md">
+                Ask the Assistant <ArrowRight size={15} aria-hidden="true" />
+              </AtelierButton>
+              <p className="font-ui text-[9px] uppercase tracking-[.16em] text-taupe">Demo assistant · deterministic</p>
+            </div>
+          </div>
+        </section>
+
         <section aria-label="Your bag">
           <div className="flex flex-wrap items-center justify-between gap-4 border border-mist/70 bg-surface/30 px-5 py-4 sm:px-6">
             <div>

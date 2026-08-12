@@ -1,7 +1,7 @@
 import { AnimatePresence, motion } from "framer-motion";
-import { Check, Heart, MapPin, RotateCcw, ShoppingBag, Sparkles, Star, Truck } from "lucide-react";
+import { Check, Heart, MapPin, RotateCcw, ShoppingBag, Sparkles, Star, Truck, Wand2 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import {
   AtelierBadge,
   AtelierButton,
@@ -417,6 +417,16 @@ export default function ProductPurchasePanel({ product }) {
           <span className="hidden min-[390px]:inline">{isSaved ? "Saved" : "Wishlist"}</span>
         </AtelierButton>
       </div>
+      <p className="mt-4">
+        <Link
+          to={`/account/ai-shopping?product=${encodeURIComponent(product.id)}`}
+          className="inline-flex items-center gap-2 font-ui text-[10px] uppercase tracking-[.16em] text-brass underline-offset-4 transition-colors hover:text-accent hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+        >
+          <Wand2 size={13} aria-hidden="true" />
+          Ask PRATIKSHYA AI about this piece
+        </Link>
+      </p>
+
       <Feedback
         message={feedback.message}
         kind={feedback.kind}

@@ -48,6 +48,7 @@ const AccountSettings = lazy(() => import("./pages/account/AccountSettings"));
 const AccountSecurity = lazy(() => import("./pages/account/AccountSecurity"));
 const AccountPreferences = lazy(() => import("./pages/account/AccountPreferences"));
 const AiMirror = lazy(() => import("./pages/account/AiMirror"));
+const AiShoppingAssistant = lazy(() => import("./pages/account/AiShoppingAssistant"));
 
 const EmployeeLogin = lazy(() => import("./pages/employee/EmployeeLogin"));
 const EmployeeForgotPassword = lazy(() => import("./pages/employee/EmployeeForgotPassword"));
@@ -126,6 +127,7 @@ const AdminCollections = lazy(() => import("./pages/admin/taxonomy/AdminCollecti
 const AdminCollectionForm = lazy(() => import("./pages/admin/taxonomy/AdminCollectionForm"));
 const AdminCollectionDetail = lazy(() => import("./pages/admin/taxonomy/AdminCollectionDetail"));
 const AdminAnalytics = lazy(() => import("./pages/admin/analytics/AdminAnalytics"));
+const AiBusinessAssistant = lazy(() => import("./pages/admin/AiBusinessAssistant"));
 const EmployeeReports = lazy(() => import("./pages/employee/EmployeeReports"));
 
 const dedicatedPaths = new Set([
@@ -142,6 +144,7 @@ const dedicatedPaths = new Set([
   "/account/security",
   "/account/preferences",
   "/account/ai-mirror",
+  "/account/ai-shopping",
   "/account/wishlist",
   "/signin",
   "/signup",
@@ -227,6 +230,7 @@ export default function App() {
                           <Route path="/admin/performance" element={<AdminPerformance />} />
                           <Route path="/admin/performance/:employeeId" element={<AdminPerformanceDetail />} />
                           <Route path="/admin/analytics" element={<AdminAnalytics />} />
+                          <Route path="/admin/ai-assistant" element={<AiBusinessAssistant />} />
                           <Route path="/admin/analytics/sales" element={<AdminAnalytics />} />
                           <Route path="/admin/analytics/products" element={<AdminAnalytics />} />
                           <Route path="/admin/analytics/customers" element={<AdminAnalytics />} />
@@ -335,6 +339,7 @@ export default function App() {
                           <Route path="/account/settings" element={<AccountSettings />} />
                           <Route path="/account/security" element={<AccountSecurity />} />
                           <Route path="/account/ai-mirror" element={<AiMirror />} />
+                          <Route path="/account/ai-shopping" element={<AiShoppingAssistant />} />
                         </Route>
 
                         {routeManifest
