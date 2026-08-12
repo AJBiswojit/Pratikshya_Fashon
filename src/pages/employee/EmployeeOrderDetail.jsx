@@ -128,6 +128,12 @@ export default function EmployeeOrderDetail() {
                 </div>
               ))}
             </div>
+            {order.pricing.couponCode ? (
+              <div className="mt-3 flex justify-between font-ui text-sm text-taupe">
+                <span>Offer · {order.pricing.couponCode}</span>
+                <span>{order.pricing.couponDiscount > 0 ? `− ${formatINR(order.pricing.couponDiscount)}` : "Applied"}</span>
+              </div>
+            ) : null}
             <div className="mt-3 flex justify-between font-medium border-t border-mist/60 pt-2"><span>Total</span><span>{formatINR(order.pricing.total)}</span></div>
           </div>
         </div>

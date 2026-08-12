@@ -60,6 +60,8 @@ const EmployeeOrders = lazy(() => import("./pages/employee/EmployeeOrders"));
 const EmployeeOrderDetail = lazy(() => import("./pages/employee/EmployeeOrderDetail"));
 const EmployeeAssistedOrder = lazy(() => import("./pages/employee/EmployeeAssistedOrder"));
 const EmployeeOffers = lazy(() => import("./pages/employee/EmployeeOffers"));
+const EmployeeOfferForm = lazy(() => import("./pages/employee/EmployeeOfferForm"));
+const EmployeeOfferDetail = lazy(() => import("./pages/employee/EmployeeOfferDetail"));
 const EmployeeAccessDenied = lazy(() => import("./pages/employee/EmployeeAccessDenied"));
 const EmployeeDesk = lazy(() => import("./pages/employee/EmployeeDesk"));
 const EmployeeMediaDashboard = lazy(() => import("./pages/employee/EmployeeMediaDashboard"));
@@ -105,6 +107,9 @@ const AdminCustomers = lazy(() => import("./pages/admin/AdminCustomers"));
 const AdminCustomerDetail = lazy(() => import("./pages/admin/AdminCustomerDetail"));
 const AdminReturns = lazy(() => import("./pages/admin/AdminReturns"));
 const AdminReturnDetail = lazy(() => import("./pages/admin/AdminReturnDetail"));
+const AdminOffers = lazy(() => import("./pages/admin/offers/AdminOffers"));
+const AdminOfferFormPage = lazy(() => import("./pages/admin/offers/AdminOfferFormPage"));
+const AdminOfferDetail = lazy(() => import("./pages/admin/offers/AdminOfferDetail"));
 
 const dedicatedPaths = new Set([
   "/search",
@@ -169,7 +174,10 @@ export default function App() {
                           <Route path="/admin/media/:mediaId" element={<AdminMediaDetail />} />
                           <Route path="/admin/categories" element={<AdminModulePlaceholder />} />
                           <Route path="/admin/collections" element={<AdminModulePlaceholder />} />
-                          <Route path="/admin/offers" element={<AdminModulePlaceholder />} />
+                          <Route path="/admin/offers" element={<AdminOffers />} />
+                          <Route path="/admin/offers/new" element={<AdminOfferFormPage />} />
+                          <Route path="/admin/offers/:offerId/edit" element={<AdminOfferFormPage />} />
+                          <Route path="/admin/offers/:offerId" element={<AdminOfferDetail />} />
                           {/* Phase 15 — Orders become operational */}
                           <Route path="/admin/orders" element={<AdminOrders />} />
                           <Route path="/admin/orders/:orderId" element={<AdminOrderDetail />} />
@@ -220,6 +228,9 @@ export default function App() {
                           <Route path="/employee/orders/:orderId" element={<EmployeeOrderDetail />} />
                           <Route path="/employee/orders/assisted" element={<EmployeeAssistedOrder />} />
                           <Route path="/employee/offers" element={<EmployeeOffers />} />
+                          <Route path="/employee/offers/new" element={<EmployeeOfferForm />} />
+                          <Route path="/employee/offers/:offerId/edit" element={<EmployeeOfferForm />} />
+                          <Route path="/employee/offers/:offerId" element={<EmployeeOfferDetail />} />
                           <Route path="/employee/inventory" element={<InventoryDashboardPage portal="employee" />} />
                           <Route path="/employee/inventory/movements" element={<InventoryMovementsPage portal="employee" />} />
                           <Route path="/employee/inventory/transfers" element={<InventoryTransfersPage portal="employee" />} />

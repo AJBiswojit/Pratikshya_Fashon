@@ -20,6 +20,10 @@ import {
 } from "../../data/employees/operations";
 import { products } from "../../data/products";
 import { loadOrders } from "../orders/orderService";
+import offerRepository, {
+  describeEligibility,
+  formatOfferDiscount,
+} from "../offers/offerRepository";
 import { readStorage } from "../../utils/shopping";
 import { formatEmployeeDateTime, todayKey } from "../../utils/employee";
 import inventoryRepository from "../inventory/inventoryRepository";
@@ -66,7 +70,27 @@ export const getFollowUps = (employeeId = null) =>
     ? MOCK_FOLLOW_UPS.filter((item) => item.employeeId === employeeId)
     : MOCK_FOLLOW_UPS;
 
-export const getOffers = () => MOCK_OFFERS;
+export const getOffers = () => {
+  try {
+    return offerRepository.all().map((offer) => ({
+      id: offer.id,
+      name: offer.name,
+      code: offer.code,
+      applies: describeEligibility(offer),
+      value: formatOfferDiscount(offer),
+      status: offer.displayStatus,
+      until: offer.endDate
+        ? new Date(`${offer.endDate}T00:00:00`).toLocaleDateString("en-IN", {
+            day: "numeric",
+            month: "long",
+            year: "numeric",
+          })
+        : "—",
+    }));
+  } catch {
+    return MOCK_OFFERS;
+  }
+};
 
 export const getStockMovements = () =>
   inventoryRepository.loadMovements().map(inventoryRepository.resolveMovement).map((movement) => ({

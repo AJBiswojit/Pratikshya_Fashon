@@ -35,6 +35,7 @@ export default function ProductCard({
   showDiscount = false,
   showBadge = true,
   showAvailability = false,
+  offerBadge = null,
   onWishlist,
   isWishlisted = false,
   wishlistIcon: WishlistIcon,
@@ -68,6 +69,10 @@ export default function ProductCard({
       >
         {showBadge && label ? (
           <AtelierBadge className="absolute top-3 left-3">{label}</AtelierBadge>
+        ) : null}
+
+        {offerBadge ? (
+          <AtelierBadge className="absolute bottom-3 left-3">{offerBadge}</AtelierBadge>
         ) : null}
 
         {showAvailability && !inStock ? (

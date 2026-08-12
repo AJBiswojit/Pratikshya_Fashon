@@ -24,8 +24,10 @@ import {
 } from "react";
 import { getProductById } from "../data/products";
 import { getCoupon, validateCoupon } from "../data/shopping/coupons";
+import { useAuth } from "./AuthContext";
 import inventoryRepository, { INVENTORY_CHANGED_EVENT } from "../services/inventory/inventoryRepository";
 import { PRODUCTS_CHANGED_EVENT } from "../services/catalogRepository";
+import { OFFERS_CHANGED_EVENT } from "../services/offers/offerRepository";
 import {
   calculateCartTotals,
   cartLineId,
@@ -104,18 +106,21 @@ const restoreCart = () => {
 /* ------------------------------------------------------------------ */
 
 export function CartProvider({ children }) {
+  const { user } = useAuth();
   const [{ lines, couponCode }, setState] = useState(restoreCart);
   const [isDrawerOpen, setDrawerOpen] = useState(false);
   const [inventoryRevision, setInventoryRevision] = useState(0);
 
-  /* A stock operation elsewhere in the app immediately revalidates the bag. */
+  /* A stock or offer change elsewhere immediately revalidates the bag. */
   useEffect(() => {
     const refresh = () => setInventoryRevision((value) => value + 1);
     window.addEventListener(INVENTORY_CHANGED_EVENT, refresh);
     window.addEventListener(PRODUCTS_CHANGED_EVENT, refresh);
+    window.addEventListener(OFFERS_CHANGED_EVENT, refresh);
     return () => {
       window.removeEventListener(INVENTORY_CHANGED_EVENT, refresh);
       window.removeEventListener(PRODUCTS_CHANGED_EVENT, refresh);
+      window.removeEventListener(OFFERS_CHANGED_EVENT, refresh);
     };
   }, []);
 
@@ -151,9 +156,12 @@ export function CartProvider({ children }) {
   /** Coupon status against the current bag — an offer can lapse gracefully. */
   const couponState = useMemo(() => {
     if (!coupon) return { active: false, lapsed: false };
-    const result = validateCoupon(coupon.code, items);
+    const result = validateCoupon(coupon.code, items, {
+      customerId: user?.id,
+      customerEmail: user?.email,
+    });
     return { active: result.ok, lapsed: !result.ok };
-  }, [coupon, items]);
+  }, [coupon, items, user?.id, user?.email]);
 
   const totals = useMemo(
     () => calculateCartTotals(items, couponState.active ? coupon : null),
@@ -284,7 +292,11 @@ export function CartProvider({ children }) {
 
   const applyCoupon = useCallback(
     (code) => {
-      const result = validateCoupon(code, items, { appliedCode: couponCode });
+      const result = validateCoupon(code, items, {
+        appliedCode: couponCode,
+        customerId: user?.id,
+        customerEmail: user?.email,
+      });
       if (!result.ok) return result;
       setState((current) => ({ ...current, couponCode: result.coupon.code }));
       return {
@@ -293,7 +305,7 @@ export function CartProvider({ children }) {
         message: `${result.coupon.code} is now part of your order.`,
       };
     },
-    [items, couponCode]
+    [items, couponCode, user?.id, user?.email]
   );
 
   const removeCoupon = useCallback(() => {

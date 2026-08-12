@@ -156,6 +156,25 @@ export const generateDemoOrders = () => {
     const createdAt = subDays(now, statusesToDemo.length - idx);
     const items = buildItems(products, idx % 2 === 0 ? 3 : 2);
     const pricing = calculatePricing(items);
+    if (idx === 2) {
+      pricing.couponCode = "WELCOME10";
+      pricing.offerId = "off-welcome10";
+      pricing.couponDiscount = Math.round(pricing.subtotal * 0.1);
+      pricing.total = Math.max(0, pricing.subtotal - pricing.couponDiscount + pricing.shipping);
+      pricing.saved = pricing.productDiscount + pricing.couponDiscount;
+    } else if (idx === 8) {
+      pricing.couponCode = "FESTIVE15";
+      pricing.offerId = "off-festive15";
+      pricing.couponDiscount = Math.round(pricing.subtotal * 0.15);
+      pricing.total = Math.max(0, pricing.subtotal - pricing.couponDiscount + pricing.shipping);
+      pricing.saved = pricing.productDiscount + pricing.couponDiscount;
+    } else if (idx === 10) {
+      pricing.couponCode = "BRIDAL20";
+      pricing.offerId = "off-bridal20";
+      pricing.couponDiscount = Math.round(pricing.subtotal * 0.2);
+      pricing.total = Math.max(0, pricing.subtotal - pricing.couponDiscount + pricing.shipping);
+      pricing.saved = pricing.productDiscount + pricing.couponDiscount;
+    }
 
     // Build status history deterministic
     const journey = [

@@ -2,8 +2,9 @@ import { AnimatePresence, motion } from "framer-motion";
 import { Check, ChevronDown, Tag, X } from "lucide-react";
 import { useId, useState } from "react";
 import { transition } from "../../design-system";
-import { coupons } from "../../data/shopping/coupons";
+import { getCoupons } from "../../data/shopping/coupons";
 import { useCart } from "../../context/CartContext";
+import { useAuth } from "../../context/AuthContext";
 import { cn } from "../../utils/cn";
 
 /**
@@ -15,10 +16,12 @@ import { cn } from "../../utils/cn";
  */
 export default function CouponField() {
   const cart = useCart();
+  const { user } = useAuth();
   const [code, setCode] = useState("");
   const [feedback, setFeedback] = useState(null);
   const [offersOpen, setOffersOpen] = useState(false);
   const inputId = useId();
+  const visibleOffers = getCoupons({ customerId: user?.id, customerEmail: user?.email });
 
   const apply = (value) => {
     const result = cart.applyCoupon(value);
@@ -152,7 +155,7 @@ export default function CouponField() {
             transition={{ duration: 0.35, ease: "easeOut" }}
             className="overflow-hidden"
           >
-            {coupons.map((offer) => (
+            {visibleOffers.map((offer) => (
               <li key={offer.code} className="border-b border-mist/60 py-3 last:border-b-0">
                 <button
                   type="button"

@@ -185,6 +185,12 @@ export default function AdminOrderDetail() {
             <dl className="space-y-2 font-ui text-sm">
               <div className="flex justify-between"><dt className="text-taupe">Subtotal</dt><dd>{formatINR(order.pricing.subtotal)}</dd></div>
               {order.pricing.productDiscount > 0 && <div className="flex justify-between"><dt className="text-taupe">Product Discount</dt><dd>− {formatINR(order.pricing.productDiscount)}</dd></div>}
+              {order.pricing.couponDiscount > 0 || order.pricing.couponCode ? (
+                <div className="flex justify-between">
+                  <dt className="text-taupe">Offer{order.pricing.couponCode ? ` · ${order.pricing.couponCode}` : ""}</dt>
+                  <dd>{order.pricing.couponDiscount > 0 ? `− ${formatINR(order.pricing.couponDiscount)}` : "—"}</dd>
+                </div>
+              ) : null}
               <div className="flex justify-between"><dt className="text-taupe">Shipping</dt><dd>{order.pricing.shipping === 0 ? "Complimentary" : formatINR(order.pricing.shipping)}</dd></div>
               {order.pricing.codFee > 0 && <div className="flex justify-between"><dt className="text-taupe">COD Fee</dt><dd>{formatINR(order.pricing.codFee)}</dd></div>}
               <div className="flex justify-between border-t border-mist/60 pt-2 font-medium"><dt>Grand Total</dt><dd>{formatINR(order.pricing.total)}</dd></div>
