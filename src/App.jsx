@@ -123,6 +123,8 @@ const AdminCategoryDetail = lazy(() => import("./pages/admin/taxonomy/AdminCateg
 const AdminCollections = lazy(() => import("./pages/admin/taxonomy/AdminCollections"));
 const AdminCollectionForm = lazy(() => import("./pages/admin/taxonomy/AdminCollectionForm"));
 const AdminCollectionDetail = lazy(() => import("./pages/admin/taxonomy/AdminCollectionDetail"));
+const AdminAnalytics = lazy(() => import("./pages/admin/analytics/AdminAnalytics"));
+const EmployeeReports = lazy(() => import("./pages/employee/EmployeeReports"));
 
 const dedicatedPaths = new Set([
   "/search",
@@ -221,10 +223,14 @@ export default function App() {
                           <Route path="/admin/attendance/:employeeId" element={<AdminAttendanceDetail />} />
                           <Route path="/admin/performance" element={<AdminPerformance />} />
                           <Route path="/admin/performance/:employeeId" element={<AdminPerformanceDetail />} />
-                          <Route path="/admin/analytics/sales" element={<AdminModulePlaceholder />} />
-                          <Route path="/admin/analytics/products" element={<AdminModulePlaceholder />} />
-                          <Route path="/admin/analytics/customers" element={<AdminModulePlaceholder />} />
-                          <Route path="/admin/analytics/inventory" element={<AdminModulePlaceholder />} />
+                          <Route path="/admin/analytics" element={<AdminAnalytics />} />
+                          <Route path="/admin/analytics/sales" element={<AdminAnalytics />} />
+                          <Route path="/admin/analytics/products" element={<AdminAnalytics />} />
+                          <Route path="/admin/analytics/customers" element={<AdminAnalytics />} />
+                          <Route path="/admin/analytics/inventory" element={<AdminAnalytics />} />
+                          <Route path="/admin/analytics/returns" element={<AdminAnalytics />} />
+                          <Route path="/admin/analytics/offers" element={<AdminAnalytics />} />
+                          <Route path="/admin/analytics/employees" element={<AdminAnalytics />} />
                           <Route path="/admin/settings" element={<AdminModulePlaceholder />} />
 
                           <Route path="/admin/*" element={<AdminNotFound />} />

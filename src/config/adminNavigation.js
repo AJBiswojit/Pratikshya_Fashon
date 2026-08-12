@@ -48,6 +48,7 @@ export const ADMIN_NAV_GROUPS = [
       { id: "media", label: "Media Management", to: "/admin/media", icon: "image", status: MODULE_STATUS.READY },
       { id: "marketing-media", label: "Marketing Media", to: "/admin/media/marketing", icon: "film", status: MODULE_STATUS.READY },
       { id: "inventory", label: "Inventory", to: "/admin/inventory", icon: "boxes", status: MODULE_STATUS.READY },
+      { id: "analytics", label: "Analytics", to: "/admin/analytics", icon: "chart", status: MODULE_STATUS.READY },
     ],
   },
   {
@@ -67,16 +68,6 @@ export const ADMIN_NAV_GROUPS = [
       { id: "roles", label: "Roles & Permissions", to: "/admin/roles", icon: "shield", status: MODULE_STATUS.READY },
       { id: "attendance", label: "Attendance", to: "/admin/attendance", icon: "clock", status: MODULE_STATUS.READY },
       { id: "performance", label: "Performance", to: "/admin/performance", icon: "target", status: MODULE_STATUS.READY },
-    ],
-  },
-  {
-    id: "analytics",
-    label: "Analytics",
-    items: [
-      { id: "sales-analytics", label: "Sales Analytics", to: "/admin/analytics/sales", icon: "trend", status: MODULE_STATUS.SOON },
-      { id: "product-analytics", label: "Product Analytics", to: "/admin/analytics/products", icon: "chart", status: MODULE_STATUS.SOON },
-      { id: "customer-analytics", label: "Customer Analytics", to: "/admin/analytics/customers", icon: "users", status: MODULE_STATUS.SOON },
-      { id: "inventory-analytics", label: "Inventory Analytics", to: "/admin/analytics/inventory", icon: "boxes", status: MODULE_STATUS.SOON },
     ],
   },
   {
@@ -119,10 +110,6 @@ export const ADMIN_PLACEHOLDER_COPY = {
   returns: "Return administration arrives with the order-operations module.",
   attendance: "House-wide attendance reporting arrives with the workforce module.",
   performance: "House-wide performance reporting arrives with the workforce module.",
-  "sales-analytics": "Deep sales analytics arrive with the analytics module. A seven-day overview is on the dashboard.",
-  "product-analytics": "Product analytics arrive with the analytics module.",
-  "customer-analytics": "Customer analytics arrive with the analytics module.",
-  "inventory-analytics": "Inventory analytics arrive with the analytics module.",
   settings: "Business settings arrive once the operational modules above are in place.",
 };
 
