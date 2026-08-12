@@ -82,6 +82,7 @@ const AdminProfile = lazy(() => import("./pages/admin/AdminProfile"));
 const AdminModulePlaceholder = lazy(() => import("./pages/admin/AdminModulePlaceholder"));
 const AdminProducts = lazy(() => import("./pages/admin/AdminProducts"));
 const ProductForm = lazy(() => import("./pages/admin/ProductForm"));
+const AdminProductDetail = lazy(() => import("./pages/admin/AdminProductDetail"));
 const AdminNotFound = lazy(() => import("./pages/admin/AdminNotFound"));
 
 /** Paths owned by dedicated pages rather than the generic interior shell. */
@@ -164,7 +165,7 @@ export default function App() {
                           <Route path="/admin/products" element={<AdminProducts />} />
                           <Route path="/admin/products/new" element={<ProductForm />} />
                           <Route path="/admin/products/:productId/edit" element={<ProductForm />} />
-                          <Route path="/admin/products/:productId" element={<ProductForm />} />
+                          <Route path="/admin/products/:productId" element={<AdminProductDetail />} />
                           <Route path="/admin/categories" element={<AdminModulePlaceholder />} />
                           <Route path="/admin/collections" element={<AdminModulePlaceholder />} />
                           <Route path="/admin/offers" element={<AdminModulePlaceholder />} />

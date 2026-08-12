@@ -182,7 +182,12 @@ const normalise = (product, index) => {
 };
 
 /** Every product in the catalogue, normalised. */
-export const products = catalogue.map(normalise);
+const seededProducts = catalogue.map(normalise);
+/** Hydrate the authored catalogue from the shared admin repository when a
+ * browser session has saved it. This keeps every storefront query on the same
+ * product identity without making the data module depend on React. */
+const persistedProducts = (() => { try { const value = JSON.parse(window.localStorage.getItem("pratikshya_products")); return Array.isArray(value) && value.length ? value : null; } catch { return null; } })();
+export const products = persistedProducts || seededProducts;
 
 /* ------------------------------------------------------------------ */
 /* Lookups                                                             */
