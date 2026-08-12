@@ -40,10 +40,14 @@ import {
 export const calculateDeliveryFee = (methodId, payableSubtotal) => {
   const method = getDeliveryMethod(methodId);
   if (payableSubtotal <= 0) return 0;
-  if (method.freeAtThreshold && payableSubtotal >= FREE_SHIPPING_THRESHOLD) {
-    return 0;
+  try {
+    const shipping = JSON.parse(localStorage.getItem("pratikshya_settings"))?.shipping;
+    if (shipping?.enabled === false) return 0;
+    if (method.freeAtThreshold && payableSubtotal >= Number(shipping?.freeShippingThreshold ?? FREE_SHIPPING_THRESHOLD)) return 0;
+    return method.freeAtThreshold ? Number(shipping?.defaultShippingFee ?? method.fee) : method.fee;
+  } catch {
+    return method.freeAtThreshold && payableSubtotal >= FREE_SHIPPING_THRESHOLD ? 0 : method.fee;
   }
-  return method.fee;
 };
 
 /**
