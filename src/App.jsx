@@ -45,6 +45,7 @@ const OrderTracking = lazy(() => import("./pages/account/OrderTracking"));
 const OrderReturn = lazy(() => import("./pages/account/OrderReturn"));
 const AccountSettings = lazy(() => import("./pages/account/AccountSettings"));
 const AccountSecurity = lazy(() => import("./pages/account/AccountSecurity"));
+const AccountPreferences = lazy(() => import("./pages/account/AccountPreferences"));
 
 const EmployeeLogin = lazy(() => import("./pages/employee/EmployeeLogin"));
 const EmployeeForgotPassword = lazy(() => import("./pages/employee/EmployeeForgotPassword"));
@@ -129,6 +130,7 @@ const dedicatedPaths = new Set([
   "/account/orders",
   "/account/settings",
   "/account/security",
+  "/account/preferences",
   "/account/wishlist",
   "/signin",
   "/signup",

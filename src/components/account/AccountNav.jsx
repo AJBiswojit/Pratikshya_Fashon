@@ -7,6 +7,7 @@ import {
   Sliders,
   Shield,
   LayoutDashboard,
+  Sparkles,
 } from "lucide-react";
 import { useWishlist } from "../../context/WishlistContext";
 import { cn } from "../../utils/cn";
@@ -39,6 +40,11 @@ export const ACCOUNT_NAV_ITEMS = [
     label: "Addresses",
     to: "/account/addresses",
     icon: MapPin,
+  },
+  {
+    label: "Style",
+    to: "/account/preferences",
+    icon: Sparkles,
   },
   {
     label: "Settings",

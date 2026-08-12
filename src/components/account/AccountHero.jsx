@@ -1,9 +1,7 @@
-import { LogOut, User } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import { useAccount } from "../../context/AccountContext";
-import { cn } from "../../utils/cn";
-import { transition } from "../../design-system";
+import { AtelierButton } from "../../design-system";
 
 export default function AccountHero() {
   const { signOut } = useAuth();
@@ -15,61 +13,56 @@ export default function AccountHero() {
     navigate("/", { replace: true });
   };
 
-  const firstName = profile?.firstName || "Customer";
+  const firstName = profile?.firstName || "there";
   const lastName = profile?.lastName || "";
-  const fullName = [firstName, lastName].filter(Boolean).join(" ");
   const initials = [firstName[0], lastName[0]].filter(Boolean).join("").toUpperCase() || "P";
-  const memberSince = profile?.memberSince || "2025";
 
   return (
-    <div className="border border-mist/80 bg-surface/60 p-6 sm:p-8 md:p-10 mb-8">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
-        {/* Left: Avatar & Identity */}
-        <div className="flex items-center gap-4 sm:gap-5">
+    <header className="mb-8 border-b border-mist/70 pb-8">
+      <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+        <div className="flex items-start gap-4 sm:gap-5">
           {profile?.avatar ? (
             <img
               src={profile.avatar}
-              alt={fullName}
-              className="h-16 w-16 sm:h-20 sm:w-20 object-cover border border-mist"
+              alt=""
+              className="h-14 w-14 shrink-0 object-cover border border-mist sm:h-16 sm:w-16"
             />
           ) : (
-            <div className="h-16 w-16 sm:h-20 sm:w-20 shrink-0 flex items-center justify-center bg-ink text-ivory font-display text-xl sm:text-2xl font-light border border-ink/20">
+            <div
+              aria-hidden="true"
+              className="flex h-14 w-14 shrink-0 items-center justify-center border border-ink/15 bg-ink font-display text-lg font-light text-ivory sm:h-16 sm:w-16 sm:text-xl"
+            >
               {initials}
             </div>
           )}
-
           <div>
-            <p className="font-ui text-[10px] uppercase tracking-[.25em] text-accent font-medium">
-              My PRATIKSHYA FASHON
-            </p>
-            <h1 className="mt-1 font-display text-2xl sm:text-3xl md:text-4xl font-light tracking-tight text-ink">
-              Welcome back, <span className="italic text-accent">{firstName}</span>
+            <p className="font-ui text-[10px] uppercase tracking-[.28em] text-accent">Welcome back</p>
+            <h1 className="mt-1 font-display text-3xl font-light tracking-tight text-ink sm:text-4xl">
+              {firstName}
             </h1>
-            <div className="mt-2 flex flex-wrap items-center gap-3 text-taupe font-ui text-xs">
-              <span>{profile?.email}</span>
-              <span aria-hidden="true" className="text-mist">•</span>
-              <span className="text-[11px] uppercase tracking-wider text-brass">
-                Member since {memberSince}
-              </span>
-            </div>
+            <p className="mt-2 font-ui text-sm text-taupe">Your personal fashion space.</p>
           </div>
         </div>
 
-        {/* Right: Quick actions */}
-        <div className="flex items-center gap-3 self-start sm:self-center border-t sm:border-t-0 pt-4 sm:pt-0 border-mist/60 w-full sm:w-auto justify-between sm:justify-end">
+        <div className="flex flex-wrap items-center gap-3">
+          <AtelierButton as={Link} to="/shop" variant="primary" size="chip">
+            Continue Shopping
+          </AtelierButton>
+          <AtelierButton as={Link} to="/account/orders" variant="outline" size="chip">
+            View Orders
+          </AtelierButton>
+          <AtelierButton as={Link} to="/collection/new-arrivals" variant="outline" size="chip">
+            Explore New Arrivals
+          </AtelierButton>
           <button
             type="button"
             onClick={handleSignOut}
-            className={cn(
-              "inline-flex items-center gap-2 border border-pearl bg-canvas px-4 py-2.5 font-ui text-[11px] uppercase tracking-[.14em] text-taupe hover:text-accent hover:border-accent",
-              transition.colors
-            )}
+            className="font-ui text-[11px] uppercase tracking-[.14em] text-taupe hover:text-accent"
           >
-            <LogOut size={13} strokeWidth={1.5} aria-hidden="true" />
-            <span>Sign Out</span>
+            Sign Out
           </button>
         </div>
       </div>
-    </div>
+    </header>
   );
 }

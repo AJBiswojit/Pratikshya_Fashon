@@ -1,6 +1,8 @@
 import { motion } from "framer-motion";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import { useEffect, useMemo } from "react";
+import { useAuth } from "../context/AuthContext";
+import { recordRecentlyViewed } from "../services/customer/recentlyViewed";
 import {
   AtelierButton,
   AtelierSection,
@@ -83,6 +85,8 @@ export default function ProductDetail() {
     [product]
   );
 
+  const { user } = useAuth();
+
   useEffect(() => {
     if (!product) return undefined;
     const previousTitle = document.title;
@@ -91,6 +95,12 @@ export default function ProductDetail() {
       document.title = previousTitle;
     };
   }, [product]);
+
+  useEffect(() => {
+    if (!product || isPreview) return undefined;
+    recordRecentlyViewed(product.id, user?.id ?? null);
+    return undefined;
+  }, [product, isPreview, user?.id]);
 
   if (!product) return <ProductNotFound />;
 

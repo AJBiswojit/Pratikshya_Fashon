@@ -1,318 +1,594 @@
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { Link } from "react-router-dom";
-import {
-  ShoppingBag,
-  Heart,
-  MapPin,
-  User,
-  Sliders,
-  Shield,
-  ArrowRight,
-} from "lucide-react";
+import { Heart } from "lucide-react";
 import AccountShell from "../../components/account/AccountShell";
 import OrderStatusBadge from "../../components/orders/OrderStatusBadge";
 import { useAccount } from "../../context/AccountContext";
+import { useAuth } from "../../context/AuthContext";
+import { useCart } from "../../context/CartContext";
 import { useOrder } from "../../context/OrderContext";
 import { useWishlist } from "../../context/WishlistContext";
-import { EditorialHeading, Rule, transition } from "../../design-system";
+import {
+  AtelierButton,
+  EditorialHeading,
+  MediaFrame,
+  ProductCard,
+  Rule,
+} from "../../design-system";
+import { getProductById, productHref } from "../../data/products";
+import { imageRef } from "../../data/pratikshyaImageManifest";
+import { useProductCovers } from "../../hooks/useMedia";
+import { useRecentlyViewed } from "../../hooks/useRecentlyViewed";
+import { ORDER_STATUS, RETURN_STATUS, getReturnStatus } from "../../config/orderConfig";
+import offerRepository, {
+  formatOfferDiscount,
+  describeEligibility,
+} from "../../services/offers/offerRepository";
+import taxonomyRepository from "../../services/taxonomyRepository";
+import { getStylePreferences, hasStylePreferences } from "../../services/customer/stylePreferences";
+import { getPersonalizedProducts } from "../../services/customer/personalization";
 import { formatOrderDate, orderItemCount } from "../../utils/orders";
 import { formatINR } from "../../utils/shopping";
-import { cn } from "../../utils/cn";
+
+const ACTIVE_ORDER_RANK = [
+  ORDER_STATUS.OUT_FOR_DELIVERY,
+  ORDER_STATUS.SHIPPED,
+  ORDER_STATUS.READY_TO_DISPATCH,
+  ORDER_STATUS.PACKED,
+  ORDER_STATUS.PICKING,
+  ORDER_STATUS.ALLOCATED,
+  ORDER_STATUS.PROCESSING,
+  ORDER_STATUS.ORDER_CONFIRMED,
+  ORDER_STATUS.CONFIRMED,
+  ORDER_STATUS.PAYMENT_CONFIRMED,
+  ORDER_STATUS.PLACED,
+  ORDER_STATUS.PENDING_PAYMENT,
+];
+
+const CLOSED_RETURNS = new Set([RETURN_STATUS.REFUNDED, RETURN_STATUS.REJECTED]);
+
+const profileCompleteness = (profile) => {
+  if (!profile) return 0;
+  const fields = [profile.firstName, profile.lastName, profile.email, profile.phone, profile.dateOfBirth];
+  const filled = fields.filter((value) => String(value || "").trim()).length;
+  return Math.round((filled / fields.length) * 100);
+};
+
+const orderThumb = (item) => {
+  if (!item) return imageRef("hero-atelier");
+  if (item.image && typeof item.image === "object") return item.image;
+  const product = item.productId ? getProductById(item.productId) : null;
+  return product?.image || imageRef("hero-atelier");
+};
+
+function SectionHead({ eyebrow, title, description, action }) {
+  return (
+    <div className="mb-6 flex flex-col gap-3 sm:mb-8 sm:flex-row sm:items-end sm:justify-between">
+      <EditorialHeading
+        as="h2"
+        size="subsection"
+        eyebrow={eyebrow}
+        description={description}
+        spacing={{ eyebrow: "mb-2", title: "mb-2", description: "mb-0" }}
+      >
+        {title}
+      </EditorialHeading>
+      {action}
+    </div>
+  );
+}
+
+function QuietEmpty({ title, description, to, cta }) {
+  return (
+    <div className="border border-mist/70 bg-surface/30 px-6 py-8 sm:px-8">
+      <p className="font-display text-xl font-light text-ink">{title}</p>
+      <p className="mt-2 max-w-md font-ui text-sm leading-relaxed text-taupe">{description}</p>
+      {to ? (
+        <div className="mt-5">
+          <AtelierButton as={Link} to={to} variant="outline" size="chip">
+            {cta}
+          </AtelierButton>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function ProductRail({ products, wishlist }) {
+  const rows = useProductCovers(products);
+  if (!rows.length) return null;
+  return (
+    <div className="-mx-1 flex gap-4 overflow-x-auto px-1 pb-2 scrollbar-none sm:grid sm:grid-cols-2 sm:overflow-visible lg:grid-cols-4">
+      {rows.map((product) => (
+        <div key={product.id} className="w-[68vw] max-w-[220px] shrink-0 sm:w-auto sm:max-w-none">
+          <ProductCard
+            product={product}
+            as={Link}
+            to={productHref(product)}
+            showCategory
+            showBadge
+            showDiscount
+            showAvailability
+            onWishlist={wishlist.toggle}
+            isWishlisted={wishlist.isSaved(product)}
+            wishlistIcon={Heart}
+          />
+        </div>
+      ))}
+    </div>
+  );
+}
 
 export default function AccountDashboard() {
-  const { profile, addresses, defaultAddress, preferences } = useAccount();
+  const { user } = useAuth();
+  const { profile, addresses, defaultAddress } = useAccount();
   const { orders } = useOrder();
   const wishlist = useWishlist();
-
-  /* The one order state — the dashboard never keeps a copy of its own. */
-  const latestOrder = orders[0] ?? null;
+  const cart = useCart();
+  const recently = useRecentlyViewed(4);
 
   useEffect(() => {
     const prevTitle = document.title;
-    document.title = "My Account — PRATIKSHYA FASHON";
+    document.title = "My PRATIKSHYA — PRATIKSHYA FASHON";
+    const robots = document.querySelector('meta[name="robots"]');
+    const created = !robots;
+    const node = robots || document.createElement("meta");
+    node.setAttribute("name", "robots");
+    node.setAttribute("content", "noindex, nofollow");
+    if (created) document.head.appendChild(node);
     return () => {
       document.title = prevTitle;
+      if (created && node.parentNode) node.parentNode.removeChild(node);
     };
   }, []);
 
-  const fullName = [profile?.firstName, profile?.lastName].filter(Boolean).join(" ") || "Valued Customer";
+  const firstName = profile?.firstName || user?.firstName || "there";
+
+  const activeOrder = useMemo(() => {
+    const ranked = orders
+      .map((order) => ({ order, rank: ACTIVE_ORDER_RANK.indexOf(order.status) }))
+      .filter((entry) => entry.rank >= 0)
+      .sort((a, b) => a.rank - b.rank || new Date(b.order.createdAt) - new Date(a.order.createdAt));
+    return ranked[0]?.order ?? null;
+  }, [orders]);
+
+  const recentOrders = orders.slice(0, 3);
+
+  const activeReturns = useMemo(() => {
+    const list = [];
+    orders.forEach((order) => {
+      (order.returns ?? []).forEach((record) => {
+        if (!CLOSED_RETURNS.has(record.status)) {
+          list.push({ order, record });
+        }
+      });
+    });
+    return list;
+  }, [orders]);
+
+  const offers = useMemo(
+    () =>
+      offerRepository.listCustomerVisible({
+        customerId: user?.id,
+        customerEmail: user?.email || profile?.email,
+      }),
+    [user?.id, user?.email, profile?.email]
+  );
+
+  const collections = useMemo(
+    () =>
+      taxonomyRepository
+        .activeCollections()
+        .filter((entry) => entry.featured || ["new-arrivals", "bridal-trousseau", "festive-edit", "silk", "wedding"].includes(entry.id))
+        .slice(0, 5),
+    []
+  );
+
+  const preferences = useMemo(() => getStylePreferences(user?.id), [user?.id]);
+
+  const personal = useMemo(
+    () =>
+      getPersonalizedProducts({
+        wishlistProducts: wishlist.products,
+        recentlyViewed: recently.products,
+        orders,
+        preferences,
+        limit: 4,
+      }),
+    [wishlist.products, recently.products, orders, preferences]
+  );
+
+  const style = personal.signals;
+  const complete = profileCompleteness(profile);
+  const wishlistPreview = wishlist.products.slice(-4).reverse();
+
+  const shortcuts = [
+    { label: "Orders", value: `${orders.length} ${orders.length === 1 ? "order" : "orders"}`, to: "/account/orders" },
+    { label: "Wishlist", value: `${wishlist.count} saved`, to: "/account/wishlist" },
+    {
+      label: "Returns",
+      value: activeReturns.length ? `${activeReturns.length} active` : "All clear",
+      to: activeReturns[0] ? `/account/orders/${activeReturns[0].order.id}/return` : "/account/orders",
+    },
+    { label: "Offers", value: offers.length ? `${offers.length} available` : "None just now", to: "/shop" },
+    { label: "Addresses", value: `${addresses.length} saved`, to: "/account/addresses" },
+    { label: "Profile", value: `${complete}% complete`, to: "/account/profile" },
+  ];
 
   return (
-    <AccountShell breadcrumbItems={[{ label: "My Account" }]}>
-      <div>
-        <EditorialHeading
-          as="h2"
-          size="subsection"
-          eyebrow="Account Overview"
-          description="Your personal atelier dashboard — manage your orders, saved pieces, delivery addresses and preferences."
-          spacing={{ eyebrow: "mb-3", title: "mb-3", description: "mb-0" }}
-        >
-          Your personal <span className="italic text-accent">atelier.</span>
-        </EditorialHeading>
+    <AccountShell breadcrumbItems={[{ label: "My PRATIKSHYA" }]}>
+      <div className="space-y-16 md:space-y-20">
+        <section aria-label="Shopping shortcuts">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+            {shortcuts.map((item) => (
+              <Link
+                key={item.label}
+                to={item.to}
+                className="border border-mist/70 bg-surface/40 px-4 py-4 transition-colors hover:border-ink/40"
+              >
+                <p className="font-ui text-[10px] uppercase tracking-[.2em] text-taupe">{item.label}</p>
+                <p className="mt-2 font-display text-lg font-light text-ink">{item.value}</p>
+              </Link>
+            ))}
+          </div>
+        </section>
 
-        <div className="mt-8 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {/* Card 1: Orders */}
-          <div className="border border-mist/80 bg-surface/40 p-6 sm:p-7 flex flex-col justify-between">
+        <section aria-label="Your bag">
+          <div className="flex flex-wrap items-center justify-between gap-4 border border-mist/70 bg-surface/30 px-5 py-4 sm:px-6">
             <div>
-              <div className="flex items-center justify-between mb-4">
-                <div className="p-2.5 bg-canvas border border-mist/60 text-ink">
-                  <ShoppingBag size={18} strokeWidth={1.5} aria-hidden="true" />
-                </div>
-                <span className="font-ui text-[10px] uppercase tracking-[.2em] text-taupe">
-                  {orders.length} {orders.length === 1 ? "Order" : "Orders"}
-                </span>
-              </div>
-              <h3 className="font-display text-xl font-light text-ink">
-                Orders &amp; Purchases
-              </h3>
-              <Rule width="w-8" tone="accent" className="my-3" />
+              <p className="font-ui text-[10px] uppercase tracking-[.2em] text-taupe">Your bag</p>
+              <p className="mt-1 font-ui text-sm text-ink">
+                {cart.count
+                  ? `${cart.count} ${cart.count === 1 ? "piece" : "pieces"} · ${formatINR(cart.totals.subtotal)}`
+                  : "Your bag is waiting for a piece."}
+              </p>
+            </div>
+            <AtelierButton as={Link} to="/cart" variant="outline" size="chip">
+              View Bag
+            </AtelierButton>
+          </div>
+        </section>
 
-              {latestOrder ? (
-                <div>
-                  <p className="font-ui text-[10px] uppercase tracking-[.16em] text-accent">
-                    Most Recent
+        <div className="grid gap-10 lg:grid-cols-2 lg:gap-12">
+          <section aria-labelledby="active-order-heading">
+            <SectionHead
+              eyebrow="On its way"
+              title={<>Active <span className="italic text-accent">order</span></>}
+            />
+            {activeOrder ? (
+              <div className="border border-mist/70 bg-surface/30 p-5 sm:p-6">
+                <div className="flex gap-4">
+                  <MediaFrame
+                    image={orderThumb(activeOrder.items[0])}
+                    alt={activeOrder.items[0]?.name || ""}
+                    aspect="portrait"
+                    className="h-24 w-[4.5rem] shrink-0"
+                  />
+                  <div className="min-w-0 flex-1">
+                    <p id="active-order-heading" className="font-ui text-xs text-ink">
+                      {activeOrder.id}
+                    </p>
+                    <p className="mt-1 truncate font-ui text-sm text-graphite">
+                      {activeOrder.items[0]?.name}
+                    </p>
+                    <div className="mt-2">
+                      <OrderStatusBadge status={activeOrder.status} kind="order" />
+                    </div>
+                    {activeOrder.estimatedDelivery ? (
+                      <p className="mt-2 font-ui text-[11px] text-taupe">
+                        Estimated {activeOrder.estimatedDelivery}
+                      </p>
+                    ) : null}
+                  </div>
+                </div>
+                <div className="mt-5">
+                  <AtelierButton as={Link} to={`/account/orders/${activeOrder.id}/track`} variant="primary" size="chip">
+                    Track Order
+                  </AtelierButton>
+                </div>
+              </div>
+            ) : (
+              <QuietEmpty
+                title="Nothing on its way yet."
+                description="Discover something beautiful for your next occasion."
+                to="/shop"
+                cta="Start Shopping"
+              />
+            )}
+          </section>
+
+          <section aria-labelledby="continue-heading">
+            <SectionHead
+              eyebrow="Continue exploring"
+              title={<>You were looking at <span className="italic text-accent">these</span></>}
+            />
+            {recently.products.length ? (
+              <>
+                <h2 id="continue-heading" className="sr-only">Recently viewed</h2>
+                <ProductRail products={recently.products} wishlist={wishlist} />
+              </>
+            ) : (
+              <QuietEmpty
+                title="Your next favourite piece is waiting."
+                description="Your next discovery starts here."
+                to="/collection/new-arrivals"
+                cta="Explore New Arrivals"
+              />
+            )}
+          </section>
+        </div>
+
+        <section aria-label="Recent orders">
+          <SectionHead
+            eyebrow="Order history"
+            title={<>Recent <span className="italic text-accent">purchases</span></>}
+            action={
+              <AtelierButton as={Link} to="/account/orders" variant="outline" size="chip">
+                View All Orders
+              </AtelierButton>
+            }
+          />
+          {recentOrders.length ? (
+            <ul className="divide-y divide-mist/70 border border-mist/70">
+              {recentOrders.map((order) => (
+                <li key={order.id} className="flex flex-wrap items-center justify-between gap-3 px-4 py-4 sm:px-5">
+                  <div>
+                    <Link to={`/account/orders/${order.id}`} className="font-ui text-xs text-ink hover:text-accent">
+                      {order.id}
+                    </Link>
+                    <p className="mt-1 font-ui text-[11px] text-taupe">
+                      {formatOrderDate(order.createdAt)} · {orderItemCount(order)}{" "}
+                      {orderItemCount(order) === 1 ? "piece" : "pieces"}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <p className="font-ui text-xs text-ink">{formatINR(order.pricing.total)}</p>
+                    <OrderStatusBadge status={order.status} kind="order" />
+                  </div>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <QuietEmpty
+              title="Your next favourite piece is waiting."
+              description="When you place an order, it will live here."
+              to="/shop"
+              cta="Start Shopping"
+            />
+          )}
+        </section>
+
+        {activeReturns.length ? (
+          <section aria-label="Returns">
+            <SectionHead eyebrow="Returns" title={<>Return in <span className="italic text-accent">progress</span></>} />
+            <div className="grid gap-4 md:grid-cols-2">
+              {activeReturns.slice(0, 2).map(({ order, record }) => (
+                <div key={record.id} className="border border-mist/70 bg-surface/30 p-5">
+                  <p className="font-ui text-[10px] uppercase tracking-[.18em] text-accent">Return in progress</p>
+                  <p className="mt-2 font-ui text-xs text-ink">{record.id}</p>
+                  <p className="mt-1 truncate font-ui text-sm text-graphite">{record.items[0]?.name}</p>
+                  <p className="mt-2 font-ui text-[11px] text-taupe">{getReturnStatus(record.status).label}</p>
+                  <div className="mt-4">
+                    <AtelierButton as={Link} to={`/account/orders/${order.id}/return`} variant="outline" size="chip">
+                      View Return
+                    </AtelierButton>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+        ) : (
+          <section aria-label="Returns">
+            <QuietEmpty
+              title="You're all clear."
+              description="When a return is in progress, you will find it here."
+              to="/account/orders"
+              cta="View Orders"
+            />
+          </section>
+        )}
+
+        <section aria-label="Wishlist">
+          <SectionHead
+            eyebrow="Saved"
+            title={<>Your <span className="italic text-accent">wishlist</span></>}
+            action={
+              <AtelierButton as={Link} to="/account/wishlist" variant="outline" size="chip">
+                View Wishlist
+              </AtelierButton>
+            }
+          />
+          {wishlistPreview.length ? (
+            <ProductRail products={wishlistPreview} wishlist={wishlist} />
+          ) : (
+            <QuietEmpty
+              title="Nothing saved yet."
+              description="Save pieces you love and find them here later."
+              to="/shop"
+              cta="Explore Collection"
+            />
+          )}
+        </section>
+
+        <section aria-label="Just for you">
+          <SectionHead
+            eyebrow="Just for you"
+            title={<>Pieces selected around what you <span className="italic text-accent">explore</span></>}
+            description={style.reason}
+          />
+          {personal.products.length ? (
+            <ProductRail products={personal.products} wishlist={wishlist} />
+          ) : (
+            <QuietEmpty
+              title="Your next discovery starts here."
+              description="Explore a few pieces and this edit will begin to take shape."
+              to="/collection/new-arrivals"
+              cta="Explore New Arrivals"
+            />
+          )}
+        </section>
+
+        <section aria-label="Offers">
+          <SectionHead eyebrow="Atelier offers" title={<>For <span className="italic text-accent">you</span></>} />
+          {offers.length ? (
+            <div className="grid gap-4 md:grid-cols-3">
+              {offers.slice(0, 3).map((offer) => (
+                <article key={offer.id} className="flex flex-col justify-between border border-mist/70 bg-surface/30 p-5">
+                  <div>
+                    <p className="font-ui text-[10px] uppercase tracking-[.22em] text-accent">{offer.code}</p>
+                    <p className="mt-2 font-display text-xl font-light text-ink">{formatOfferDiscount(offer)}</p>
+                    <p className="mt-2 font-ui text-xs leading-relaxed text-taupe">
+                      {describeEligibility(offer)}
+                      {offer.minimumOrderValue > 0 ? ` · Min ${formatINR(offer.minimumOrderValue)}` : ""}
+                    </p>
+                    {offer.endDate ? (
+                      <p className="mt-2 font-ui text-[11px] text-taupe">Until {offer.endDate}</p>
+                    ) : null}
+                  </div>
+                  <div className="mt-5">
+                    <AtelierButton as={Link} to="/shop" variant="outline" size="chip">
+                      Shop Collection
+                    </AtelierButton>
+                  </div>
+                </article>
+              ))}
+            </div>
+          ) : (
+            <QuietEmpty
+              title="New offers will appear here when they're available."
+              description="The atelier will share seasonal invitations in this space."
+              to="/shop"
+              cta="Continue Shopping"
+            />
+          )}
+        </section>
+
+        <section aria-label="Featured collections">
+          <SectionHead eyebrow="The house" title={<>Featured <span className="italic text-accent">collections</span></>} />
+          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            {collections.map((collection) => (
+              <Link
+                key={collection.id}
+                to={`/collection/${collection.slug}`}
+                className="group block overflow-hidden border border-mist/70"
+              >
+                <MediaFrame
+                  image={imageRef(collection.image || "hero-atelier")}
+                  alt=""
+                  aspect="landscape"
+                  overlay="imageBottom"
+                  zoom="strong"
+                />
+                <div className="px-5 py-5">
+                  <p className="font-ui text-[10px] uppercase tracking-[.2em] text-accent">
+                    {collection.eyebrow || "Collection"}
                   </p>
-                  <div className="mt-2.5 flex items-center gap-3">
-                    <img
-                      src={latestOrder.items[0].image}
-                      alt=""
-                      className="h-14 w-11 shrink-0 bg-surface object-cover"
-                      loading="lazy"
-                    />
-                    <div className="min-w-0">
-                      <p className="truncate font-ui text-xs text-ink">
-                        {latestOrder.id}
-                      </p>
-                      <p className="mt-0.5 font-ui text-[11px] text-taupe">
-                        {formatOrderDate(latestOrder.createdAt)} ·{" "}
-                        {orderItemCount(latestOrder)}{" "}
-                        {orderItemCount(latestOrder) === 1 ? "piece" : "pieces"}
-                      </p>
-                      <p className="mt-1 font-ui text-xs text-ink">
-                        {formatINR(latestOrder.pricing.total)}
-                      </p>
+                  <h3 className="mt-2 font-display text-2xl font-light text-ink">{collection.name}</h3>
+                  <p className="mt-2 font-ui text-sm leading-relaxed text-taupe">
+                    {collection.shortDescription || collection.description}
+                  </p>
+                  <p className="mt-4 font-ui text-[11px] uppercase tracking-[.16em] text-ink group-hover:text-accent">
+                    Explore Collection →
+                  </p>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </section>
+
+        <section aria-label="Your style">
+          <SectionHead
+            eyebrow="Your style"
+            title={<>Taste, as it <span className="italic text-accent">unfolds</span></>}
+            action={
+              <AtelierButton as={Link} to="/account/preferences" variant="outline" size="chip">
+                Style Preferences
+              </AtelierButton>
+            }
+          />
+          {style.sufficient || hasStylePreferences(preferences) ? (
+            <div className="grid gap-6 md:grid-cols-2">
+              {[
+                { label: "Favourite categories", items: style.favouriteCategories },
+                { label: "Favourite collections", items: style.favouriteCollections },
+                { label: "Frequently viewed fabrics", items: style.favouriteFabrics },
+                { label: "Occasions you explore", items: style.favouriteOccasions },
+              ].map((group) =>
+                group.items.length ? (
+                  <div key={group.label}>
+                    <p className="font-ui text-[10px] uppercase tracking-[.18em] text-taupe">{group.label}</p>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {group.items.map((item) => (
+                        <span
+                          key={item.id}
+                          className="border border-pearl px-3 py-1.5 font-ui text-[11px] uppercase tracking-[.12em] text-ink"
+                        >
+                          {item.label}
+                        </span>
+                      ))}
                     </div>
                   </div>
-                  <div className="mt-3">
-                    <OrderStatusBadge status={latestOrder.status} kind="order" />
-                  </div>
-                </div>
-              ) : (
-                <p className="font-ui text-xs text-taupe leading-relaxed">
-                  Track your active orders, past celebration purchases, and view
-                  your invoices.
-                </p>
+                ) : null
               )}
             </div>
-            <div className="mt-6 pt-4 border-t border-mist/60 flex flex-wrap items-center gap-x-5 gap-y-2">
-              <Link
-                to="/account/orders"
-                className={cn(
-                  "font-ui text-xs uppercase tracking-[.14em] text-ink hover:text-accent font-medium inline-flex items-center gap-1.5",
-                  transition.colors
-                )}
-              >
-                View All Orders <ArrowRight size={12} aria-hidden="true" />
-              </Link>
-              {latestOrder ? (
-                <Link
-                  to={`/account/orders/${latestOrder.id}`}
-                  className={cn(
-                    "font-ui text-[10px] uppercase tracking-[.14em] text-brass hover:text-accent",
-                    transition.colors
-                  )}
-                >
-                  Latest Order
-                </Link>
-              ) : null}
+          ) : (
+            <QuietEmpty
+              title="Your style is still unfolding."
+              description="Explore a few pieces and your space will begin to reflect your taste."
+              to="/category/sarees"
+              cta="Explore Sarees"
+            />
+          )}
+        </section>
+
+        <section aria-label="Account management" className="grid gap-5 md:grid-cols-3">
+          <div className="border border-mist/70 bg-surface/30 p-6">
+            <p className="font-ui text-[10px] uppercase tracking-[.18em] text-taupe">Personal details</p>
+            <Rule width="w-8" tone="accent" className="my-3" />
+            <p className="font-ui text-sm text-ink">{[profile?.firstName, profile?.lastName].filter(Boolean).join(" ") || firstName}</p>
+            <p className="mt-1 truncate font-ui text-xs text-taupe">{profile?.email}</p>
+            <p className="mt-1 font-ui text-xs text-taupe">{profile?.phone || "No phone added"}</p>
+            <div className="mt-5">
+              <AtelierButton as={Link} to="/account/profile" variant="outline" size="chip">
+                Manage Profile
+              </AtelierButton>
             </div>
           </div>
 
-          {/* Card 2: Wishlist */}
-          <div className="border border-mist/80 bg-surface/40 p-6 sm:p-7 flex flex-col justify-between">
-            <div>
-              <div className="flex items-center justify-between mb-4">
-                <div className="p-2.5 bg-canvas border border-mist/60 text-accent">
-                  <Heart size={18} strokeWidth={1.5} aria-hidden="true" />
-                </div>
-                <span className="font-ui text-[10px] uppercase tracking-[.2em] text-accent font-medium">
-                  {wishlist.count} {wishlist.count === 1 ? "Saved Piece" : "Saved Pieces"}
-                </span>
-              </div>
-              <h3 className="font-display text-xl font-light text-ink">
-                Saved Wishlist
-              </h3>
-              <Rule width="w-8" tone="accent" className="my-3" />
-              <p className="font-ui text-xs text-taupe leading-relaxed">
-                {wishlist.count > 0
-                  ? `You have ${wishlist.count} handcrafted pieces curated in your personal edit.`
-                  : "Save sarees, bridal lehengas, and jewellery pieces to return to later."}
-              </p>
-            </div>
-            <div className="mt-6 pt-4 border-t border-mist/60 flex items-center justify-between">
-              <Link
-                to="/account/wishlist"
-                className={cn(
-                  "font-ui text-xs uppercase tracking-[.14em] text-ink hover:text-accent font-medium inline-flex items-center gap-1.5",
-                  transition.colors
-                )}
-              >
-                View Wishlist <ArrowRight size={12} aria-hidden="true" />
-              </Link>
-            </div>
-          </div>
-
-          {/* Card 3: Saved Addresses */}
-          <div className="border border-mist/80 bg-surface/40 p-6 sm:p-7 flex flex-col justify-between">
-            <div>
-              <div className="flex items-center justify-between mb-4">
-                <div className="p-2.5 bg-canvas border border-mist/60 text-ink">
-                  <MapPin size={18} strokeWidth={1.5} aria-hidden="true" />
-                </div>
-                <span className="font-ui text-[10px] uppercase tracking-[.2em] text-taupe">
-                  {addresses.length} {addresses.length === 1 ? "Address" : "Addresses"}
-                </span>
-              </div>
-              <h3 className="font-display text-xl font-light text-ink">
-                Saved Addresses
-              </h3>
-              <Rule width="w-8" tone="accent" className="my-3" />
-              <div className="font-ui text-xs text-taupe leading-relaxed">
-                {defaultAddress ? (
-                  <div>
-                    <span className="font-medium text-ink block mb-0.5">
-                      {defaultAddress.fullName} ({defaultAddress.type})
-                    </span>
-                    <p className="truncate">{defaultAddress.addressLine}</p>
-                    <p>{defaultAddress.city}, {defaultAddress.pincode}</p>
-                  </div>
-                ) : (
-                  <p>No saved addresses yet. Add your delivery details for seamless checkout.</p>
-                )}
-              </div>
-            </div>
-            <div className="mt-6 pt-4 border-t border-mist/60 flex items-center justify-between">
-              <Link
-                to="/account/addresses"
-                className={cn(
-                  "font-ui text-xs uppercase tracking-[.14em] text-ink hover:text-accent font-medium inline-flex items-center gap-1.5",
-                  transition.colors
-                )}
-              >
-                Manage Addresses <ArrowRight size={12} aria-hidden="true" />
-              </Link>
-            </div>
-          </div>
-
-          {/* Card 4: Personal Profile */}
-          <div className="border border-mist/80 bg-surface/40 p-6 sm:p-7 flex flex-col justify-between">
-            <div>
-              <div className="flex items-center justify-between mb-4">
-                <div className="p-2.5 bg-canvas border border-mist/60 text-ink">
-                  <User size={18} strokeWidth={1.5} aria-hidden="true" />
-                </div>
-                <span className="font-ui text-[10px] uppercase tracking-[.2em] text-taupe">
-                  Identity
-                </span>
-              </div>
-              <h3 className="font-display text-xl font-light text-ink">
-                Profile Details
-              </h3>
-              <Rule width="w-8" tone="accent" className="my-3" />
-              <div className="font-ui text-xs text-taupe leading-relaxed space-y-1">
-                <p className="text-ink font-medium">{fullName}</p>
-                <p className="truncate">{profile?.email}</p>
-                <p>{profile?.phone || "No phone number added"}</p>
-              </div>
-            </div>
-            <div className="mt-6 pt-4 border-t border-mist/60 flex items-center justify-between">
-              <Link
-                to="/account/profile"
-                className={cn(
-                  "font-ui text-xs uppercase tracking-[.14em] text-ink hover:text-accent font-medium inline-flex items-center gap-1.5",
-                  transition.colors
-                )}
-              >
-                Edit Profile <ArrowRight size={12} aria-hidden="true" />
-              </Link>
-            </div>
-          </div>
-
-          {/* Card 5: Preferences */}
-          <div className="border border-mist/80 bg-surface/40 p-6 sm:p-7 flex flex-col justify-between">
-            <div>
-              <div className="flex items-center justify-between mb-4">
-                <div className="p-2.5 bg-canvas border border-mist/60 text-ink">
-                  <Sliders size={18} strokeWidth={1.5} aria-hidden="true" />
-                </div>
-                <span className="font-ui text-[10px] uppercase tracking-[.2em] text-taupe">
-                  Preferences
-                </span>
-              </div>
-              <h3 className="font-display text-xl font-light text-ink">
-                Communications
-              </h3>
-              <Rule width="w-8" tone="accent" className="my-3" />
-              <div className="font-ui text-xs text-taupe leading-relaxed space-y-1">
-                <p>
-                  Email Updates:{" "}
-                  <span className={preferences.emailNotifications ? "text-cocoa font-medium" : "text-taupe"}>
-                    {preferences.emailNotifications ? "Active" : "Paused"}
-                  </span>
+          <div className="border border-mist/70 bg-surface/30 p-6">
+            <p className="font-ui text-[10px] uppercase tracking-[.18em] text-taupe">Address book</p>
+            <Rule width="w-8" tone="accent" className="my-3" />
+            {defaultAddress ? (
+              <>
+                <p className="font-ui text-sm text-ink">{defaultAddress.type || "Home"}</p>
+                <p className="mt-1 font-ui text-xs text-taupe">
+                  {defaultAddress.city}
+                  {defaultAddress.state ? `, ${defaultAddress.state}` : ""}
                 </p>
-                <p>
-                  SMS Alerts:{" "}
-                  <span className={preferences.smsNotifications ? "text-cocoa font-medium" : "text-taupe"}>
-                    {preferences.smsNotifications ? "Active" : "Paused"}
-                  </span>
-                </p>
-              </div>
-            </div>
-            <div className="mt-6 pt-4 border-t border-mist/60 flex items-center justify-between">
-              <Link
-                to="/account/settings"
-                className={cn(
-                  "font-ui text-xs uppercase tracking-[.14em] text-ink hover:text-accent font-medium inline-flex items-center gap-1.5",
-                  transition.colors
-                )}
-              >
-                Manage Preferences <ArrowRight size={12} aria-hidden="true" />
-              </Link>
+              </>
+            ) : (
+              <p className="font-ui text-sm text-taupe">No saved address yet.</p>
+            )}
+            <div className="mt-5">
+              <AtelierButton as={Link} to="/account/addresses" variant="outline" size="chip">
+                Manage Addresses
+              </AtelierButton>
             </div>
           </div>
 
-          {/* Card 6: Security */}
-          <div className="border border-mist/80 bg-surface/40 p-6 sm:p-7 flex flex-col justify-between">
-            <div>
-              <div className="flex items-center justify-between mb-4">
-                <div className="p-2.5 bg-canvas border border-mist/60 text-ink">
-                  <Shield size={18} strokeWidth={1.5} aria-hidden="true" />
-                </div>
-                <span className="font-ui text-[10px] uppercase tracking-[.2em] text-taupe">
-                  Security
-                </span>
-              </div>
-              <h3 className="font-display text-xl font-light text-ink">
-                Security &amp; Sessions
-              </h3>
-              <Rule width="w-8" tone="accent" className="my-3" />
-              <p className="font-ui text-xs text-taupe leading-relaxed">
-                Manage your password, review active atelier sessions, and secure your account.
-              </p>
-            </div>
-            <div className="mt-6 pt-4 border-t border-mist/60 flex items-center justify-between">
-              <Link
-                to="/account/security"
-                className={cn(
-                  "font-ui text-xs uppercase tracking-[.14em] text-ink hover:text-accent font-medium inline-flex items-center gap-1.5",
-                  transition.colors
-                )}
-              >
-                Review Security <ArrowRight size={12} aria-hidden="true" />
-              </Link>
+          <div className="border border-mist/70 bg-surface/30 p-6">
+            <p className="font-ui text-[10px] uppercase tracking-[.18em] text-taupe">Account security</p>
+            <Rule width="w-8" tone="accent" className="my-3" />
+            <p className="font-ui text-xs text-taupe">Email · {profile?.email ? "on file" : "not set"}</p>
+            <p className="mt-1 font-ui text-xs text-taupe">Phone · {profile?.phone ? "on file" : "not set"}</p>
+            <p className="mt-1 font-ui text-xs text-taupe">Password · protected</p>
+            <div className="mt-5">
+              <AtelierButton as={Link} to="/account/security" variant="outline" size="chip">
+                Account Security
+              </AtelierButton>
             </div>
           </div>
-        </div>
+        </section>
       </div>
     </AccountShell>
   );
