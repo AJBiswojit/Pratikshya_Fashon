@@ -28,8 +28,9 @@ import { cn } from "../../utils/cn";
  * that collection's real route. With no active campaign the band falls back
  * to a tasteful house statement and still never fabricates a discount.
  */
-export default function SaleBanner() {
+export default function SaleBanner({ excludeIds = null }) {
   const festiveMedia = useActivePlacementMedia(MARKETING_PLACEMENTS.FESTIVE_SECTION);
+  const usedIds = new Set(excludeIds ?? []);
 
   const activeOffers = offerRepository.list({ status: "ACTIVE" });
   const collectionOffers = activeOffers.filter(
@@ -73,7 +74,7 @@ export default function SaleBanner() {
       backdrop={
         <>
           <PratikshyaImage
-            image={resolveSaleBackdrop(festiveMedia)}
+            image={resolveSaleBackdrop(festiveMedia, usedIds)}
             alt="PRATIKSHYA FASHON festive sale campaign"
             className={imageTreatment.campaignBackdrop}
           />

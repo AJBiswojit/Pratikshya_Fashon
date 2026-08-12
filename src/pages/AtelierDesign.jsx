@@ -1,9 +1,10 @@
 import { motion } from "framer-motion";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { imageRef } from "../data/pratikshyaImageManifest";
 import { MARKETING_PLACEMENTS } from "../config/mediaTypes";
 import { useActivePlacementMedia } from "../hooks/useMedia";
 import { resolvePlacementImage } from "../services/media/marketingMediaSource";
+import { resolveHeroImageIds } from "../services/media/mediaResolver";
 import HeroCarousel from "../components/storefront/HeroCarousel";
 import ShopByCategory from "../components/storefront/ShopByCategory";
 import NewArrivals from "../components/storefront/NewArrivals";
@@ -44,6 +45,11 @@ export default function AtelierDesign() {
   const heroMedia = useActivePlacementMedia(MARKETING_PLACEMENTS.HOME_HERO);
   const sareeMedia = useActivePlacementMedia(MARKETING_PLACEMENTS.SAREE_SECTION);
   const lehengaMedia = useActivePlacementMedia(MARKETING_PLACEMENTS.LEHENGA_SECTION);
+
+  /* The hero reserves its five plates first; the editorial, category and sale
+     seams below seed their exclusion set from this list so the homepage never
+     shows the same photograph in several sections at once. */
+  const heroImageIds = useMemo(() => resolveHeroImageIds(heroMedia), [heroMedia]);
 
   const materials = [
     { name: "Silk", desc: fabricDetails.Silk.desc, img: imageRef("fabric-silk") },
@@ -145,13 +151,13 @@ export default function AtelierDesign() {
         </div>
       </AtelierSection>
 
-      <CelebrationEdit />
+      <CelebrationEdit excludeIds={heroImageIds} />
 
-      <ShopByCategory />
+      <ShopByCategory excludeIds={heroImageIds} />
 
       <NewArrivals />
 
-      <SaleBanner />
+      <SaleBanner excludeIds={heroImageIds} />
 
       <AtelierSection rhythm="spacious" width="narrow" className="text-center">
         <EditorialHeading

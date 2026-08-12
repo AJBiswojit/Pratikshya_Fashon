@@ -104,10 +104,20 @@ export default function CatalogueListing({ variant }) {
           { label: scope.title },
         ];
 
-  const heroMedia = scope.heroMediaId ? getMediaById(scope.heroMediaId) : null;
-  const heroImage = heroMedia?.status === "ACTIVE" && heroMedia.url
-    ? { id: heroMedia.id, src: heroMedia.url, alt: heroMedia.alt || scope.title }
-    : imageRef(scope.image);
+  /* The editorial plate resolves through the central media resolver, so
+     category and collection pages show the same centralized media the rest
+     of the storefront uses — managed banner first, then library media, then
+     the authored artwork. Navigation paths keep their authored plate. */
+  const heroImage = (() => {
+    if (variant === "category") {
+      const category = taxonomyRepository.findCategory(scope.id);
+      if (category) return resolveCategoryCover(category);
+    } else if (variant === "collection") {
+      const collection = taxonomyRepository.findCollection(scope.id);
+      if (collection) return resolveCollectionCover(collection);
+    }
+    return imageRef(scope.image);
+  })();
 
   return (
     <>

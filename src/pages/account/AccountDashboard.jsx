@@ -17,6 +17,7 @@ import {
 } from "../../design-system";
 import { getProductById, productHref } from "../../data/products";
 import { imageRef } from "../../data/pratikshyaImageManifest";
+import { resolveCollectionCover } from "../../services/media/mediaResolver";
 import { useProductCovers } from "../../hooks/useMedia";
 import { useRecentlyViewed } from "../../hooks/useRecentlyViewed";
 import { ORDER_STATUS, RETURN_STATUS, getReturnStatus } from "../../config/orderConfig";
@@ -525,7 +526,7 @@ export default function AccountDashboard() {
                 className="group block overflow-hidden border border-mist/70"
               >
                 <MediaFrame
-                  image={imageRef(collection.image || "hero-atelier")}
+                  image={resolveCollectionCover(collection)}
                   alt=""
                   aspect="landscape"
                   overlay="imageBottom"

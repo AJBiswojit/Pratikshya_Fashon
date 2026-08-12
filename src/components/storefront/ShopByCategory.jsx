@@ -90,9 +90,9 @@ const subcategoryCard = (category, subcategory, route, product) => ({
   alt: `${subcategory.name} collection at PRATIKSHYA FASHON`,
 });
 
-export default function ShopByCategory() {
+export default function ShopByCategory({ excludeIds = null }) {
   const reveal = useReveal();
-  const usedIds = new Set();
+  const usedIds = new Set(excludeIds ?? []);
 
   const active = taxonomyRepository.activeCategories();
   const activeById = new Map(active.map((category) => [category.id, category]));

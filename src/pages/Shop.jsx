@@ -14,7 +14,7 @@ import CategoryShortcuts from "../components/storefront/CategoryShortcuts";
 import { collectionRoutes } from "../data/products/taxonomy";
 import taxonomyRepository from "../services/taxonomyRepository";
 import { categoryCounts, products } from "../data/products";
-import { imageRef } from "../data/pratikshyaImageManifest";
+import { resolveCategoryCover, resolveCollectionCover } from "../services/media/mediaResolver";
 import { cn } from "../utils/cn";
 
 /**
@@ -49,12 +49,13 @@ export default function Shop() {
       to: shortcutRoutes[id] || `/category/${category.slug}`,
       label: category.name,
       eyebrow: category.eyebrow,
-      image: category.image,
+      image: resolveCategoryCover(category),
       count: categoryCounts[id] ?? 0,
     };
   }).filter(Boolean);
 
   const featured = collectionRoutes.featured;
+  const featuredImage = resolveCollectionCover(featured);
   const featuredCount = products.filter((product) => product.isFeatured).length;
 
   return (
@@ -77,7 +78,7 @@ export default function Shop() {
       <AtelierSection rhythm="none" width="wide" className="pb-20 md:pb-28">
         <Link to="/collection/featured" className="group grid gap-8 md:grid-cols-12 md:items-center">
           <MediaFrame
-            image={imageRef(featured.image)}
+            image={featuredImage}
             alt={featured.title}
             aspect="panorama"
             zoom="soft"

@@ -66,14 +66,33 @@ const roleRank = (media, preferredRoles = []) => {
 };
 
 /**
+ * The Phase 21.4 house plates are the *existing* fallback artwork (the old
+ * `images/*` manifest plates re-ingested as `dump` records). They must never
+ * outrank the new library photography for the same category — they exist to
+ * catch the case where a category has no library media at all.
+ */
+const isHousePlate = (media) =>
+  Boolean(media && ((media.tags || []).includes("house") || media.source === "House artwork"));
+
+/**
  * Rank a candidate list. Higher is better; ties break on id so the order
  * is stable across renders.
+ *
+ * Order mirrors the Phase 21.5 selection rules:
+ *   1. real library photography over house fallback plates
+ *   2. explicit usage role (CATEGORY_COVER > EDITORIAL > HERO > …)
+ *   3. featured
+ *   4. quality / resolution
+ *   5. portrait preference
+ *   6. stable id order
  */
 export const compareMedia = (a, b, { preferredRoles = [], preferPortrait = false } = {}) => {
-  const featured = Number(Boolean(b.featured)) - Number(Boolean(a.featured));
-  if (featured) return featured;
+  const house = Number(isHousePlate(a)) - Number(isHousePlate(b));
+  if (house) return house;
   const role = roleRank(a, preferredRoles) - roleRank(b, preferredRoles);
   if (role) return role;
+  const featured = Number(Boolean(b.featured)) - Number(Boolean(a.featured));
+  if (featured) return featured;
   const quality = qualityScore(b) - qualityScore(a);
   if (quality) return quality;
   if (preferPortrait) {
@@ -118,6 +137,34 @@ export const selectMedia = ({
 };
 
 export const resolveMediaSource = (media, fallback) => asSource(media) ?? fallback ?? null;
+
+/**
+ * Ergonomic entry point for the single distribution strategy (Phase 21.5).
+ * Thin alias over `selectMedia` so callers and the exposure audit speak one
+ * vocabulary (`usage`, `excludeIds`) without introducing a second resolver.
+ */
+export const resolveMedia = ({
+  usage = null,
+  roles = null,
+  categoryId = null,
+  collectionId = null,
+  productId = null,
+  limit = 1,
+  excludeIds = null,
+  preferPortrait = false,
+  allowUnmapped = false,
+} = {}) =>
+  selectMedia({
+    role: usage && !roles ? usage : null,
+    roles,
+    categoryId,
+    collectionId,
+    productId,
+    usedIds: excludeIds,
+    limit,
+    preferPortrait,
+    allowUnmapped,
+  });
 
 /**
  * Category card / listing hero. Prefer an ACTIVE managed banner, then a
@@ -222,6 +269,22 @@ export const resolveHeroSlideImage = (theme, { heroMedia = null, lead = false, u
   return resolveThemeImage(theme, usedIds);
 };
 
+/**
+ * The ids the hero carousel reserves, in slide order. Later homepage sections
+ * seed their exclusion set from this so the hero, editorial and category
+ * cards do not all show the same photograph at once (Phase 21.5 reuse rule).
+ */
+export const resolveHeroImageIds = (heroMedia = null) => {
+  const usedIds = new Set();
+  const themes = ["festive", "bridal", "heritage", "celebration", "arrivals"];
+  return themes
+    .map((theme, index) =>
+      resolveHeroSlideImage(theme, { heroMedia, lead: index === 0, usedIds })
+    )
+    .map((source) => source?.id)
+    .filter(Boolean);
+};
+
 export const resolveEditorialFrame = (theme, usedIds = null) => resolveThemeImage(theme, usedIds);
 
 /**
@@ -288,11 +351,13 @@ export const resolveProductGallery = (product) => {
 
 export default {
   selectMedia,
+  resolveMedia,
   compareMedia,
   resolveCategoryCover,
   resolveCollectionCover,
   resolveThemeImage,
   resolveHeroSlideImage,
+  resolveHeroImageIds,
   resolveEditorialFrame,
   resolveSaleBackdrop,
   resolveProductCover,
