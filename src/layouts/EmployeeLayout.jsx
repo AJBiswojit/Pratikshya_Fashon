@@ -1,12 +1,11 @@
 import { Suspense, useEffect, useState } from "react";
-import { Outlet, useLocation } from "react-router-dom";
+import { Outlet, useLocation, Navigate } from "react-router-dom";
 import { AnimatePresence } from "framer-motion";
 import { LoadingState, PageTransition } from "../design-system";
 import EmployeeHeader from "../components/employee/EmployeeHeader";
 import EmployeeSidebar from "../components/employee/EmployeeSidebar";
 import { useEmployeeAuth } from "../context/EmployeeAuthContext";
 import { requiredPermissionForPath } from "../config/employeeNavigation";
-import { Navigate } from "react-router-dom";
 
 export default function EmployeeLayout() {
   const { pathname } = useLocation();
@@ -25,6 +24,16 @@ export default function EmployeeLayout() {
     };
   }, []);
 
+  /* Escape closes the mobile navigation drawer. */
+  useEffect(() => {
+    if (!navOpen) return;
+    const onKeyDown = (event) => {
+      if (event.key === "Escape") setNavOpen(false);
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [navOpen]);
+
   const required = requiredPermissionForPath(pathname);
   if (required && employee && !hasPermission(required) && pathname !== "/employee/access-denied") {
     return <Navigate to="/employee/access-denied" replace />;
@@ -40,16 +49,17 @@ export default function EmployeeLayout() {
             type="button"
             className="fixed inset-0 z-20 bg-ink/30 lg:hidden"
             aria-label="Close navigation overlay"
+            tabIndex={-1}
             onClick={() => setNavOpen(false)}
           />
         ) : null}
 
         <aside
-          className={`fixed inset-y-0 left-0 z-30 w-64 overflow-y-auto border-r border-mist/80 bg-canvas pt-[65px] transition-transform lg:static lg:z-0 lg:w-auto lg:translate-x-0 lg:pt-0 ${
+          className={`fixed inset-y-0 left-0 z-30 w-72 overflow-hidden border-r border-mist/80 bg-canvas pt-[65px] transition-transform lg:static lg:z-0 lg:w-auto lg:translate-x-0 lg:overflow-visible lg:pt-0 ${
             navOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
           }`}
         >
-          <div className="lg:sticky lg:top-[65px] lg:h-[calc(100vh-65px)] lg:overflow-y-auto">
+          <div className="h-full lg:sticky lg:top-[65px] lg:h-[calc(100vh-65px)]">
             <EmployeeSidebar onNavigate={() => setNavOpen(false)} />
           </div>
         </aside>
