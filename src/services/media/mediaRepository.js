@@ -105,6 +105,20 @@ export const getUnassignedMedia = () =>
     .filter((item) => item.scope === MEDIA_SCOPES.UNASSIGNED)
     .sort(byRecency);
 
+/** Media awaiting manager / admin approval. */
+export const getPendingReview = () =>
+  readMedia()
+    .filter((item) => item.status === MEDIA_STATUS.PENDING_REVIEW)
+    .sort(byRecency);
+
+/** Media submitted by a specific employee. */
+export const getByEmployee = (employeeId) => {
+  if (!employeeId) return [];
+  return readMedia()
+    .filter((item) => item.uploadedByEmployeeId === employeeId)
+    .sort(byRecency);
+};
+
 /** The cover a product page and every product card should use. */
 export const getProductCover = (productId) =>
   getProductMedia(productId, { publicOnly: true }).find(
@@ -142,10 +156,14 @@ export const create = (draft = {}) => {
     ...draft,
     id: draft.id && !items.some((item) => item.id === draft.id) ? draft.id : createMediaId(),
     type,
-    url: ephemeral ? "" : draft.url,
-    poster: isEphemeralUrl(draft.poster) ? "" : draft.poster,
-    thumbnail: isEphemeralUrl(draft.thumbnail) ? "" : draft.thumbnail,
+    url: ephemeral ? (draft.sampleUrl || "") : (draft.url || draft.sampleUrl || ""),
+    poster: isEphemeralUrl(draft.poster) ? (draft.samplePoster || "") : (draft.poster || draft.samplePoster || ""),
+    thumbnail: isEphemeralUrl(draft.thumbnail) ? (draft.sampleThumbnail || "") : (draft.thumbnail || draft.sampleThumbnail || ""),
     role: productId ? (draft.role ?? defaultRoleForType(type)) : null,
+    status: draft.status || MEDIA_STATUS.DRAFT,
+    uploadedBy: draft.uploadedBy || null,
+    uploadedByEmployeeId: draft.uploadedByEmployeeId || null,
+    uploadedByType: draft.uploadedByType || "ADMIN",
     sortOrder,
     demoPlaceholder: ephemeral || Boolean(draft.demoPlaceholder),
     createdAt: timestamp,
@@ -234,6 +252,50 @@ export const setStatus = (mediaId, status) =>
 
 export const activate = (mediaId) => setStatus(mediaId, MEDIA_STATUS.ACTIVE);
 export const archive = (mediaId) => setStatus(mediaId, MEDIA_STATUS.ARCHIVED);
+
+/**
+ * Approves a pending media asset, making it ACTIVE.
+ */
+export const approve = (mediaId, reviewerInfo = {}) => {
+  const reviewer =
+    typeof reviewerInfo === "string"
+      ? reviewerInfo
+      : reviewerInfo.actorName || reviewerInfo.name || reviewerInfo.employeeId || "Administrator";
+
+  return update(mediaId, {
+    status: MEDIA_STATUS.ACTIVE,
+    reviewStatus: "APPROVED",
+    reviewedBy: reviewer,
+    reviewedAt: nowIso(),
+    rejectionReason: null,
+  });
+};
+
+/**
+ * Rejects a pending media asset, with optional rejection reason.
+ */
+export const reject = (mediaId, reason = "", reviewerInfo = {}) => {
+  const reviewer =
+    typeof reviewerInfo === "string"
+      ? reviewerInfo
+      : reviewerInfo.actorName || reviewerInfo.name || reviewerInfo.employeeId || "Administrator";
+
+  return update(mediaId, {
+    status: MEDIA_STATUS.REJECTED,
+    reviewStatus: "REJECTED",
+    rejectionReason: reason || "Asset does not meet quality or catalogue standards.",
+    reviewedBy: reviewer,
+    reviewedAt: nowIso(),
+  });
+};
+
+export const approveMany = (mediaIds = [], reviewerInfo = {}) =>
+  (Array.isArray(mediaIds) ? mediaIds : []).map((id) => approve(id, reviewerInfo)).filter(Boolean);
+
+export const rejectMany = (mediaIds = [], reason = "", reviewerInfo = {}) =>
+  (Array.isArray(mediaIds) ? mediaIds : [])
+    .map((id) => reject(id, reason, reviewerInfo))
+    .filter(Boolean);
 
 /**
  * Deletes a record.
@@ -504,7 +566,9 @@ export const getMediaMetrics = () => {
     productMedia: product.length,
     marketingMedia: marketing.length,
     unassigned: items.filter((item) => item.scope === MEDIA_SCOPES.UNASSIGNED).length,
+    pendingReview: items.filter((item) => item.status === MEDIA_STATUS.PENDING_REVIEW).length,
     active: items.filter((item) => item.status === MEDIA_STATUS.ACTIVE).length,
+    rejected: items.filter((item) => item.status === MEDIA_STATUS.REJECTED).length,
     draft: items.filter((item) => item.status === MEDIA_STATUS.DRAFT).length,
     archived: items.filter((item) => item.status === MEDIA_STATUS.ARCHIVED).length,
     activeMarketing: marketing.filter((item) => item.status === MEDIA_STATUS.ACTIVE).length,
@@ -532,6 +596,8 @@ const mediaRepository = {
   getProductMedia,
   getMarketingMedia,
   getUnassignedMedia,
+  getPendingReview,
+  getByEmployee,
   getProductCover,
   create,
   createMany,
@@ -539,6 +605,10 @@ const mediaRepository = {
   setStatus,
   activate,
   archive,
+  approve,
+  reject,
+  approveMany,
+  rejectMany,
   remove,
   removeMany,
   reorder,

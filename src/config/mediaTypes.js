@@ -58,14 +58,26 @@ export const MEDIA_SCOPE_LABELS = {
 /** Only ACTIVE media is ever shown to a customer. */
 export const MEDIA_STATUS = {
   DRAFT: "DRAFT",
+  PENDING_REVIEW: "PENDING_REVIEW",
   ACTIVE: "ACTIVE",
+  REJECTED: "REJECTED",
   ARCHIVED: "ARCHIVED",
 };
 
 export const MEDIA_STATUS_OPTIONS = [
   { id: MEDIA_STATUS.DRAFT, label: "Draft", tone: "quiet" },
+  { id: MEDIA_STATUS.PENDING_REVIEW, label: "Pending Review", tone: "brass" },
   { id: MEDIA_STATUS.ACTIVE, label: "Active", tone: "ink" },
+  { id: MEDIA_STATUS.REJECTED, label: "Rejected", tone: "alert" },
   { id: MEDIA_STATUS.ARCHIVED, label: "Archived", tone: "muted" },
+];
+
+export const REJECTION_REASONS = [
+  "Image quality or lighting is not suitable.",
+  "Wrong product or colorway selected.",
+  "File format or aspect ratio does not meet house standards.",
+  "Please upload higher resolution or clearer angle.",
+  "Duplicate media asset.",
 ];
 
 export const getMediaStatusLabel = (status) =>

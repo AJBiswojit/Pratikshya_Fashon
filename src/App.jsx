@@ -62,6 +62,9 @@ const EmployeeAssistedOrder = lazy(() => import("./pages/employee/EmployeeAssist
 const EmployeeOffers = lazy(() => import("./pages/employee/EmployeeOffers"));
 const EmployeeAccessDenied = lazy(() => import("./pages/employee/EmployeeAccessDenied"));
 const EmployeeDesk = lazy(() => import("./pages/employee/EmployeeDesk"));
+const EmployeeMediaDashboard = lazy(() => import("./pages/employee/EmployeeMediaDashboard"));
+const EmployeeMediaUpload = lazy(() => import("./pages/employee/EmployeeMediaUpload"));
+const EmployeeMediaDetail = lazy(() => import("./pages/employee/EmployeeMediaDetail"));
 const EmployeeList = lazy(() => import("./pages/employee/management/EmployeeList"));
 const EmployeeCreate = lazy(() => import("./pages/employee/management/EmployeeCreate"));
 const EmployeeDetail = lazy(() => import("./pages/employee/management/EmployeeDetail"));
@@ -84,6 +87,8 @@ const AdminProducts = lazy(() => import("./pages/admin/AdminProducts"));
 const ProductForm = lazy(() => import("./pages/admin/ProductForm"));
 const AdminProductDetail = lazy(() => import("./pages/admin/AdminProductDetail"));
 const AdminMediaLibrary = lazy(() => import("./pages/admin/media/AdminMediaLibrary"));
+const AdminMediaUpload = lazy(() => import("./pages/admin/media/AdminMediaUpload"));
+const AdminMediaReview = lazy(() => import("./pages/admin/media/AdminMediaReview"));
 const AdminMarketingMedia = lazy(() => import("./pages/admin/media/AdminMarketingMedia"));
 const AdminMediaDetail = lazy(() => import("./pages/admin/media/AdminMediaDetail"));
 const AdminProductMedia = lazy(() => import("./pages/admin/media/AdminProductMedia"));
@@ -172,10 +177,12 @@ export default function App() {
                           <Route path="/admin/products/:productId" element={<AdminProductDetail />} />
                           <Route path="/admin/products/:productId/media" element={<AdminProductMedia />} />
 
-                          {/* Media. The marketing board is declared before the
-                              record route so /admin/media/marketing is never
+                          {/* Media. The marketing, upload, and review boards are declared
+                              before the record route so /admin/media/* is never
                               read as a media identifier. */}
                           <Route path="/admin/media" element={<AdminMediaLibrary />} />
+                          <Route path="/admin/media/upload" element={<AdminMediaUpload />} />
+                          <Route path="/admin/media/review" element={<AdminMediaReview />} />
                           <Route path="/admin/media/marketing" element={<AdminMarketingMedia />} />
                           <Route path="/admin/media/:mediaId" element={<AdminMediaDetail />} />
                           <Route path="/admin/categories" element={<AdminModulePlaceholder />} />
@@ -213,6 +220,9 @@ export default function App() {
                           <Route path="/employee/attendance" element={<EmployeeAttendance />} />
                           <Route path="/employee/performance" element={<EmployeePerformance />} />
                           <Route path="/employee/access-denied" element={<EmployeeAccessDenied />} />
+                          <Route path="/employee/media" element={<EmployeeMediaDashboard />} />
+                          <Route path="/employee/media/upload" element={<EmployeeMediaUpload />} />
+                          <Route path="/employee/media/:mediaId" element={<EmployeeMediaDetail />} />
                           <Route path="/employee/products" element={<EmployeeProducts />} />
                           <Route path="/employee/customers" element={<EmployeeCustomers />} />
                           <Route path="/employee/orders" element={<EmployeeOrders />} />

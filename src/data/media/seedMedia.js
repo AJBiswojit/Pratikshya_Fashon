@@ -345,6 +345,87 @@ const unassignedMedia = [
   },
 ];
 
-export const SEED_MEDIA = [...productMedia, ...marketingMedia, ...unassignedMedia];
+/* ------------------------------------------------------------------ */
+/* Employee submissions                                               */
+/* ------------------------------------------------------------------ */
+
+const employeeSubmissions = [
+  {
+    id: "pm-seed-301",
+    type: MEDIA_TYPES.IMAGE,
+    url: plate("saree-traditional"),
+    thumbnail: plate("saree-traditional"),
+    title: "Bomkai Pato — Pallu close view",
+    alt: "Bomkai Pato traditional pallu detailing",
+    caption: "Captured in the styling suite during bridal draping.",
+    tags: ["seed", "employee", "styling", "pallu"],
+    scope: MEDIA_SCOPES.PRODUCT,
+    productId: "pf-002",
+    role: PRODUCT_MEDIA_ROLES.DETAIL,
+    sortOrder: 0,
+    status: MEDIA_STATUS.PENDING_REVIEW,
+    uploadedBy: "Ishita Kapoor",
+    uploadedByEmployeeId: "PF-STY-00012",
+    uploadedByType: "EMPLOYEE",
+    reviewStatus: "PENDING",
+    source: "Employee upload",
+    createdAt: "2026-08-11T11:20:00.000Z",
+    updatedAt: "2026-08-11T11:20:00.000Z",
+  },
+  {
+    id: "pm-seed-302",
+    type: MEDIA_TYPES.IMAGE,
+    url: plate("fabric-embroidered"),
+    thumbnail: plate("fabric-embroidered"),
+    title: "Bomkai Pato — Border zari texture",
+    alt: "Bomkai Pato zari border craft study",
+    caption: "Macro weave texture under warm studio light.",
+    tags: ["seed", "employee", "styling", "texture"],
+    scope: MEDIA_SCOPES.PRODUCT,
+    productId: "pf-002",
+    role: PRODUCT_MEDIA_ROLES.CLOSEUP,
+    sortOrder: 1,
+    status: MEDIA_STATUS.PENDING_REVIEW,
+    uploadedBy: "Ishita Kapoor",
+    uploadedByEmployeeId: "PF-STY-00012",
+    uploadedByType: "EMPLOYEE",
+    reviewStatus: "PENDING",
+    source: "Employee upload",
+    createdAt: "2026-08-11T11:25:00.000Z",
+    updatedAt: "2026-08-11T11:25:00.000Z",
+  },
+  {
+    id: "pm-seed-303",
+    type: MEDIA_TYPES.IMAGE,
+    url: plate("saree-printed"),
+    thumbnail: plate("saree-printed"),
+    title: "Khandua Pato — Floor drape view",
+    alt: "Khandua Pato drape test",
+    caption: "Drape test shot on mannequin.",
+    tags: ["seed", "employee", "styling"],
+    scope: MEDIA_SCOPES.PRODUCT,
+    productId: "pf-004",
+    role: PRODUCT_MEDIA_ROLES.LIFESTYLE,
+    sortOrder: 0,
+    status: MEDIA_STATUS.REJECTED,
+    uploadedBy: "Ishita Kapoor",
+    uploadedByEmployeeId: "PF-STY-00012",
+    uploadedByType: "EMPLOYEE",
+    reviewStatus: "REJECTED",
+    reviewedBy: "Vikram Iyer",
+    reviewedAt: "2026-08-11T14:30:00.000Z",
+    rejectionReason: "Lighting does not meet atelier lookbook standards. Please capture in studio lighting.",
+    source: "Employee upload",
+    createdAt: "2026-08-10T15:10:00.000Z",
+    updatedAt: "2026-08-11T14:30:00.000Z",
+  },
+];
+
+export const SEED_MEDIA = [
+  ...productMedia,
+  ...marketingMedia,
+  ...unassignedMedia,
+  ...employeeSubmissions,
+];
 
 export default SEED_MEDIA;

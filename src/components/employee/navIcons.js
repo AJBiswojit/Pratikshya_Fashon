@@ -6,8 +6,10 @@ import {
   Boxes,
   Calendar,
   Clock3,
+  Film,
   Gem,
   Headphones,
+  Image as ImageIcon,
   LayoutDashboard,
   Package,
   Plus,
@@ -28,6 +30,8 @@ import {
 
 export const NAV_ICONS = {
   layout: LayoutDashboard,
+  image: ImageIcon,
+  film: Film,
   sparkles: Sparkles,
   users: Users,
   bag: ShoppingBag,

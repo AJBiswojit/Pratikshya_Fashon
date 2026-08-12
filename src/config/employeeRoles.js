@@ -49,6 +49,7 @@ export const ROLE_DEFINITIONS = {
       P.MEDIA_UPLOAD,
       P.MEDIA_EDIT,
       P.MEDIA_ASSIGN,
+      P.MEDIA_MANAGE,
       P.ANALYTICS_VIEW,
       P.PROFILE_VIEW,
       P.PROFILE_EDIT,
