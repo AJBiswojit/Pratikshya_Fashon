@@ -40,7 +40,7 @@ export const ADMIN_NAV_GROUPS = [
     id: "business",
     label: "Business",
     items: [
-      { id: "products", label: "Products", to: "/admin/products", icon: "sparkles", status: MODULE_STATUS.SOON },
+      { id: "products", label: "Products", to: "/admin/products", icon: "sparkles", status: MODULE_STATUS.READY },
       { id: "categories", label: "Categories", to: "/admin/categories", icon: "grid", status: MODULE_STATUS.SOON },
       { id: "collections", label: "Collections", to: "/admin/collections", icon: "layers", status: MODULE_STATUS.SOON },
       { id: "offers", label: "Offers", to: "/admin/offers", icon: "tag", status: MODULE_STATUS.SOON },

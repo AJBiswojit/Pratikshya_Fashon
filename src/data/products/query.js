@@ -154,7 +154,7 @@ export const queryCatalogue = ({
   sort = defaultSort,
 } = {}) => {
   const scoped = source.filter(
-    (product) => matchesFilters(product, scopeFilters) && matchesSearch(product, search)
+    (product) => product.status !== "DRAFT" && product.status !== "ARCHIVED" && product.published !== false && matchesFilters(product, scopeFilters) && matchesSearch(product, search)
   );
   const matched = scoped.filter((product) => matchesFilters(product, filters));
 
