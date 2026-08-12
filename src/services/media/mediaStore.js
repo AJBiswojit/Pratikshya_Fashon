@@ -133,6 +133,20 @@ export const normaliseMedia = (entry) => {
     source: cleanString(entry.source, "URL"),
     fileName: cleanString(entry.fileName) || null,
     fileSize: Number.isFinite(Number(entry.fileSize)) ? Number(entry.fileSize) : null,
+    uploadedBy: cleanString(entry.uploadedBy) || null,
+    uploadedByEmployeeId: cleanString(entry.uploadedByEmployeeId) || null,
+    uploadedByType:
+      entry.uploadedByType === "ADMIN"
+        ? "ADMIN"
+        : entry.uploadedByType === "EMPLOYEE"
+          ? "EMPLOYEE"
+          : entry.uploadedByEmployeeId
+            ? "EMPLOYEE"
+            : "ADMIN",
+    reviewStatus: cleanString(entry.reviewStatus) || null,
+    reviewedBy: cleanString(entry.reviewedBy) || null,
+    reviewedAt: cleanString(entry.reviewedAt) || null,
+    rejectionReason: cleanString(entry.rejectionReason) || null,
     /** True when the file was only ever previewed in a browser session. */
     demoPlaceholder: Boolean(entry.demoPlaceholder),
 
@@ -164,6 +178,8 @@ export const dedupeMedia = (items) => {
   return unique;
 };
 
+let memoryMedia = null;
+
 const seeded = () => dedupeMedia(SEED_MEDIA.map(normaliseMedia).filter(Boolean));
 
 /**
@@ -173,14 +189,17 @@ const seeded = () => dedupeMedia(SEED_MEDIA.map(normaliseMedia).filter(Boolean))
  * admin surfaces are never a blank page on a fresh browser.
  */
 export const readMedia = () => {
-  if (typeof window === "undefined") return seeded();
+  if (typeof window === "undefined") {
+    if (!memoryMedia) memoryMedia = seeded();
+    return memoryMedia;
+  }
   try {
     const stored = JSON.parse(window.localStorage.getItem(MEDIA_STORAGE_KEY));
-    if (!Array.isArray(stored)) return seeded();
+    if (!Array.isArray(stored)) return memoryMedia || seeded();
     const clean = dedupeMedia(stored.map(normaliseMedia).filter(Boolean));
-    return clean.length ? clean : seeded();
+    return clean.length ? clean : memoryMedia || seeded();
   } catch {
-    return seeded();
+    return memoryMedia || seeded();
   }
 };
 
@@ -192,6 +211,7 @@ export const readMedia = () => {
  */
 export const writeMedia = (items) => {
   const clean = dedupeMedia((Array.isArray(items) ? items : []).map(normaliseMedia).filter(Boolean));
+  memoryMedia = clean;
   if (typeof window !== "undefined") {
     try {
       window.localStorage.setItem(MEDIA_STORAGE_KEY, JSON.stringify(clean));

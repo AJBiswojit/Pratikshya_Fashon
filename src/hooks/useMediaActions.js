@@ -54,25 +54,125 @@ export default function useMediaActions() {
   const upload = useCallback(
     (drafts = [], context = {}) => {
       const list = Array.isArray(drafts) ? drafts : [drafts];
+      const isEmp = !admin && Boolean(employee);
+      const provenanceDefaults = isEmp
+        ? {
+            uploadedBy: [employee?.firstName, employee?.lastName].filter(Boolean).join(" ") || "Employee",
+            uploadedByEmployeeId: employee?.employeeId || null,
+            uploadedByType: "EMPLOYEE",
+            status: context.status || "PENDING_REVIEW",
+          }
+        : {
+            uploadedBy: admin?.name || "Administrator",
+            uploadedByEmployeeId: admin?.adminId || null,
+            uploadedByType: "ADMIN",
+            status: context.status || "ACTIVE",
+          };
+
       const created = mediaRepository.createMany(
-        list.map((draft) => ({ ...context, ...draft }))
+        list.map((draft) => ({ ...provenanceDefaults, ...context, ...draft }))
       );
+
       if (created.length) {
         const where = context.productId
-          ? ` to ${context.productId}`
+          ? ` for product ${context.productId}`
           : context.placement
             ? ` to ${getPlacementLabel(context.placement)}`
             : " to the library";
+
+        const isPending = created.some((item) => item.status === "PENDING_REVIEW");
+        const actionType = isPending
+          ? ACTIVITY_ACTIONS.MEDIA_SUBMITTED_FOR_REVIEW
+          : ACTIVITY_ACTIONS.MEDIA_UPLOADED;
+
+        const actorCode = isEmp ? employee?.employeeId || "Employee" : admin?.name || "Admin";
+
         note(
-          ACTIVITY_ACTIONS.MEDIA_UPLOADED,
+          actionType,
           created.length === 1
-            ? `Added ${nameOf(created[0])}${where}.`
-            : `Added ${created.length} media items${where}.`
+            ? `${actorCode} uploaded ${nameOf(created[0])}${where}${isPending ? " (submitted for review)" : ""}.`
+            : `${actorCode} uploaded ${created.length} media assets${where}${isPending ? " (submitted for review)" : ""}.`
         );
       }
       return created;
     },
-    [note]
+    [admin, employee, note]
+  );
+
+  /* ---------------------------------------------------------------- */
+  /* Review & Approval                                                 */
+  /* ---------------------------------------------------------------- */
+
+  const approve = useCallback(
+    (mediaId) => {
+      const reviewer = admin
+        ? { name: admin.name || "Administrator", id: admin.adminId }
+        : { name: [employee?.firstName, employee?.lastName].filter(Boolean).join(" ") || "Manager", id: employee?.employeeId };
+
+      const next = mediaRepository.approve(mediaId, reviewer);
+      if (next) {
+        note(
+          ACTIVITY_ACTIONS.MEDIA_APPROVED,
+          `Approved ${nameOf(next)}${next.productId ? ` for ${next.productId}` : ""}.`
+        );
+      }
+      return next;
+    },
+    [admin, employee, note]
+  );
+
+  const reject = useCallback(
+    (mediaId, reason = "") => {
+      const reviewer = admin
+        ? { name: admin.name || "Administrator", id: admin.adminId }
+        : { name: [employee?.firstName, employee?.lastName].filter(Boolean).join(" ") || "Manager", id: employee?.employeeId };
+
+      const next = mediaRepository.reject(mediaId, reason, reviewer);
+      if (next) {
+        note(
+          ACTIVITY_ACTIONS.MEDIA_REJECTED,
+          `Rejected ${nameOf(next)}${reason ? `: "${reason}"` : ""}.`
+        );
+      }
+      return next;
+    },
+    [admin, employee, note]
+  );
+
+  const approveMany = useCallback(
+    (mediaIds = []) => {
+      const reviewer = admin
+        ? { name: admin.name || "Administrator", id: admin.adminId }
+        : { name: [employee?.firstName, employee?.lastName].filter(Boolean).join(" ") || "Manager", id: employee?.employeeId };
+
+      const approved = mediaRepository.approveMany(mediaIds, reviewer);
+      if (approved.length) {
+        note(
+          ACTIVITY_ACTIONS.MEDIA_APPROVED,
+          `Approved ${approved.length} media assets.`
+        );
+      }
+      return approved;
+    },
+    [admin, employee, note]
+  );
+
+  const rejectMany = useCallback(
+    (mediaIds = [], reason = "") => {
+      const reviewer = admin
+        ? { name: admin.name || "Administrator", id: admin.adminId }
+        : { name: [employee?.firstName, employee?.lastName].filter(Boolean).join(" ") || "Manager", id: employee?.employeeId };
+
+      const rejected = mediaRepository.rejectMany(mediaIds, reason, reviewer);
+      if (rejected.length) {
+        note(
+          ACTIVITY_ACTIONS.MEDIA_REJECTED,
+          `Rejected ${rejected.length} media assets${reason ? `: "${reason}"` : ""}.`
+        );
+      }
+      return rejected;
+    },
+    [admin, employee, note]
   );
 
   /* ---------------------------------------------------------------- */
@@ -228,6 +328,10 @@ export default function useMediaActions() {
       edit,
       activate,
       archive,
+      approve,
+      reject,
+      approveMany,
+      rejectMany,
       setStatus,
       remove,
       removeMany,
@@ -244,6 +348,10 @@ export default function useMediaActions() {
       edit,
       activate,
       archive,
+      approve,
+      reject,
+      approveMany,
+      rejectMany,
       setStatus,
       remove,
       removeMany,
