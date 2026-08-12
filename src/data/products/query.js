@@ -12,6 +12,7 @@
 
 import { getPriceBand, filterFacets, sortOptions, defaultSort } from "./taxonomy";
 import { normaliseSearchText, getLiveStorefrontProducts, products as defaultProducts } from "./index";
+import taxonomyRepository from "../../services/taxonomyRepository";
 
 /* ------------------------------------------------------------------ */
 /* Matching                                                            */
@@ -37,7 +38,11 @@ const matchers = {
   gender: (product, value) => product.gender === value,
   fabric: (product, value) => product.fabric === value,
   material: (product, value) => product.material === value,
-  collection: (product, value) => product.collection === value,
+  collection: (product, value) =>
+    product.collection === value ||
+    (product.collections ?? []).includes(value) ||
+    taxonomyRepository.isProductInCollection(product, value),
+  collectionId: (product, value) => taxonomyRepository.isProductInCollection(product, value),
   availability: (product, value) => product.availability === value,
   occasion: (product, value) => product.occasion.includes(value),
   color: (product, value) => product.colors.includes(value),
@@ -155,7 +160,13 @@ export const queryCatalogue = ({
 } = {}) => {
   const productSource = source || getLiveStorefrontProducts();
   const scoped = productSource.filter(
-    (product) => product.status !== "DRAFT" && product.status !== "ARCHIVED" && product.published !== false && matchesFilters(product, scopeFilters) && matchesSearch(product, search)
+    (product) =>
+      product.status !== "DRAFT" &&
+      product.status !== "ARCHIVED" &&
+      product.published !== false &&
+      taxonomyRepository.findCategory(product.category)?.status === "ACTIVE" &&
+      matchesFilters(product, scopeFilters) &&
+      matchesSearch(product, search)
   );
   const matched = scoped.filter((product) => matchesFilters(product, filters));
 

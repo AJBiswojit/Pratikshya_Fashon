@@ -16,6 +16,17 @@ export const PERMISSIONS = {
   PRODUCTS_VIEW: "products.view",
   PRODUCTS_MANAGE: "products.manage",
 
+  CATEGORIES_VIEW: "categories.view",
+  CATEGORIES_CREATE: "categories.create",
+  CATEGORIES_EDIT: "categories.edit",
+  CATEGORIES_ARCHIVE: "categories.archive",
+
+  COLLECTIONS_VIEW: "collections.view",
+  COLLECTIONS_CREATE: "collections.create",
+  COLLECTIONS_EDIT: "collections.edit",
+  COLLECTIONS_ASSIGN: "collections.assign",
+  COLLECTIONS_ARCHIVE: "collections.archive",
+
   ORDERS_VIEW: "orders.view",
   ORDERS_CREATE: "orders.create",
   ORDERS_MANAGE: "orders.manage",
@@ -99,6 +110,15 @@ export const PERMISSION_CATALOGUE = [
     items: [
       { key: PERMISSIONS.PRODUCTS_VIEW, label: "View products" },
       { key: PERMISSIONS.PRODUCTS_MANAGE, label: "Manage products" },
+      { key: PERMISSIONS.CATEGORIES_VIEW, label: "View category taxonomy" },
+      { key: PERMISSIONS.CATEGORIES_CREATE, label: "Create categories" },
+      { key: PERMISSIONS.CATEGORIES_EDIT, label: "Edit categories" },
+      { key: PERMISSIONS.CATEGORIES_ARCHIVE, label: "Archive categories" },
+      { key: PERMISSIONS.COLLECTIONS_VIEW, label: "View collections" },
+      { key: PERMISSIONS.COLLECTIONS_CREATE, label: "Create collections" },
+      { key: PERMISSIONS.COLLECTIONS_EDIT, label: "Edit collections" },
+      { key: PERMISSIONS.COLLECTIONS_ASSIGN, label: "Assign collection products" },
+      { key: PERMISSIONS.COLLECTIONS_ARCHIVE, label: "Archive collections" },
       { key: PERMISSIONS.ORDERS_VIEW, label: "View orders" },
       { key: PERMISSIONS.ORDERS_CREATE, label: "Create assisted orders" },
       { key: PERMISSIONS.ORDERS_MANAGE, label: "Manage orders" },

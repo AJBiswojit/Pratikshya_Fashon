@@ -10,6 +10,7 @@
 
 import { canEmployeeLogin } from "../../config/employeeStatus";
 import { ROLES, isKnownRole } from "../../config/employeeRoles";
+import { PERMISSIONS } from "../../config/employeePermissions";
 import { requiredPermissionForPath } from "../../config/employeeNavigation";
 
 export const hasPermission = (employee, permission) => {

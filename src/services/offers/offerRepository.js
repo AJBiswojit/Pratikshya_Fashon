@@ -19,12 +19,8 @@
  */
 
 import { SEED_OFFERS } from "../../data/offers/seedOffers";
-import {
-  categories as taxonomyCategories,
-  collections as taxonomyCollections,
-  collectionLabels,
-  categoryLabels,
-} from "../../data/products/taxonomy";
+import { collectionLabels, categoryLabels } from "../../data/products/taxonomy";
+import taxonomyRepository from "../taxonomyRepository";
 import { loadOrders } from "../orders/orderService";
 import {
   ACTIVITY_ACTIONS,
@@ -180,7 +176,7 @@ export const isRedeemableStatus = (status) => status === OFFER_STATUS.ACTIVE;
 /* Collection compatibility                                            */
 /* ------------------------------------------------------------------ */
 
-const collectionById = Object.fromEntries(taxonomyCollections.map((entry) => [entry.id, entry]));
+const collectionById = () => Object.fromEntries(taxonomyRepository.collections().map((entry) => [entry.id, entry]));
 
 const productCollectionValues = (product) =>
   [product?.collection, ...(Array.isArray(product?.collections) ? product.collections : [])]
@@ -224,8 +220,8 @@ const collectionMatcher = (collectionId) => {
         (product.occasion ?? []).includes("Wedding") ||
         matchesNamedCollection(product, "wedding", "Wedding");
     default: {
-      const known = collectionById[id];
-      return (product) => matchesNamedCollection(product, id, known?.label || id);
+      const known = collectionById()[id] || taxonomyRepository.findCollection(id);
+      return (product) => taxonomyRepository.isProductInCollection(product, id) || matchesNamedCollection(product, id, known?.name || known?.label || id);
     }
   }
 };
@@ -389,7 +385,7 @@ export const describeEligibility = (offer) => {
   }
   if (kind === PRODUCT_ELIGIBILITY.COLLECTION) {
     const labels = (offer.includedCollections ?? [])
-      .map((id) => collectionLabels[id] || collectionById[id]?.label || id)
+      .map((id) => collectionLabels[id] || collectionById()[id]?.name || id)
       .filter(Boolean);
     return labels.length ? labels.join(", ") : "Selected collections";
   }
@@ -1064,13 +1060,12 @@ export const offerRepository = {
     };
   },
 
-  categories: taxonomyCategories,
-  collections: [
-    ...taxonomyCollections,
-    { id: "new-arrivals", label: "New Arrivals", description: "Pieces flagged as just in." },
-    { id: "silk", label: "Silk", description: "Weaves whose fabric is silk." },
-    { id: "wedding", label: "Wedding", description: "The wedding occasion edit." },
-  ],
+  get categories() {
+    return taxonomyRepository.categories().map((category) => ({ ...category, label: category.name }));
+  },
+  get collections() {
+    return taxonomyRepository.collections().map((collection) => ({ ...collection, label: collection.name }));
+  },
 };
 
 export default offerRepository;

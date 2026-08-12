@@ -19,6 +19,7 @@ import {
   availabilityOptions,
   categoryLabels,
 } from "./taxonomy";
+import taxonomyRepository from "../../services/taxonomyRepository";
 import { countBand, countFacet } from "./query";
 
 /** Options for the facets whose values come from the catalogue itself. */
@@ -55,6 +56,7 @@ export function buildFacets(scoped, filters = {}, locked = {}) {
 
         if (facet.id === "category") {
           options = Object.keys(counts)
+            .filter((id) => getCategory(id)?.status === "ACTIVE")
             .map((id) => ({
               id,
               label: categoryLabels[id] ?? id,
@@ -62,6 +64,9 @@ export function buildFacets(scoped, filters = {}, locked = {}) {
               order: getCategory(id) ? 0 : 1,
             }))
             .sort((a, b) => a.label.localeCompare(b.label));
+        } else if (facet.id === "collection") {
+          const activeNames = new Set(taxonomyRepository.activeCollections().map((collection) => collection.name));
+          options = derivedOptions(facet.id, counts).filter((option) => activeNames.has(option.label));
         } else if (facet.id === "availability") {
           options = availabilityOptions
             .map((option) => ({ ...option, count: counts[option.id] ?? 0 }))

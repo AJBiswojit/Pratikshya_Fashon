@@ -21,6 +21,7 @@ import {
   subcategoryOptionsFor,
 } from "../../config/productCatalogConfig";
 import catalogRepository from "../../services/catalogRepository";
+import taxonomyRepository from "../../services/taxonomyRepository";
 import {
   ChipGroup,
   ChipRadio,
@@ -192,6 +193,8 @@ export function SectionBasics({ draft, patch, errors, isNew }) {
 
 export function SectionAttributes({ draft, patch, errors }) {
   const subcategoryOptions = subcategoryOptionsFor(draft.category);
+  const categoryOptions = taxonomyRepository.categoryOptions();
+  const collectionOptions = taxonomyRepository.collectionOptions().map((entry) => entry.label);
 
   return (
     <div className="space-y-8">
@@ -202,7 +205,7 @@ export function SectionAttributes({ draft, patch, errors }) {
             value={draft.category}
             onChange={(event) => patch({ category: event.target.value, subcategory: "" })}
             placeholder="Choose a category"
-            options={CATEGORY_OPTIONS.map((category) => ({ value: category.id, label: category.label }))}
+            options={categoryOptions.map((category) => ({ value: category.id, label: category.label }))}
           />
         </Field>
 
@@ -352,7 +355,7 @@ export function SectionAttributes({ draft, patch, errors }) {
       >
         <ChipGroup
           ariaLabel="Collections"
-          options={[...new Set([...COLLECTION_OPTIONS, ...draft.collections])]}
+          options={[...new Set([...collectionOptions, ...COLLECTION_OPTIONS, ...draft.collections])]}
           value={draft.collections}
           onToggle={(collections) =>
             patch({ collections, collection: collections[0] ?? "" })

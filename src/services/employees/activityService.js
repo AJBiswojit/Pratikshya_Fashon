@@ -76,6 +76,21 @@ export const ACTIVITY_ACTIONS = {
   OFFER_PAUSED: "OFFER_PAUSED",
   OFFER_ARCHIVED: "OFFER_ARCHIVED",
   OFFER_REDEEMED: "OFFER_REDEEMED",
+
+  /* Taxonomy — Phase 18. Central category, subcategory and collection management. */
+  CATEGORY_CREATED: "CATEGORY_CREATED",
+  CATEGORY_UPDATED: "CATEGORY_UPDATED",
+  CATEGORY_ARCHIVED: "CATEGORY_ARCHIVED",
+  CATEGORY_RESTORED: "CATEGORY_RESTORED",
+  SUBCATEGORY_CREATED: "SUBCATEGORY_CREATED",
+  SUBCATEGORY_UPDATED: "SUBCATEGORY_UPDATED",
+  SUBCATEGORY_ARCHIVED: "SUBCATEGORY_ARCHIVED",
+  COLLECTION_CREATED: "COLLECTION_CREATED",
+  COLLECTION_UPDATED: "COLLECTION_UPDATED",
+  COLLECTION_ACTIVATED: "COLLECTION_ACTIVATED",
+  COLLECTION_PAUSED: "COLLECTION_PAUSED",
+  COLLECTION_ARCHIVED: "COLLECTION_ARCHIVED",
+  COLLECTION_PRODUCTS_UPDATED: "COLLECTION_PRODUCTS_UPDATED",
 };
 
 const ACTION_LABELS = {
@@ -131,6 +146,19 @@ const ACTION_LABELS = {
   [ACTIVITY_ACTIONS.OFFER_PAUSED]: "Offer paused",
   [ACTIVITY_ACTIONS.OFFER_ARCHIVED]: "Offer archived",
   [ACTIVITY_ACTIONS.OFFER_REDEEMED]: "Offer redeemed",
+  [ACTIVITY_ACTIONS.CATEGORY_CREATED]: "Category created",
+  [ACTIVITY_ACTIONS.CATEGORY_UPDATED]: "Category updated",
+  [ACTIVITY_ACTIONS.CATEGORY_ARCHIVED]: "Category archived",
+  [ACTIVITY_ACTIONS.CATEGORY_RESTORED]: "Category restored",
+  [ACTIVITY_ACTIONS.SUBCATEGORY_CREATED]: "Subcategory created",
+  [ACTIVITY_ACTIONS.SUBCATEGORY_UPDATED]: "Subcategory updated",
+  [ACTIVITY_ACTIONS.SUBCATEGORY_ARCHIVED]: "Subcategory archived",
+  [ACTIVITY_ACTIONS.COLLECTION_CREATED]: "Collection created",
+  [ACTIVITY_ACTIONS.COLLECTION_UPDATED]: "Collection updated",
+  [ACTIVITY_ACTIONS.COLLECTION_ACTIVATED]: "Collection activated",
+  [ACTIVITY_ACTIONS.COLLECTION_PAUSED]: "Collection paused",
+  [ACTIVITY_ACTIONS.COLLECTION_ARCHIVED]: "Collection archived",
+  [ACTIVITY_ACTIONS.COLLECTION_PRODUCTS_UPDATED]: "Collection products updated",
 };
 
 export const getActivityLabel = (action) => ACTION_LABELS[action] ?? "Activity";
@@ -150,6 +178,9 @@ const normaliseEntry = (entry) => {
     targetProductId: entry.targetProductId || null,
     /* Phase 17 — offer events reference the offer they acted on. */
     targetOfferId: entry.targetOfferId || null,
+    /* Phase 18 — taxonomy events reference categories and collections. */
+    targetCategoryId: entry.targetCategoryId || null,
+    targetCollectionId: entry.targetCollectionId || null,
     action: entry.action || ACTIVITY_ACTIONS.EMPLOYEE_UPDATED,
     summary: String(entry.summary || getActivityLabel(entry.action)),
   };

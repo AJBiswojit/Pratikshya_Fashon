@@ -33,6 +33,7 @@ import {
   getReturnInfo,
 } from "./details";
 import { categoryLabels, getCategory } from "./taxonomy";
+import taxonomyRepository from "../../services/taxonomyRepository";
 
 export { slugify };
 
@@ -85,10 +86,10 @@ const buildTags = (product) =>
     product.name,
     product.sku,
     product.subcategory,
-    categoryLabels[product.category] ?? product.category,
+    taxonomyRepository.getCategoryLabel(product.category),
     product.gender,
-    product.collection,
-    ...(product.collections ?? []),
+    taxonomyRepository.getCollectionLabel(product.collection),
+    ...(product.collections ?? []).map((entry) => taxonomyRepository.getCollectionLabel(entry)),
     product.fabric,
     product.material,
     ...(product.occasion ?? []),
@@ -144,6 +145,8 @@ export const toStorefrontProduct = (product, index = 0) => {
   const images = [...new Set(galleryIds)].slice(0, 5).map((entry) => resolveImage(entry, product.name));
 
   const collection = product.collection ?? product.collections?.[0] ?? "";
+  const productCollections = taxonomyRepository.collectionsForProduct(product);
+  const collectionLabelsForProduct = productCollections.map((entry) => entry.name);
 
   return {
     ...product,
@@ -156,10 +159,12 @@ export const toStorefrontProduct = (product, index = 0) => {
 
     /* Placement */
     category: product.category,
-    categoryLabel: categoryLabels[product.category] ?? product.category,
+    categoryLabel: taxonomyRepository.getCategoryLabel(product.category),
     subcategory: product.subcategory,
     gender: product.gender,
-    collection,
+    collection: taxonomyRepository.getCollectionLabel(collection) || collection,
+    collectionIds: productCollections.map((entry) => entry.id),
+    collections: collectionLabelsForProduct.length ? collectionLabelsForProduct : (product.collections ?? []),
 
     /* Price */
     price: product.price,
@@ -251,6 +256,7 @@ const seededProducts = catalogue.map((product, index) =>
  */
 const isCustomerVisible = (record) => {
   if (!record) return false;
+  if (taxonomyRepository.findCategory(record.category)?.status !== "ACTIVE") return false;
   if (record.status) return record.status === "PUBLISHED";
   return record.published !== false;
 };

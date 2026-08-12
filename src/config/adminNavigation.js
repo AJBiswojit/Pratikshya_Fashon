@@ -42,8 +42,8 @@ export const ADMIN_NAV_GROUPS = [
     items: [
       { id: "products", label: "Products", to: "/admin/products", icon: "sparkles", status: MODULE_STATUS.READY },
       { id: "product-review", label: "Product Review", to: "/admin/products/review", icon: "check", status: MODULE_STATUS.READY },
-      { id: "categories", label: "Categories", to: "/admin/categories", icon: "grid", status: MODULE_STATUS.SOON },
-      { id: "collections", label: "Collections", to: "/admin/collections", icon: "layers", status: MODULE_STATUS.SOON },
+      { id: "categories", label: "Categories", to: "/admin/categories", icon: "grid", status: MODULE_STATUS.READY },
+      { id: "collections", label: "Collections", to: "/admin/collections", icon: "layers", status: MODULE_STATUS.READY },
       { id: "offers", label: "Offers", to: "/admin/offers", icon: "tag", status: MODULE_STATUS.READY },
       { id: "media", label: "Media Management", to: "/admin/media", icon: "image", status: MODULE_STATUS.READY },
       { id: "marketing-media", label: "Marketing Media", to: "/admin/media/marketing", icon: "film", status: MODULE_STATUS.READY },

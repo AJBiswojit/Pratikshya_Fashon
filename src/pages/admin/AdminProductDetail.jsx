@@ -30,6 +30,7 @@ import {
   getProductTypeLabel,
 } from "../../config/productCatalogConfig";
 import { categoryLabels } from "../../data/products/taxonomy";
+import taxonomyRepository from "../../services/taxonomyRepository";
 import { formatEmployeeDateTime } from "../../utils/employee";
 
 const statusTone = {
@@ -76,6 +77,7 @@ export default function AdminProductDetail() {
   const issues = getPublishIssues(product);
   const productActivity = activityForProduct(activity, product.id);
   const previewHref = `/product/${product.slug}?preview=1`;
+  const taxonomyCollections = taxonomyRepository.collectionsForProduct(product);
   const stockRows = inventory.records.filter((row) => row.productId === product.id);
   const inventorySummary = stockRows.reduce((summary, row) => ({
     available: summary.available + row.quantity.available,
@@ -293,7 +295,7 @@ export default function AdminProductDetail() {
               <Term label="Gender" value={product.gender} />
               <Term label="Category" value={categoryLabels[product.category] ?? product.category} />
               <Term label="Subcategory" value={product.subcategory} />
-              <Term label="Collection" value={product.collections?.join(", ") || product.collection} />
+              <Term label="Collections" value={taxonomyCollections.map((collection) => collection.name).join(", ") || product.collections?.join(", ") || product.collection} />
               <Term label="Product code" value={product.productCode} />
               <Term label="Barcode" value={product.barcode} />
               <Term label="Internal reference" value={product.internalReference} />
