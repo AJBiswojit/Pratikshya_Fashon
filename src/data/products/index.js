@@ -22,7 +22,7 @@
 
 import { imageRef } from "../pratikshyaImageManifest";
 import catalogue from "./catalogue";
-import catalogRepository, { slugify } from "../../services/catalogRepository";
+import catalogRepository, { productsRegisterRaw, slugify } from "../../services/catalogRepository";
 import {
   getCareInstructions,
   getDeliveryInfo,
@@ -261,12 +261,24 @@ const isCustomerVisible = (record) => {
   return record.published !== false;
 };
 
+/**
+ * Memoised against the raw register string (Phase 21.1). Lookups such as
+ * `getProductById` run from very hot paths — order hydration, analytics,
+ * the AI assistants — and the derived list is a deterministic function of
+ * the register: any save() writes a new string and invalidates the cache.
+ */
+let liveCache = null;
+
 export const getLiveStorefrontProducts = () => {
+  const fingerprint = productsRegisterRaw() ?? "seed";
+  if (liveCache && liveCache.fingerprint === fingerprint) return liveCache.list;
+
+  let list = null;
   try {
-    const list = catalogRepository.all();
-    if (Array.isArray(list) && list.length > 0) {
+    const records = catalogRepository.all();
+    if (Array.isArray(records) && records.length > 0) {
       const seenSlugs = new Set();
-      return list
+      list = records
         .filter(isCustomerVisible)
         .map((record, index) => withSearchText(toStorefrontProduct(record, index)))
         .map((product) => {
@@ -279,7 +291,9 @@ export const getLiveStorefrontProducts = () => {
   } catch {
     /* fallback to seeded */
   }
-  return seededProducts;
+  if (!list) list = seededProducts;
+  liveCache = { fingerprint, list };
+  return list;
 };
 
 export const products = getLiveStorefrontProducts();

@@ -219,8 +219,26 @@ const persist = (state) => {
   return payload;
 };
 
+/*
+ * Parse cache — Phase 21.1 performance guard.
+ *
+ * Category labels are resolved through `read()` from every hot path
+ * (analytics, inventory, AI assistants). The merged state is a
+ * deterministic function of the stored string, so it is cached against
+ * that exact string; any persist() writes a new string and invalidates the
+ * cache automatically.
+ */
+let readCache = null;
+let readCacheRaw = Symbol("empty");
+
 const read = () => {
+  const storedRaw = typeof localStorage !== "undefined"
+    ? localStorage.getItem(TAXONOMY_STORAGE_KEY)
+    : memoryStorage;
+  if (readCache && readCacheRaw === storedRaw) return readCache;
+
   const raw = readRaw();
+  let state;
   if (raw) {
     const seed = buildSeed();
     const categories = raw.categories.map(makeCategory);
@@ -232,9 +250,15 @@ const read = () => {
     seed.subcategories.forEach((entry) => { if (!subKeys.has(`${entry.categoryId}::${entry.slug}`)) subcategories.push(entry); });
     const colIds = new Set(collections.map((entry) => entry.id));
     seed.collections.forEach((entry) => { if (!colIds.has(entry.id)) collections.push(entry); });
-    return { ...raw, categories, subcategories, collections };
+    state = { ...raw, categories, subcategories, collections };
+  } else {
+    state = persist(buildSeed());
   }
-  return persist(buildSeed());
+  readCache = state;
+  readCacheRaw = typeof localStorage !== "undefined"
+    ? localStorage.getItem(TAXONOMY_STORAGE_KEY)
+    : memoryStorage;
+  return state;
 };
 
 const products = () => catalogRepository.all();

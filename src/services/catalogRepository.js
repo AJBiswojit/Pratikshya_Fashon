@@ -81,6 +81,18 @@ const imageIdOf = (value) => {
 
 let memoryStorage = null;
 
+/*
+ * Parse cache — Phase 21.1 performance guard.
+ *
+ * `read()` is called from many hot paths (inventory resolution, analytics,
+ * AI assistants) and healing the register on every call meant re-parsing
+ * the whole JSON tens of thousands of times per analytics snapshot. The
+ * healed output is a deterministic function of the stored string, so it is
+ * cached against that exact string: any write — this tab or another —
+ * changes the string and invalidates the cache automatically.
+ */
+let readCache = null;
+
 const read = () => {
   try {
     let raw = null;
@@ -89,6 +101,19 @@ const read = () => {
     } else {
       raw = memoryStorage;
     }
+    if (readCache && readCache.raw === raw && readCache.parsed) {
+      return readCache.parsed;
+    }
+    const healed = healRead(raw);
+    readCache = { raw, parsed: healed };
+    return healed;
+  } catch {
+    return healRead(null);
+  }
+};
+
+const healRead = (raw) => {
+  try {
     const value = raw ? JSON.parse(raw) : null;
     if (Array.isArray(value) && value.length) {
       /* Heals early rows that persisted plate objects or had no explicit id.
@@ -127,6 +152,19 @@ const read = () => {
     }));
   } catch {
     return catalogue;
+  }
+};
+
+/**
+ * The raw register string, exposed so read-only consumers can memoise
+ * derived views against it (Phase 21.1). Any save() writes a new string,
+ * so fingerprint-keyed caches invalidate automatically.
+ */
+export const productsRegisterRaw = () => {
+  try {
+    return typeof localStorage !== "undefined" ? localStorage.getItem(KEY) : memoryStorage;
+  } catch {
+    return null;
   }
 };
 

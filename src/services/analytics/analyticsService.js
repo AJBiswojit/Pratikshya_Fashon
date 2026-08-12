@@ -947,7 +947,7 @@ const buildOfferPerformance = (periodOrders) => {
   };
 };
 
-const buildFulfillmentSummary = (allOrders, periodOrders) => {
+const buildFulfillmentSummary = (allOrders, periodOrders, period) => {
   const pipeline = FULFILLMENT_PIPELINE.map((stage) => ({
     id: stage.id,
     label: stage.label,
@@ -1150,7 +1150,7 @@ export const getAnalyticsSnapshot = ({
       })
     : null;
   const offers = buildOfferPerformance(scoped);
-  const fulfillment = buildFulfillmentSummary(allOrders, scoped);
+  const fulfillment = buildFulfillmentSummary(allOrders, scoped, period);
   const employees = buildEmployeeAnalytics(period, filters);
 
   fulfillment.locations.forEach((location) => {

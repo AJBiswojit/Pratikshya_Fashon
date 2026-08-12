@@ -233,7 +233,7 @@ export const generateDemoOrders = () => {
         assignedEmployeeId: employee.id,
         assignedEmployeeName: employee.name,
         status: fulfillmentStatus,
-        createdAt: createdAt.toISOString(),
+        createdAt: createdAt,
       }),
       sourceLocationId: location.id,
       fulfillmentType: location.type,
@@ -314,7 +314,7 @@ export const generateDemoOrders = () => {
         carrier: carrierFor(orderId),
         origin: "Bhubaneswar, Odisha",
       },
-      invoice: { number: buildInvoiceNumber(orderId), issuedAt: createdAt.toISOString() },
+      invoice: { number: buildInvoiceNumber(orderId), issuedAt: createdAt },
       returns: [],
       refund: def.status === ORDER_STATUS.CANCELLED || def.status.includes("RETURN") || def.status.includes("REFUND")
         ? { amount: pricing.total, method: "Original payment method", status: ORDER_PAYMENT_STATUS.REFUND_PENDING, initiatedAt: new Date().toISOString(), note: "Demo refund — no real money movement." }
@@ -325,9 +325,9 @@ export const generateDemoOrders = () => {
       timeline,
       notes: {
         customer: idx % 3 === 0 ? "Please call before delivery." : "",
-        internal: idx % 2 === 0 ? [{ at: createdAt.toISOString(), by: employee.name, text: idx % 4 === 0 ? "Customer requested evening delivery." : "Verify blouse measurement before packing." }] : [],
+        internal: idx % 2 === 0 ? [{ at: createdAt, by: employee.name, text: idx % 4 === 0 ? "Customer requested evening delivery." : "Verify blouse measurement before packing." }] : [],
       },
-      createdAt: createdAt.toISOString(),
+      createdAt: createdAt,
       updatedAt: new Date().toISOString(),
     };
   });

@@ -34,6 +34,13 @@ export const ADMIN_NAV_GROUPS = [
         exact: true,
         status: MODULE_STATUS.READY,
       },
+      {
+        id: "ai-assistant",
+        label: "AI Assistant",
+        to: "/admin/ai-assistant",
+        icon: "sparkles",
+        status: MODULE_STATUS.READY,
+      },
     ],
   },
   {

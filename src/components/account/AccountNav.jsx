@@ -9,6 +9,7 @@ import {
   LayoutDashboard,
   Sparkles,
   Camera,
+  Wand2,
 } from "lucide-react";
 import { useWishlist } from "../../context/WishlistContext";
 import { cn } from "../../utils/cn";
@@ -46,6 +47,11 @@ export const ACCOUNT_NAV_ITEMS = [
     label: "Style",
     to: "/account/preferences",
     icon: Sparkles,
+  },
+  {
+    label: "AI Shopping",
+    to: "/account/ai-shopping",
+    icon: Wand2,
   },
   {
     label: "AI Mirror",
