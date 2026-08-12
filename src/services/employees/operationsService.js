@@ -217,17 +217,54 @@ export const loadAttendanceMap = () => {
   return stored && typeof stored === "object" ? stored : {};
 };
 
-export const attendanceFor = (employeeId, map = loadAttendanceMap()) => {
-  const record = map[employeeId];
-  if (record && record.date === todayKey()) return record;
-  return {
-    employeeId,
-    date: todayKey(),
-    status: "NOT_CHECKED_IN",
-    checkedInAt: null,
-    checkedOutAt: null,
-  };
+/** Compatibility shim — prefer workforce/attendanceService. */
+export const attendanceFor = (employeeId) => {
+  try {
+    const { getTodayAttendance } = requireCompatibility();
+    const record = getTodayAttendance(employeeId);
+    if (!record) {
+      return {
+        employeeId,
+        date: todayKey(),
+        status: "NOT_CHECKED_IN",
+        checkedInAt: null,
+        checkedOutAt: null,
+      };
+    }
+    return {
+      ...record,
+      checkedInAt: record.checkIn,
+      checkedOutAt: record.checkOut,
+    };
+  } catch {
+    return {
+      employeeId,
+      date: todayKey(),
+      status: "NOT_CHECKED_IN",
+      checkedInAt: null,
+      checkedOutAt: null,
+    };
+  }
 };
+
+function requireCompatibility() {
+  return {
+    getTodayAttendance: (id) => {
+      const stored = readStorage("pratikshya_attendance", []);
+      const today = todayKey();
+      const record = Array.isArray(stored)
+        ? stored.find((entry) => entry.employeeId === id && entry.date === today)
+        : null;
+      return record || {
+        employeeId: id,
+        date: today,
+        status: "NOT_CHECKED_IN",
+        checkIn: null,
+        checkOut: null,
+      };
+    },
+  };
+}
 
 export const defaultDashboardMetrics = (role) => {
   const stock = getCatalogueStock();

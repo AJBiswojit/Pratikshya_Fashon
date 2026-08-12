@@ -7,6 +7,9 @@ import StatusBadge from "../../../components/employee/StatusBadge";
 import PermissionMatrix from "../../../components/employee/PermissionMatrix";
 import ActivityFeed from "../../../components/employee/ActivityFeed";
 import PerformancePanel from "../../../components/employee/PerformancePanel";
+import { getTodayAttendance } from "../../../services/workforce/attendanceService";
+import { formatTime } from "../../../services/workforce/dateUtils";
+import { AttendanceStatusBadge } from "../../../components/workforce/WorkforceBadges";
 import CredentialSheet from "../../../components/employee/CredentialSheet";
 import ConfirmDialog from "../../../components/orders/ConfirmDialog";
 import { useEmployeeManagement } from "../../../context/EmployeeManagementContext";
@@ -22,7 +25,7 @@ import {
   formatEmployeeDate,
   formatEmployeeDateTime,
 } from "../../../utils/employee";
-import { attendanceFor } from "../../../services/employees/operationsService";
+
 
 /**
  * /admin/employees/:employeeId
@@ -62,7 +65,7 @@ export default function AdminEmployeeDetail() {
     );
   }
 
-  const attendance = attendanceFor(person.employeeId);
+  const attendance = getTodayAttendance(person.employeeId);
 
   const run = async () => {
     if (confirm === "suspend") await suspendEmployee(person.employeeId);
@@ -173,15 +176,24 @@ export default function AdminEmployeeDetail() {
         </AdminPanel>
 
         <div className="space-y-6">
-          <AdminPanel eyebrow="Today" title="Attendance">
-            <p className="font-ui text-sm text-taupe">
-              {String(attendance.status).replaceAll("_", " ").toLowerCase()}
-              {attendance.checkedInAt
-                ? ` · in ${formatEmployeeDateTime(attendance.checkedInAt)}`
-                : ""}
-            </p>
+          <AdminPanel
+            eyebrow="Today"
+            title="Attendance"
+            action={
+              <AtelierButton as={Link} to={`/admin/attendance/${person.employeeId}`} variant="outline" size="chip">
+                Open
+              </AtelierButton>
+            }
+          >
+            <div className="flex flex-wrap items-center gap-3">
+              <AttendanceStatusBadge status={attendance?.status} />
+              <p className="font-ui text-sm text-taupe">
+                {attendance?.checkIn ? `In ${formatTime(attendance.checkIn)}` : "Not checked in"}
+                {attendance?.checkOut ? ` · out ${formatTime(attendance.checkOut)}` : ""}
+              </p>
+            </div>
           </AdminPanel>
-          <PerformancePanel employeeId={person.employeeId} compact />
+          <PerformancePanel employeeId={person.employeeId} compact to={`/admin/performance/${person.employeeId}`} />
         </div>
       </div>
 

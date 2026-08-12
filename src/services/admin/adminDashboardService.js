@@ -36,14 +36,15 @@ import { employeeFullName } from "../../utils/employee";
  * register when one is supplied, so a newly created colleague is reflected
  * immediately.
  */
-export const getBusinessMetrics = (employees = []) => {
+export const getBusinessMetrics = (employees = [], attendanceSummary = null) => {
   const activeEmployees = employees.filter(
     (person) => person.status === EMPLOYEE_STATUS.ACTIVE
   ).length;
 
   return {
     ...BUSINESS_METRICS,
-    employeesPresent: activeEmployees || BUSINESS_METRICS.employeesPresent,
+    employeesPresent:
+      attendanceSummary?.presentToday ?? activeEmployees ?? BUSINESS_METRICS.employeesPresent,
   };
 };
 

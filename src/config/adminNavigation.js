@@ -65,8 +65,8 @@ export const ADMIN_NAV_GROUPS = [
     items: [
       { id: "employees", label: "Employees", to: "/admin/employees", icon: "badge", status: MODULE_STATUS.READY },
       { id: "roles", label: "Roles & Permissions", to: "/admin/roles", icon: "shield", status: MODULE_STATUS.READY },
-      { id: "attendance", label: "Attendance", to: "/admin/attendance", icon: "clock", status: MODULE_STATUS.SOON },
-      { id: "performance", label: "Performance", to: "/admin/performance", icon: "target", status: MODULE_STATUS.SOON },
+      { id: "attendance", label: "Attendance", to: "/admin/attendance", icon: "clock", status: MODULE_STATUS.READY },
+      { id: "performance", label: "Performance", to: "/admin/performance", icon: "target", status: MODULE_STATUS.READY },
     ],
   },
   {

@@ -28,10 +28,11 @@ import {
   loadActivity,
   recordActivity,
 } from "../services/employees/activityService";
-import { writeStorage } from "../utils/shopping";
-import { EMPLOYEE_STORAGE_KEYS } from "../services/employees/storage";
-import { attendanceFor, loadAttendanceMap } from "../services/employees/operationsService";
-import { todayKey } from "../utils/employee";
+import {
+  checkIn as punchIn,
+  checkOut as punchOut,
+  getTodayAttendance,
+} from "../services/workforce/attendanceService";
 
 const EmployeeAuthContext = createContext(null);
 
@@ -108,38 +109,23 @@ export function EmployeeAuthProvider({ children }) {
 
   const getAttendance = useCallback(() => {
     if (!employee) return null;
-    return attendanceFor(employee.employeeId);
+    const record = getTodayAttendance(employee.employeeId);
+    if (!record) return null;
+    return {
+      ...record,
+      checkedInAt: record.checkIn,
+      checkedOutAt: record.checkOut,
+    };
   }, [employee]);
 
   const checkIn = useCallback(() => {
     if (!employee) return { ok: false };
-    const map = loadAttendanceMap();
-    const now = new Date().toISOString();
-    map[employee.employeeId] = {
-      employeeId: employee.employeeId,
-      date: todayKey(),
-      status: "PRESENT",
-      checkedInAt: now,
-      checkedOutAt: null,
-    };
-    writeStorage(EMPLOYEE_STORAGE_KEYS.ATTENDANCE, map);
-    return { ok: true, record: map[employee.employeeId] };
+    return punchIn({ employeeId: employee.employeeId, actor: employee });
   }, [employee]);
 
   const checkOut = useCallback(() => {
     if (!employee) return { ok: false };
-    const map = loadAttendanceMap();
-    const current = attendanceFor(employee.employeeId, map);
-    const now = new Date().toISOString();
-    map[employee.employeeId] = {
-      ...current,
-      employeeId: employee.employeeId,
-      date: todayKey(),
-      status: current.checkedInAt ? "PRESENT" : "PRESENT",
-      checkedOutAt: now,
-    };
-    writeStorage(EMPLOYEE_STORAGE_KEYS.ATTENDANCE, map);
-    return { ok: true, record: map[employee.employeeId] };
+    return punchOut({ employeeId: employee.employeeId, actor: employee });
   }, [employee]);
 
   const value = useMemo(
