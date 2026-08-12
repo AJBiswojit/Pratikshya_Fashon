@@ -39,6 +39,16 @@ export default function AdminLayout() {
     };
   }, [navOpen]);
 
+  /* Escape closes the mobile navigation drawer. */
+  useEffect(() => {
+    if (!navOpen) return undefined;
+    const onKeyDown = (event) => {
+      if (event.key === "Escape") setNavOpen(false);
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [navOpen]);
+
   return (
     <div className="min-h-screen bg-canvas font-display text-ink selection:bg-accent selection:text-white">
       <AdminHeader navOpen={navOpen} onToggleNav={() => setNavOpen((open) => !open)} />
@@ -54,11 +64,11 @@ export default function AdminLayout() {
         ) : null}
 
         <aside
-          className={`fixed inset-y-0 left-0 z-40 w-64 overflow-y-auto border-r border-mist/80 bg-canvas pt-[65px] transition-transform duration-300 lg:static lg:z-0 lg:w-auto lg:translate-x-0 lg:pt-0 ${
+          className={`fixed inset-y-0 left-0 z-40 w-72 overflow-hidden border-r border-mist/80 bg-canvas pt-[65px] transition-transform duration-300 lg:static lg:z-0 lg:w-auto lg:translate-x-0 lg:overflow-visible lg:pt-0 ${
             navOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
           }`}
         >
-          <div className="lg:sticky lg:top-[65px] lg:h-[calc(100vh-65px)] lg:overflow-y-auto">
+          <div className="h-full lg:sticky lg:top-[65px] lg:h-[calc(100vh-65px)]">
             <AdminSidebar onNavigate={() => setNavOpen(false)} />
           </div>
         </aside>
