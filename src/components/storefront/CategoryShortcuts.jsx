@@ -1,7 +1,6 @@
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
 import { MediaFrame, body, eyebrow, gap, heading, useReveal } from "../../design-system";
-import { imageRef } from "../../data/pratikshyaImageManifest";
 import { cn } from "../../utils/cn";
 
 /**
@@ -28,7 +27,7 @@ export default function CategoryShortcuts({ items, className = "" }) {
           <li key={item.to} className="w-36 shrink-0 snap-start sm:w-auto">
             <Link to={item.to} className="group block">
               <MediaFrame
-                image={imageRef(item.image)}
+                image={item.image}
                 alt={item.label}
                 aspect="portrait"
                 zoom="strong"

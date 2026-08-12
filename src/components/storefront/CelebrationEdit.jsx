@@ -49,11 +49,11 @@ const edits = [
 ];
 
 /** A compact editorial seam within the home page, not a category grid. */
-export default function CelebrationEdit() {
+export default function CelebrationEdit({ excludeIds = null }) {
   const [activeId, setActiveId] = useState("bridal");
   const festiveMedia = useActivePlacementMedia(MARKETING_PLACEMENTS.FESTIVE_SECTION);
   const activeEdit = edits.find((edit) => edit.id === activeId) ?? edits[0];
-  const usedIds = new Set();
+  const usedIds = new Set(excludeIds ?? []);
   const themeFor = (id) => ({ bridal: "bridal", groom: "celebration", festive: "festive", heritage: "heritage" }[id] || "festive");
   const images = Object.fromEntries(
     edits.map((edit) => {

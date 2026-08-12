@@ -213,7 +213,16 @@ export const dedupeMedia = (items) => {
 
 let memoryMedia = null;
 
-const seeded = () => dedupeMedia(SEED_MEDIA.map(normaliseMedia).filter(Boolean));
+/**
+ * The seeded register is the Phase 12 house seed *plus* the Phase 21.4
+ * ingested library, so every customer-facing surface reads one list. The
+ * ingested adapter turns the build-time manifest into the same record shape
+ * `normaliseMedia` already accepts; product-slotted assets become PRODUCT
+ * scope, everything else stays UNASSIGNED but remains queryable by
+ * categoryId / collectionId / usageRoles through the resolver.
+ */
+const seeded = () =>
+  dedupeMedia([...SEED_MEDIA, ...getIngestedRecords()].map(normaliseMedia).filter(Boolean));
 
 /**
  * Every media record, normalised and de-duplicated.
