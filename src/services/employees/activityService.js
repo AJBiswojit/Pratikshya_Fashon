@@ -58,6 +58,16 @@ export const ACTIVITY_ACTIONS = {
   /* Inventory — Phase 14. The stock ledger holds quantity-level detail;
      this shared diary carries the readable cross-module activity note. */
   INVENTORY_MOVEMENT: "INVENTORY_MOVEMENT",
+
+  /* Returns — Phase 16.1. Full return operational lifecycle. */
+  RETURN_REQUESTED: "RETURN_REQUESTED",
+  RETURN_APPROVED: "RETURN_APPROVED",
+  RETURN_REJECTED: "RETURN_REJECTED",
+  RETURN_PICKUP_SCHEDULED: "RETURN_PICKUP_SCHEDULED",
+  RETURN_RECEIVED: "RETURN_RECEIVED",
+  RETURN_INSPECTED: "RETURN_INSPECTED",
+  RETURN_REFUND_REQUESTED: "RETURN_REFUND_REQUESTED",
+  RETURN_REFUNDED: "RETURN_REFUNDED",
 };
 
 const ACTION_LABELS = {
@@ -99,6 +109,14 @@ const ACTION_LABELS = {
   [ACTIVITY_ACTIONS.PRODUCT_DUPLICATED]: "Product duplicated",
   [ACTIVITY_ACTIONS.PRODUCT_BULK_UPDATED]: "Products updated in bulk",
   [ACTIVITY_ACTIONS.INVENTORY_MOVEMENT]: "Inventory updated",
+  [ACTIVITY_ACTIONS.RETURN_REQUESTED]: "Return requested",
+  [ACTIVITY_ACTIONS.RETURN_APPROVED]: "Return approved",
+  [ACTIVITY_ACTIONS.RETURN_REJECTED]: "Return rejected",
+  [ACTIVITY_ACTIONS.RETURN_PICKUP_SCHEDULED]: "Return pickup scheduled",
+  [ACTIVITY_ACTIONS.RETURN_RECEIVED]: "Return received",
+  [ACTIVITY_ACTIONS.RETURN_INSPECTED]: "Return inspected",
+  [ACTIVITY_ACTIONS.RETURN_REFUND_REQUESTED]: "Refund requested",
+  [ACTIVITY_ACTIONS.RETURN_REFUNDED]: "Refund completed",
 };
 
 export const getActivityLabel = (action) => ACTION_LABELS[action] ?? "Activity";
