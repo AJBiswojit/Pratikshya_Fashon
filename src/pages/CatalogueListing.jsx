@@ -11,7 +11,7 @@ import { categoryRoutes, collectionRoutes, navigationScopes } from "../data/prod
 import taxonomyRepository from "../services/taxonomyRepository";
 import { getRouteMeta } from "../config/navigationConfig";
 import { imageRef } from "../data/pratikshyaImageManifest";
-import { getById as getMediaById } from "../services/media/mediaRepository";
+import { resolveCategoryCover, resolveCollectionCover } from "../services/media/mediaResolver";
 import { cn } from "../utils/cn";
 import NotFound from "./NotFound";
 

@@ -28,7 +28,9 @@ const asImageSource = (media) => ({
   id: media.id,
   src: media.url || media.thumbnail,
   alt: media.alt || media.title,
-  category: media.tags?.[0] ?? "default",
+  category: media.categoryId || media.tags?.[0] || "default",
+  width: media.width || undefined,
+  height: media.height || undefined,
 });
 
 /** A gallery slide, in the single shape the gallery renders. */

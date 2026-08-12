@@ -63,6 +63,7 @@ export const ADMIN_NAV_GROUPS = [
         to: "/admin/media",
         icon: "image",
         children: [
+          { id: "media-review", label: "Review Queue", to: "/admin/media/review", icon: "check" },
           { id: "marketing-media", label: "Marketing Media", to: "/admin/media/marketing", icon: "imagePlay" },
         ],
       },

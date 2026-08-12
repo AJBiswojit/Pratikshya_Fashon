@@ -25,11 +25,13 @@ import {
   MEDIA_STATUS_OPTIONS,
   MEDIA_TYPES,
   PRODUCT_MEDIA_ROLES,
+  USAGE_ROLE_OPTIONS,
   getMediaStatusLabel,
   getMediaStatusTone,
   getPlacementLabel,
   getProductRoleLabel,
 } from "../../../config/mediaTypes";
+import taxonomyRepository from "../../../services/taxonomyRepository";
 import { useMediaLibrary, useMediaMetrics } from "../../../hooks/useMedia";
 import useMediaActions from "../../../hooks/useMediaActions";
 import { cn } from "../../../utils/cn";
@@ -42,6 +44,9 @@ const TABS = [
   { id: "MARKETING", label: "Marketing" },
   { id: "UNASSIGNED", label: "Unassigned" },
   { id: "PENDING_REVIEW", label: "Pending Review" },
+  { id: "UNMAPPED", label: "Unmapped" },
+  { id: "DUPLICATE", label: "Duplicates" },
+  { id: "NEEDS_REVIEW", label: "Needs Review" },
 ];
 
 const matchesTab = (media, tab) => {
@@ -58,6 +63,19 @@ const matchesTab = (media, tab) => {
       return media.scope === MEDIA_SCOPES.UNASSIGNED;
     case "PENDING_REVIEW":
       return media.status === MEDIA_STATUS.PENDING_REVIEW;
+    case "UNMAPPED":
+      return media.mappingStatus === "UNMAPPED";
+    case "DUPLICATE":
+      return media.duplicateStatus === "DUPLICATE" || media.duplicateStatus === "POSSIBLE_DUPLICATE";
+    case "NEEDS_REVIEW":
+      return (
+        media.mappingStatus === "NEEDS_REVIEW" ||
+        media.mappingStatus === "UNMAPPED" ||
+        media.duplicateStatus === "DUPLICATE" ||
+        media.duplicateStatus === "POSSIBLE_DUPLICATE" ||
+        media.broken ||
+        media.lowResolution
+      );
     default:
       return true;
   }
@@ -82,13 +100,18 @@ export default function AdminMediaLibrary() {
   const [tab, setTab] = useState("ALL");
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState("ALL");
+  const [category, setCategory] = useState("ALL");
+  const [usage, setUsage] = useState("ALL");
   const [selected, setSelected] = useState([]);
+  const categories = useMemo(() => taxonomyRepository.activeCategories(), []);
 
   const filtered = useMemo(() => {
     const needle = query.trim().toLowerCase();
     return media.filter((item) => {
       if (!matchesTab(item, tab)) return false;
       if (status !== "ALL" && item.status !== status) return false;
+      if (category !== "ALL" && item.categoryId !== category) return false;
+      if (usage !== "ALL" && !(item.usageRoles || []).includes(usage)) return false;
       if (!needle) return true;
       return [
         item.title,
@@ -100,6 +123,9 @@ export default function AdminMediaLibrary() {
         item.fileName,
         item.uploadedBy,
         item.uploadedByEmployeeId,
+        item.originalPath,
+        item.currentFilename,
+        item.mappingStatus,
         ...(item.tags ?? []),
       ]
         .filter(Boolean)
@@ -107,7 +133,7 @@ export default function AdminMediaLibrary() {
         .toLowerCase()
         .includes(needle);
     });
-  }, [media, tab, status, query]);
+  }, [media, tab, status, category, usage, query]);
 
   const toggle = (id) =>
     setSelected((current) =>
@@ -177,6 +203,20 @@ export default function AdminMediaLibrary() {
         <AdminMetricCard label="Active" value={metrics.active} icon={Star} hint="Visible to customers" />
       </div>
 
+      <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-6">
+        <AdminMetricCard label="Ingested" value={metrics.ingested ?? 0} hint="Library ingestion" />
+        <AdminMetricCard
+          label="Unmapped"
+          value={metrics.unmapped ?? 0}
+          tone={(metrics.unmapped ?? 0) > 0 ? "alert" : "default"}
+          hint="Needs taxonomy"
+        />
+        <AdminMetricCard label="Duplicates" value={metrics.duplicates ?? 0} hint="Kept, not deleted" />
+        <AdminMetricCard label="Needs review" value={metrics.needsReview ?? 0} hint="Unmapped or uncertain" />
+        <AdminMetricCard label="Large files" value={metrics.large ?? 0} hint="Originals ≥ 1.5 MB" />
+        <AdminMetricCard label="Optimized" value={metrics.optimized ?? 0} hint="Application-ready" />
+      </div>
+
       {/* Review Queue Alert Banner */}
       {metrics.pendingReview > 0 ? (
         <div className="mb-6 flex flex-col gap-3 border border-amber-400/80 bg-amber-50/70 p-4 sm:flex-row sm:items-center sm:justify-between">
@@ -228,6 +268,16 @@ export default function AdminMediaLibrary() {
                   {metrics.pendingReview}
                 </span>
               ) : null}
+              {entry.id === "UNMAPPED" && (metrics.unmapped ?? 0) > 0 ? (
+                <span className="ml-1.5 rounded-full bg-amber-600 px-1.5 py-0.2 text-[8px] text-white">
+                  {metrics.unmapped}
+                </span>
+              ) : null}
+              {entry.id === "DUPLICATE" && (metrics.duplicates ?? 0) > 0 ? (
+                <span className="ml-1.5 rounded-full bg-ink/70 px-1.5 py-0.2 text-[8px] text-white">
+                  {metrics.duplicates}
+                </span>
+              ) : null}
             </button>
           ))}
         </div>
@@ -253,6 +303,36 @@ export default function AdminMediaLibrary() {
             >
               <option value="ALL">All statuses</option>
               {MEDIA_STATUS_OPTIONS.map((option) => (
+                <option key={option.id} value={option.id}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            <span className="sr-only">Filter by category</span>
+            <select
+              value={category}
+              onChange={(event) => setCategory(event.target.value)}
+              className="h-full border border-mist bg-canvas px-3 py-2.5 font-ui text-sm text-ink outline-none focus:border-accent"
+            >
+              <option value="ALL">All categories</option>
+              {categories.map((entry) => (
+                <option key={entry.id} value={entry.id}>
+                  {entry.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            <span className="sr-only">Filter by usage</span>
+            <select
+              value={usage}
+              onChange={(event) => setUsage(event.target.value)}
+              className="h-full border border-mist bg-canvas px-3 py-2.5 font-ui text-sm text-ink outline-none focus:border-accent"
+            >
+              <option value="ALL">All usage</option>
+              {USAGE_ROLE_OPTIONS.map((option) => (
                 <option key={option.id} value={option.id}>
                   {option.label}
                 </option>
@@ -344,6 +424,10 @@ export default function AdminMediaLibrary() {
                       {item.role === PRODUCT_MEDIA_ROLES.COVER ? (
                         <StatusBadge label="Cover" tone="accent" />
                       ) : null}
+                      {item.mappingStatus === "UNMAPPED" ? <StatusBadge label="Unmapped" tone="alert" /> : null}
+                      {item.mappingStatus === "NEEDS_REVIEW" ? <StatusBadge label="Review" tone="brass" /> : null}
+                      {item.duplicateStatus === "DUPLICATE" ? <StatusBadge label="Duplicate" tone="muted" /> : null}
+                      {item.ingested ? <StatusBadge label="Ingested" tone="quiet" /> : null}
                       {item.demoPlaceholder ? <StatusBadge label="Demo" tone="muted" /> : null}
                     </div>
 

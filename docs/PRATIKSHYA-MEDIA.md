@@ -57,10 +57,9 @@ editorial description.
 
 ### Placements
 
-Thirteen are defined; four are `live: true` — `HOME_HERO`, `SAREE_SECTION`,
-`LEHENGA_SECTION`, `FESTIVE_SECTION`. Only those are offered in the marketing
-UI, because only those map to a section that exists on the landing page today.
-The rest are declared so a later phase adds a surface, not a constant.
+Thirteen are defined. Phase 21.4 marks the remaining storefront surfaces
+`live: true` so the resolver and the marketing board can assign them —
+hero, category, editorial, new arrivals and sale included.
 
 ---
 
@@ -266,7 +265,80 @@ employee events, in one stream.
 
 ---
 
-## 11. Deliberately not built
+## 11. Phase 21.4 — Ingestion, optimization and distribution
+
+The house already had a media register. This phase does not add a second one.
+It discovers the photographs that already live under `public/media` and
+`public/images`, writes web-ready copies to `public/library`, and folds those
+records into the **same** `mediaRepository`.
+
+```
+EXISTING IMAGE FILES
+        ↓
+MEDIA INGESTION   (scripts/optimize-media.mjs)
+        ↓
+MEDIA METADATA    (src/data/media/ingestedManifest.json)
+        ↓
+   mediaStore.mergeIngestedMedia
+        ↓
+   mediaRepository          ← still the only door
+        ↓
+   mediaResolver            ← deterministic distribution
+        ↓
+ homepage / catalogue / PDP / AI Shopping / AI Mirror
+```
+
+### Source vs optimized
+
+| Tree | Role |
+| --- | --- |
+| `public/media/` | Source originals. Never deleted, never renamed. |
+| `public/images/` | Existing house plates. Left at their original URLs. |
+| `public/library/` | Application-ready WebP, deterministic names (`women-saree-silk-001.webp`). |
+
+Running `npm run media:optimize` twice produces the same filenames. A dry run
+is `npm run media:analyze`.
+
+### Mapping rules
+
+Folder tokens are mapped onto **existing** taxonomy ids only.
+
+- `women/saree/silk sarees` → Sarees / Silk Saree
+- `women/saree/baranasi` → Sarees / Banarasi Saree
+- `women/lehnga` → Lehengas
+- `women/marriage` → Bridal Couture
+- `men/sherwani_marriage` → Men's Wear / Sherwani
+- `accesories/earrings` → Jewellery / Earrings
+- `accesories/anklet` → **UNMAPPED** (no anklet category)
+- `women/saree/bandhani`, `women/saree/chanderi` → Sarees, **NEEDS_REVIEW** (no matching subcategory)
+
+Product-set folders (several angles of one piece) are slotted onto catalogue
+products in the same style, in stable id order. That is a folder-slot, not a
+claim that the folder *is* a named SKU. Seeded product media (`pf-001`,
+`pf-005`, `pf-024`, `pf-036`, …) is never overwritten. Leftover folders stay
+on the category and are flagged for review.
+
+Colour, brand, material and price are never inferred from the photograph.
+
+### Distribution
+
+`services/media/mediaResolver.js` is the only module pages ask for a plate.
+Selection is deterministic: featured → usage role → category/product fit →
+active → resolution → stable id. The same refresh never reshuffles imagery.
+An image is never used for a category it does not belong to.
+
+AI Mirror still uses `aiMirrorEligibility.js`. Jewellery, earrings, bangles,
+bags, footwear, cosmetics, accessories and innerwear never receive the
+`AI_MIRROR` usage role.
+
+### Admin
+
+The existing Media Management page gained Unmapped / Duplicates / Needs Review
+tabs and Category / Usage filters. Duplicates are reported, never deleted.
+
+---
+
+## 12. Deliberately not built
 
 Real or cloud upload (S3, Cloudinary, Firebase, Supabase), transcoding,
 thumbnails generated from video, CDN delivery, scheduled campaign activation,

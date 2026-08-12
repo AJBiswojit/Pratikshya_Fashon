@@ -15,13 +15,17 @@
  */
 
 import {
+  DUPLICATE_STATUS,
+  MAPPING_STATUS,
   MEDIA_SCOPES,
   MEDIA_STATUS,
   MEDIA_TYPES,
   PRODUCT_MEDIA_ROLES,
   defaultRoleForType,
+  isValidUsageRole,
 } from "../../config/mediaTypes";
 import { SEED_MEDIA } from "../../data/media/seedMedia";
+import { getIngestedRecords } from "./ingestedMedia";
 
 /** Namespaced, in line with every other PRATIKSHYA FASHON storage key. */
 export const MEDIA_STORAGE_KEY = "pratikshya_media";
@@ -160,6 +164,35 @@ export const normaliseMedia = (entry) => {
       analysedAt: cleanString(entry.ai?.analysedAt) || null,
     },
 
+    /* Phase 21.4 — ingestion provenance. Optional on older records. */
+    originalPath: cleanString(entry.originalPath) || null,
+    optimizedPath: cleanString(entry.optimizedPath) || null,
+    originalFilename: cleanString(entry.originalFilename) || null,
+    currentFilename: cleanString(entry.currentFilename) || null,
+    checksum: cleanString(entry.checksum) || null,
+    categoryId: cleanString(entry.categoryId) || null,
+    subcategoryId: cleanString(entry.subcategoryId) || null,
+    collectionId: cleanString(entry.collectionId) || null,
+    variantId: cleanString(entry.variantId) || null,
+    usageRoles: cleanList(entry.usageRoles).filter(isValidUsageRole),
+    mappingStatus: Object.values(MAPPING_STATUS).includes(entry.mappingStatus)
+      ? entry.mappingStatus
+      : null,
+    mappingMethod: cleanString(entry.mappingMethod) || null,
+    mappingNote: cleanString(entry.mappingNote) || null,
+    duplicateStatus: Object.values(DUPLICATE_STATUS).includes(entry.duplicateStatus)
+      ? entry.duplicateStatus
+      : null,
+    duplicateOf: cleanString(entry.duplicateOf) || null,
+    featured: Boolean(entry.featured),
+    width: Number.isFinite(Number(entry.width)) ? Number(entry.width) : null,
+    height: Number.isFinite(Number(entry.height)) ? Number(entry.height) : null,
+    aspectRatio: Number.isFinite(Number(entry.aspectRatio)) ? Number(entry.aspectRatio) : null,
+    ingested: Boolean(entry.ingested),
+    large: Boolean(entry.large),
+    lowResolution: Boolean(entry.lowResolution),
+    broken: Boolean(entry.broken),
+
     /* Lifecycle */
     createdAt: cleanString(entry.createdAt, nowIso()),
     updatedAt: cleanString(entry.updatedAt, cleanString(entry.createdAt, nowIso())),
@@ -221,6 +254,11 @@ export const writeMedia = (items) => {
     window.dispatchEvent(new Event(MEDIA_CHANGED_EVENT));
   }
   return clean;
+};
+
+/** Drops the in-memory register so the next read reseeds (seed + ingested). */
+export const clearMediaMemory = () => {
+  memoryMedia = null;
 };
 
 export default { readMedia, writeMedia, normaliseMedia, createMediaId, MEDIA_STORAGE_KEY };

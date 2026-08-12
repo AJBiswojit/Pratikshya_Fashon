@@ -17,6 +17,8 @@
  */
 
 import {
+  DUPLICATE_STATUS,
+  MAPPING_STATUS,
   MEDIA_SCOPES,
   MEDIA_STATUS,
   MEDIA_TYPES,
@@ -27,6 +29,7 @@ import {
 import {
   MEDIA_CHANGED_EVENT,
   MEDIA_STORAGE_KEY,
+  clearMediaMemory,
   createMediaId,
   isEphemeralUrl,
   normaliseMedia,
@@ -116,6 +119,63 @@ export const getByEmployee = (employeeId) => {
   if (!employeeId) return [];
   return readMedia()
     .filter((item) => item.uploadedByEmployeeId === employeeId)
+    .sort(byRecency);
+};
+
+/** Ingested library records (Phase 21.4). */
+export const getIngestedMedia = () =>
+  readMedia()
+    .filter((item) => item.ingested)
+    .sort(byRecency);
+
+/** Assets that could not be confidently mapped to taxonomy or a product. */
+export const getUnmappedMedia = () =>
+  readMedia()
+    .filter((item) => item.mappingStatus === MAPPING_STATUS.UNMAPPED)
+    .sort(byRecency);
+
+/** Exact or possible duplicates — never auto-deleted. */
+export const getDuplicateMedia = () =>
+  readMedia()
+    .filter(
+      (item) =>
+        item.duplicateStatus === DUPLICATE_STATUS.DUPLICATE ||
+        item.duplicateStatus === DUPLICATE_STATUS.POSSIBLE_DUPLICATE
+    )
+    .sort(byRecency);
+
+/** Unmapped, duplicate, or explicitly flagged for review. */
+export const getNeedsReviewMedia = () =>
+  readMedia()
+    .filter(
+      (item) =>
+        item.mappingStatus === MAPPING_STATUS.NEEDS_REVIEW ||
+        item.mappingStatus === MAPPING_STATUS.UNMAPPED ||
+        item.duplicateStatus === DUPLICATE_STATUS.DUPLICATE ||
+        item.duplicateStatus === DUPLICATE_STATUS.POSSIBLE_DUPLICATE ||
+        item.broken ||
+        item.lowResolution
+    )
+    .sort(byRecency);
+
+/** Active media for one taxonomy category. */
+export const getMediaByCategory = (categoryId, options = {}) => {
+  if (!categoryId) return [];
+  const { publicOnly = false } = options;
+  return readMedia()
+    .filter((item) => item.categoryId === categoryId)
+    .filter((item) => (publicOnly ? item.status === MEDIA_STATUS.ACTIVE && Boolean(item.url) : true))
+    .sort(byRecency);
+};
+
+/** Active media carrying a usage role. */
+export const getMediaByUsageRole = (role, options = {}) => {
+  if (!role) return [];
+  const { publicOnly = false, categoryId = null } = options;
+  return readMedia()
+    .filter((item) => (item.usageRoles || []).includes(role))
+    .filter((item) => (categoryId ? item.categoryId === categoryId : true))
+    .filter((item) => (publicOnly ? item.status === MEDIA_STATUS.ACTIVE && Boolean(item.url) : true))
     .sort(byRecency);
 };
 
@@ -574,11 +634,28 @@ export const getMediaMetrics = () => {
     activeMarketing: marketing.filter((item) => item.status === MEDIA_STATUS.ACTIVE).length,
     productsWithMedia: productIds.length,
     productsNeedingCover: needsCover.length,
+    ingested: items.filter((item) => item.ingested).length,
+    unmapped: items.filter((item) => item.mappingStatus === MAPPING_STATUS.UNMAPPED).length,
+    needsReview: items.filter(
+      (item) =>
+        item.mappingStatus === MAPPING_STATUS.NEEDS_REVIEW ||
+        item.mappingStatus === MAPPING_STATUS.UNMAPPED
+    ).length,
+    duplicates: items.filter(
+      (item) =>
+        item.duplicateStatus === DUPLICATE_STATUS.DUPLICATE ||
+        item.duplicateStatus === DUPLICATE_STATUS.POSSIBLE_DUPLICATE
+    ).length,
+    large: items.filter((item) => item.large).length,
+    optimized: items.filter((item) => item.ingested && item.optimizedPath).length,
+    lowResolution: items.filter((item) => item.lowResolution).length,
+    broken: items.filter((item) => item.broken).length,
   };
 };
 
-/** Restores the seeded register. Used by the library's reset control. */
+/** Restores the seeded register (Phase 12 seed + ingested library). */
 export const resetMedia = () => {
+  clearMediaMemory();
   if (typeof window !== "undefined") {
     try {
       window.localStorage.removeItem(MEDIA_STORAGE_KEY);
@@ -598,6 +675,12 @@ const mediaRepository = {
   getUnassignedMedia,
   getPendingReview,
   getByEmployee,
+  getIngestedMedia,
+  getUnmappedMedia,
+  getDuplicateMedia,
+  getNeedsReviewMedia,
+  getMediaByCategory,
+  getMediaByUsageRole,
   getProductCover,
   create,
   createMany,
