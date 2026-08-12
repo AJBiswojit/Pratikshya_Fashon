@@ -29,7 +29,14 @@ import * as orderService from "../services/orders/orderService";
 import { getTracking as buildTracking } from "../services/orders/trackingService";
 import {
   advanceReturnRecord,
+  approveReturnRecord,
+  completeRefundRecord,
   createReturnRecord,
+  initiateRefundRecord,
+  inspectReturnRecord,
+  receiveReturnRecord,
+  rejectReturnRecord,
+  schedulePickupRecord,
 } from "../services/orders/returnService";
 import { latestReturn } from "../utils/orders";
 import inventoryRepository from "../services/inventory/inventoryRepository";
@@ -282,6 +289,154 @@ export function OrderProvider({ children }) {
     [customerId, applyResult]
   );
 
+  /* ---------------------------------------------------------------- */
+  /* Return operational mutations — admin / employee                   */
+  /* ---------------------------------------------------------------- */
+
+  const applyReturnMutation = useCallback(
+    (returnId, mutationFn, options = {}) => {
+      const orders = ordersRef.current;
+      let foundOrder = null;
+      let foundRecord = null;
+      for (const order of orders) {
+        const record = (order.returns || []).find((entry) => entry.id === returnId);
+        if (record) {
+          foundOrder = order;
+          foundRecord = record;
+          break;
+        }
+      }
+      if (!foundRecord) return { ok: false, message: "Return not found." };
+
+      const result = mutationFn(foundRecord, options);
+      if (!result.ok) return result;
+
+      const updated = orderService.updateReturn(
+        orders,
+        foundOrder.id,
+        result.record
+      );
+      if (!updated.ok) {
+        return { ok: false, message: "Return could not be updated." };
+      }
+      applyResult(updated);
+      return { ok: true, record: result.record, message: result.message };
+    },
+    [applyResult]
+  );
+
+  const approveReturn = useCallback(
+    (returnId, options = {}) => applyReturnMutation(returnId, approveReturnRecord, options),
+    [applyReturnMutation]
+  );
+
+  const rejectReturn = useCallback(
+    (returnId, options = {}) => applyReturnMutation(returnId, rejectReturnRecord, options),
+    [applyReturnMutation]
+  );
+
+  const scheduleReturnPickup = useCallback(
+    (returnId, options = {}) => applyReturnMutation(returnId, schedulePickupRecord, options),
+    [applyReturnMutation]
+  );
+
+  const receiveReturn = useCallback(
+    (returnId, options = {}) => {
+      const orders = ordersRef.current;
+      let foundOrder = null;
+      let foundRecord = null;
+      for (const order of orders) {
+        const record = (order.returns || []).find((entry) => entry.id === returnId);
+        if (record) {
+          foundOrder = order;
+          foundRecord = record;
+          break;
+        }
+      }
+      if (!foundRecord) return { ok: false, message: "Return not found." };
+
+      const result = receiveReturnRecord(foundRecord, options);
+      if (!result.ok) return result;
+
+      const updated = orderService.updateReturn(
+        orders,
+        foundOrder.id,
+        result.record
+      );
+      if (!updated.ok) {
+        return { ok: false, message: "Return could not be updated." };
+      }
+      applyResult(updated);
+
+      /* Record return into inventory quarantine. */
+      inventoryRepository.recordOrderReturn(result.record, options.actor);
+
+      return { ok: true, record: result.record, message: result.message };
+    },
+    [applyResult]
+  );
+
+  const inspectReturn = useCallback(
+    (returnId, options = {}) => {
+      const orders = ordersRef.current;
+      let foundOrder = null;
+      let foundRecord = null;
+      for (const order of orders) {
+        const record = (order.returns || []).find((entry) => entry.id === returnId);
+        if (record) {
+          foundOrder = order;
+          foundRecord = record;
+          break;
+        }
+      }
+      if (!foundRecord) return { ok: false, message: "Return not found." };
+
+      const result = inspectReturnRecord(foundRecord, options);
+      if (!result.ok) return result;
+
+      const updated = orderService.updateReturn(
+        orders,
+        foundOrder.id,
+        result.record
+      );
+      if (!updated.ok) {
+        return { ok: false, message: "Return could not be updated." };
+      }
+      applyResult(updated);
+
+      /* Apply inspection results to inventory. */
+      const inspections = options.inspections || [];
+      inspections.forEach((inspection) => {
+        const item = foundRecord.items.find((entry) => entry.lineId === inspection.lineId);
+        if (!item) return;
+        inventoryRepository.inspectReturnedStock({
+          productId: item.productId,
+          variantId: item.variantId || null,
+          locationId: "loc-main-warehouse",
+          quantity: item.quantity,
+          condition: inspection.condition || "SELLABLE",
+          reason: `Return inspection — ${inspection.condition || "SELLABLE"}`,
+          notes: inspection.notes || "",
+          reference: `${returnId}:${item.lineId}`,
+          actor: options.actor,
+        });
+      });
+
+      return { ok: true, record: result.record, message: result.message };
+    },
+    [applyResult]
+  );
+
+  const initiateReturnRefund = useCallback(
+    (returnId, options = {}) => applyReturnMutation(returnId, initiateRefundRecord, options),
+    [applyReturnMutation]
+  );
+
+  const completeReturnRefund = useCallback(
+    (returnId, options = {}) => applyReturnMutation(returnId, completeRefundRecord, options),
+    [applyReturnMutation]
+  );
+
   const claimGuestOrders = useCallback(
     (id = customerId) => {
       if (!id) return { ok: false, claimed: 0 };
@@ -466,6 +621,14 @@ export function OrderProvider({ children }) {
       cancelOrderAdmin,
       forceTransition,
       applyStatusAdmin,
+      /* Return Operations */
+      approveReturn,
+      rejectReturn,
+      scheduleReturnPickup,
+      receiveReturn,
+      inspectReturn,
+      initiateReturnRefund,
+      completeReturnRefund,
     }),
     [
       customerOrders,
@@ -501,6 +664,13 @@ export function OrderProvider({ children }) {
       cancelOrderAdmin,
       forceTransition,
       applyStatusAdmin,
+      approveReturn,
+      rejectReturn,
+      scheduleReturnPickup,
+      receiveReturn,
+      inspectReturn,
+      initiateReturnRefund,
+      completeReturnRefund,
     ]
   );
 
@@ -542,6 +712,13 @@ const inertOrders = {
   cancelOrderAdmin: () => ({ ok: false, message: "" }),
   forceTransition: () => ({ ok: false, message: "" }),
   applyStatusAdmin: () => ({ ok: false, message: "" }),
+  approveReturn: () => ({ ok: false, message: "" }),
+  rejectReturn: () => ({ ok: false, message: "" }),
+  scheduleReturnPickup: () => ({ ok: false, message: "" }),
+  receiveReturn: () => ({ ok: false, message: "" }),
+  inspectReturn: () => ({ ok: false, message: "" }),
+  initiateReturnRefund: () => ({ ok: false, message: "" }),
+  completeReturnRefund: () => ({ ok: false, message: "" }),
 };
 
 export function useOrder() {
