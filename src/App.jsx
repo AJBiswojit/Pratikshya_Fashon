@@ -83,6 +83,10 @@ const AdminModulePlaceholder = lazy(() => import("./pages/admin/AdminModulePlace
 const AdminProducts = lazy(() => import("./pages/admin/AdminProducts"));
 const ProductForm = lazy(() => import("./pages/admin/ProductForm"));
 const AdminProductDetail = lazy(() => import("./pages/admin/AdminProductDetail"));
+const AdminMediaLibrary = lazy(() => import("./pages/admin/media/AdminMediaLibrary"));
+const AdminMarketingMedia = lazy(() => import("./pages/admin/media/AdminMarketingMedia"));
+const AdminMediaDetail = lazy(() => import("./pages/admin/media/AdminMediaDetail"));
+const AdminProductMedia = lazy(() => import("./pages/admin/media/AdminProductMedia"));
 const AdminNotFound = lazy(() => import("./pages/admin/AdminNotFound"));
 
 /** Paths owned by dedicated pages rather than the generic interior shell. */
@@ -166,6 +170,14 @@ export default function App() {
                           <Route path="/admin/products/new" element={<ProductForm />} />
                           <Route path="/admin/products/:productId/edit" element={<ProductForm />} />
                           <Route path="/admin/products/:productId" element={<AdminProductDetail />} />
+                          <Route path="/admin/products/:productId/media" element={<AdminProductMedia />} />
+
+                          {/* Media. The marketing board is declared before the
+                              record route so /admin/media/marketing is never
+                              read as a media identifier. */}
+                          <Route path="/admin/media" element={<AdminMediaLibrary />} />
+                          <Route path="/admin/media/marketing" element={<AdminMarketingMedia />} />
+                          <Route path="/admin/media/:mediaId" element={<AdminMediaDetail />} />
                           <Route path="/admin/categories" element={<AdminModulePlaceholder />} />
                           <Route path="/admin/collections" element={<AdminModulePlaceholder />} />
                           <Route path="/admin/offers" element={<AdminModulePlaceholder />} />

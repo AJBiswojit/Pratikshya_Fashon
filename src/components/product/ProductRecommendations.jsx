@@ -3,6 +3,7 @@ import { Heart } from "lucide-react";
 import { Link } from "react-router-dom";
 import { AtelierSection, EditorialHeading, ProductCard, useReveal } from "../../design-system";
 import { productHref } from "../../data/products";
+import { useProductCovers } from "../../hooks/useMedia";
 import { useWishlist } from "../../context/WishlistContext";
 
 export default function ProductRecommendations({
@@ -15,7 +16,10 @@ export default function ProductRecommendations({
 }) {
   const wishlist = useWishlist();
   const reveal = useReveal(16, 0.5);
-  if (!products?.length) return null;
+  /* Published covers, resolved before the early return so the hook order
+     never changes between renders. */
+  const rows = useProductCovers(products);
+  if (!rows.length) return null;
 
   return (
     <AtelierSection id={id} tone={tone} rhythm="compact" width="wide">
@@ -31,7 +35,7 @@ export default function ProductRecommendations({
       </EditorialHeading>
 
       <div className="grid grid-cols-2 gap-x-4 gap-y-10 sm:gap-x-6 lg:grid-cols-4 lg:gap-x-7">
-        {products.map((product, index) => (
+        {rows.map((product, index) => (
           <motion.div
             key={product.id}
             {...reveal}

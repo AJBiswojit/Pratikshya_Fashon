@@ -44,6 +44,8 @@ export const ADMIN_NAV_GROUPS = [
       { id: "categories", label: "Categories", to: "/admin/categories", icon: "grid", status: MODULE_STATUS.SOON },
       { id: "collections", label: "Collections", to: "/admin/collections", icon: "layers", status: MODULE_STATUS.SOON },
       { id: "offers", label: "Offers", to: "/admin/offers", icon: "tag", status: MODULE_STATUS.SOON },
+      { id: "media", label: "Media Library", to: "/admin/media", icon: "image", status: MODULE_STATUS.READY },
+      { id: "marketing-media", label: "Marketing Media", to: "/admin/media/marketing", icon: "film", status: MODULE_STATUS.READY },
     ],
   },
   {
@@ -97,13 +99,19 @@ export const ADMIN_NAV_GROUPS = [
 
 export const ADMIN_NAV_ITEMS = ADMIN_NAV_GROUPS.flatMap((group) => group.items);
 
+/**
+ * The nav item a path belongs to.
+ *
+ * The most specific destination wins, so a nested module such as
+ * `/admin/media/marketing` resolves to itself rather than to its parent.
+ */
 export const findAdminNavItem = (pathname) => {
   if (!pathname || typeof pathname !== "string") return null;
   const cleaned = pathname.split("?")[0];
   return (
-    ADMIN_NAV_ITEMS.find((item) =>
+    ADMIN_NAV_ITEMS.filter((item) =>
       item.exact ? cleaned === item.to : cleaned === item.to || cleaned.startsWith(`${item.to}/`)
-    ) ?? null
+    ).sort((a, b) => b.to.length - a.to.length)[0] ?? null
   );
 };
 

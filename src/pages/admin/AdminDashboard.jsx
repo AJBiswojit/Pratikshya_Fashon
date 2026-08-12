@@ -4,6 +4,8 @@ import {
   AlertTriangle,
   ArrowRight,
   Boxes,
+  ImageOff,
+  Images,
   IndianRupee,
   PackageX,
   RotateCcw,
@@ -25,6 +27,7 @@ import OrderStatusBadge from "../../components/orders/OrderStatusBadge";
 import { useAdminAuth } from "../../context/AdminAuthContext";
 import { useEmployeeManagement } from "../../context/EmployeeManagementContext";
 import { useOrder } from "../../context/OrderContext";
+import { useMediaMetrics } from "../../hooks/useMedia";
 import {
   getBusinessMetrics,
   getDepartmentPerformance,
@@ -50,6 +53,9 @@ export default function AdminDashboard() {
   const { admin } = useAdminAuth();
   const { employees } = useEmployeeManagement();
   const { getOrders } = useOrder();
+  /* One line of media health, read from the same register the Media
+     Library uses. */
+  const media = useMediaMetrics();
 
   const metrics = useMemo(() => getBusinessMetrics(employees), [employees]);
   const trends = getMetricTrends();
@@ -73,6 +79,22 @@ export default function AdminDashboard() {
     { label: "Pending orders", value: formatAdminNumber(metrics.pendingOrders), hint: trends.pendingOrders, icon: Timer },
     { label: "Returns", value: formatAdminNumber(metrics.returns), hint: trends.returns, icon: RotateCcw },
     { label: "Employees present", value: formatAdminNumber(metrics.employeesPresent), hint: trends.employeesPresent, icon: UsersRound },
+    {
+      label: "Media library",
+      value: formatAdminNumber(media.total),
+      hint: `${media.images} images · ${media.videos} videos`,
+      icon: Images,
+    },
+    {
+      label: "Products needing cover",
+      value: formatAdminNumber(media.productsNeedingCover),
+      hint:
+        media.productsNeedingCover === 0
+          ? "Every curated product has a cover"
+          : "Set a cover so cards show the right plate",
+      icon: ImageOff,
+      tone: media.productsNeedingCover ? "alert" : undefined,
+    },
   ];
 
   return (
@@ -326,6 +348,9 @@ export default function AdminDashboard() {
           </AtelierButton>
           <AtelierButton as={Link} to="/admin/employees" variant="outline" size="chip">
             Manage employees <ArrowRight size={12} aria-hidden="true" />
+          </AtelierButton>
+          <AtelierButton as={Link} to="/admin/media" variant="outline" size="chip">
+            Media library <ArrowRight size={12} aria-hidden="true" />
           </AtelierButton>
           {[
             { label: "View orders", to: "/admin/orders" },

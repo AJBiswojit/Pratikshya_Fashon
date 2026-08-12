@@ -11,6 +11,8 @@ import {
   Boxes,
   ClipboardList,
   Clock3,
+  Film,
+  Image as ImageIcon,
   LayoutDashboard,
   LayoutGrid,
   Layers,
@@ -25,6 +27,7 @@ import {
   TrendingUp,
   User,
   Users,
+  Video,
   Warehouse,
 } from "lucide-react";
 
@@ -47,6 +50,9 @@ export const ADMIN_NAV_ICONS = {
   trend: TrendingUp,
   chart: BarChart3,
   list: ClipboardList,
+  image: ImageIcon,
+  film: Film,
+  video: Video,
   sliders: SlidersHorizontal,
   user: User,
 };

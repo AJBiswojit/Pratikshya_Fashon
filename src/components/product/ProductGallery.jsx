@@ -1,14 +1,23 @@
 import { AnimatePresence, motion } from "framer-motion";
-import { ChevronLeft, ChevronRight, Maximize2, Minus, Plus, X } from "lucide-react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { ChevronLeft, ChevronRight, Maximize2, Minus, Play, Plus, X } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import PratikshyaImage from "../PratikshyaImage";
+import MediaVideo from "../media/MediaVideo";
+import { MEDIA_TYPES } from "../../config/mediaTypes";
+import { useProductSlides } from "../../hooks/useMedia";
 import { cn } from "../../utils/cn";
 
-function GalleryThumbnail({ image, index, active, productName, onSelect, className = "" }) {
+/**
+ * A thumbnail. `slide` may be an image or a video: a video shows its poster
+ * with a play glyph, so the strip reads as one sequence rather than two.
+ */
+function GalleryThumbnail({ slide, index, active, productName, onSelect, className = "" }) {
+  const video = slide?.type === MEDIA_TYPES.VIDEO;
+
   return (
     <button
       type="button"
-      aria-label={`View image ${index + 1} of ${productName}`}
+      aria-label={`View ${video ? "video" : "image"} ${index + 1} of ${productName}`}
       aria-current={active ? "true" : undefined}
       onClick={() => onSelect(index)}
       className={cn(
@@ -18,13 +27,25 @@ function GalleryThumbnail({ image, index, active, productName, onSelect, classNa
         className
       )}
     >
-      <PratikshyaImage
-        image={image}
-        alt=""
-        aria-hidden="true"
-        className="h-full w-full object-cover"
-        sizes="64px"
-      />
+      {slide?.image ? (
+        <PratikshyaImage
+          image={slide.image}
+          alt=""
+          aria-hidden="true"
+          className="h-full w-full object-cover"
+          sizes="64px"
+        />
+      ) : (
+        <span className="flex h-full w-full items-center justify-center bg-ink" aria-hidden="true" />
+      )}
+      {video ? (
+        <span
+          className="absolute inset-0 flex items-center justify-center bg-ink/35 text-ivory"
+          aria-hidden="true"
+        >
+          <Play size={14} strokeWidth={1.5} />
+        </span>
+      ) : null}
     </button>
   );
 }
@@ -174,7 +195,7 @@ function ImageViewer({ product, images, initialIndex, onClose, onIndexChange }) 
         {images.map((image, imageIndex) => (
           <GalleryThumbnail
             key={`${image.id ?? image.src}-${imageIndex}`}
-            image={image}
+            slide={{ type: MEDIA_TYPES.IMAGE, image }}
             index={imageIndex}
             active={imageIndex === index}
             productName={product.name}
@@ -187,8 +208,36 @@ function ImageViewer({ product, images, initialIndex, onClose, onIndexChange }) 
   );
 }
 
+/**
+ * Phase 12: the gallery reads its slides from the media register through
+ * `useProductSlides`, which falls back to the authored catalogue plates for
+ * every product the Admin Portal has not curated. Layout, motion and the
+ * full-screen viewer are exactly as Phase 5 left them — only the source of
+ * the pictures changed, plus optional video slides at the end of the strip.
+ */
 export default function ProductGallery({ product }) {
-  const images = product.images?.length ? product.images : [product.image].filter(Boolean);
+  const slides = useProductSlides(product);
+
+  /* A product with neither media nor plates still needs one entry so the
+     stage keeps its ratio rather than collapsing. */
+  const items = useMemo(
+    () =>
+      slides.length
+        ? slides
+        : [
+            {
+              id: `${product.id}-empty`,
+              type: MEDIA_TYPES.IMAGE,
+              title: product.name,
+              alt: product.name,
+              image: product.image ?? null,
+              src: null,
+              poster: "",
+            },
+          ],
+    [slides, product.id, product.image, product.name]
+  );
+
   const [activeIndex, setActiveIndex] = useState(0);
   const [viewerOpen, setViewerOpen] = useState(false);
   const touchStart = useRef(null);
@@ -198,13 +247,29 @@ export default function ProductGallery({ product }) {
     setViewerOpen(false);
   }, [product.id]);
 
-  const show = (index) => setActiveIndex((index + images.length) % images.length);
+  /* Media can be removed while the page is open; never point past the end. */
+  const safeIndex = Math.min(activeIndex, items.length - 1);
+  const active = items[safeIndex];
+  const isVideo = active?.type === MEDIA_TYPES.VIDEO;
+
+  /* The full-screen viewer is an image experience. Video plays in the
+     stage, where its own controls live. */
+  const viewerImages = useMemo(
+    () => items.filter((item) => item.type !== MEDIA_TYPES.VIDEO && item.image).map((item) => item.image),
+    [items]
+  );
+  const viewerIndex = Math.max(
+    0,
+    items.slice(0, safeIndex).filter((item) => item.type !== MEDIA_TYPES.VIDEO && item.image).length
+  );
+
+  const show = (index) => setActiveIndex((index + items.length) % items.length);
   const closeViewer = useCallback(() => setViewerOpen(false), []);
 
   const onTouchEnd = (event) => {
     if (touchStart.current === null) return;
     const distance = event.changedTouches[0].clientX - touchStart.current;
-    if (Math.abs(distance) > 45) show(activeIndex + (distance < 0 ? 1 : -1));
+    if (Math.abs(distance) > 45) show(safeIndex + (distance < 0 ? 1 : -1));
     touchStart.current = null;
   };
 
@@ -212,12 +277,12 @@ export default function ProductGallery({ product }) {
     <div className="md:sticky md:top-24 md:self-start">
       <div className="flex flex-col-reverse gap-3 sm:flex-row md:gap-4">
         <div className="flex gap-2 overflow-x-auto pb-1 sm:w-16 sm:flex-col sm:overflow-visible sm:pb-0">
-          {images.map((image, index) => (
+          {items.map((item, index) => (
             <GalleryThumbnail
-              key={`${image.id ?? image.src}-${index}`}
-              image={image}
+              key={`${item.id}-${index}`}
+              slide={item}
               index={index}
-              active={index === activeIndex}
+              active={index === safeIndex}
               productName={product.name}
               onSelect={show}
             />
@@ -233,55 +298,75 @@ export default function ProductGallery({ product }) {
         >
           <AnimatePresence mode="wait" initial={false}>
             <motion.div
-              key={activeIndex}
+              key={safeIndex}
               initial={{ opacity: 0.45 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0.25 }}
               transition={{ duration: 0.3 }}
               className="absolute inset-0"
             >
-              <PratikshyaImage
-                image={images[activeIndex]}
-                alt={`${product.name}, view ${activeIndex + 1} of ${images.length}`}
-                className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-[1.025]"
-                loading={activeIndex === 0 ? "eager" : "lazy"}
-                fetchPriority={activeIndex === 0 ? "high" : "auto"}
-                sizes="(min-width: 1024px) 48vw, (min-width: 768px) 46vw, 100vw"
-              />
+              {isVideo ? (
+                <MediaVideo
+                  src={active.src}
+                  poster={active.poster}
+                  posterImage={active.image}
+                  title={active.title || `${product.name} film`}
+                />
+              ) : (
+                <PratikshyaImage
+                  image={active?.image}
+                  alt={active?.alt || `${product.name}, view ${safeIndex + 1} of ${items.length}`}
+                  className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-[1.025]"
+                  loading={safeIndex === 0 ? "eager" : "lazy"}
+                  fetchPriority={safeIndex === 0 ? "high" : "auto"}
+                  sizes="(min-width: 1024px) 48vw, (min-width: 768px) 46vw, 100vw"
+                />
+              )}
             </motion.div>
           </AnimatePresence>
 
-          <button
-            type="button"
-            onClick={() => setViewerOpen(true)}
-            aria-label={`Open full-screen image viewer for ${product.name}`}
-            className="absolute inset-0 flex items-end justify-end p-4 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-4px] focus-visible:outline-ivory"
-          >
-            <span className="flex items-center gap-2 bg-ivory/90 px-3 py-2 font-ui text-[9px] uppercase tracking-[.16em] text-ink backdrop-blur-sm transition-colors group-hover:bg-ink group-hover:text-ivory">
-              <Maximize2 size={13} aria-hidden="true" /> View
-            </span>
-          </button>
+          {isVideo || !viewerImages.length ? null : (
+            <button
+              type="button"
+              onClick={() => setViewerOpen(true)}
+              aria-label={`Open full-screen image viewer for ${product.name}`}
+              className="absolute inset-0 flex items-end justify-end p-4 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-4px] focus-visible:outline-ivory"
+            >
+              <span className="flex items-center gap-2 bg-ivory/90 px-3 py-2 font-ui text-[9px] uppercase tracking-[.16em] text-ink backdrop-blur-sm transition-colors group-hover:bg-ink group-hover:text-ivory">
+                <Maximize2 size={13} aria-hidden="true" /> View
+              </span>
+            </button>
+          )}
 
           <div className="pointer-events-none absolute bottom-4 left-4 flex gap-1.5 sm:hidden" aria-hidden="true">
-            {images.map((image, index) => (
-              <span key={image.id ?? index} className={cn("h-1 w-1 rounded-full", index === activeIndex ? "bg-accent" : "bg-ivory/70")} />
+            {items.map((item, index) => (
+              <span key={item.id ?? index} className={cn("h-1 w-1 rounded-full", index === safeIndex ? "bg-accent" : "bg-ivory/70")} />
             ))}
           </div>
         </div>
       </div>
 
       <p className="mt-3 text-right font-ui text-[9px] uppercase tracking-[.16em] text-taupe">
-        Swipe or select a view · Click to explore
+        {isVideo ? "Press play to watch the film" : "Swipe or select a view · Click to explore"}
       </p>
 
       <AnimatePresence>
-        {viewerOpen ? (
+        {viewerOpen && viewerImages.length ? (
           <ImageViewer
             product={product}
-            images={images}
-            initialIndex={activeIndex}
+            images={viewerImages}
+            initialIndex={viewerIndex}
             onClose={closeViewer}
-            onIndexChange={setActiveIndex}
+            onIndexChange={(nextViewerIndex) => {
+              /* Map the viewer's image index back onto the mixed strip. */
+              let seen = -1;
+              const match = items.findIndex((item) => {
+                if (item.type === MEDIA_TYPES.VIDEO || !item.image) return false;
+                seen += 1;
+                return seen === nextViewerIndex;
+              });
+              if (match >= 0) setActiveIndex(match);
+            }}
           />
         ) : null}
       </AnimatePresence>

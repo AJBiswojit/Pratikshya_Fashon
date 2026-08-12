@@ -13,6 +13,7 @@ import {
   transition,
   useReveal,
 } from "../design-system";
+import { useProductCovers } from "../hooks/useMedia";
 import { productHref } from "../data/products";
 import { useShopping } from "../context/ShoppingContext";
 import { requiresVariantChoice } from "../utils/shopping";
@@ -32,6 +33,8 @@ export default function Wishlist() {
   const navigate = useNavigate();
   const reveal = useReveal(16, 0.5);
   const [feedback, setFeedback] = useState(null);
+  /* Saved pieces show the published cover plate when one exists. */
+  const savedProducts = useProductCovers(wishlist.products);
 
   useEffect(() => {
     const previousTitle = document.title;
@@ -106,7 +109,7 @@ export default function Wishlist() {
 
         <div className={cn("mt-12 grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 md:mt-16", gap.tile)}>
           <AnimatePresence initial={false}>
-            {wishlist.products.map((product) => (
+            {savedProducts.map((product) => (
               <motion.div
                 key={product.id}
                 layout="position"
