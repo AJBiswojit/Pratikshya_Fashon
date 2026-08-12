@@ -4,6 +4,9 @@ import { useState } from "react";
 import PratikshyaImage from "../components/PratikshyaImage";
 import { imageRef } from "../data/pratikshyaImageManifest";
 import { editorialCollections, offer, products } from "../data/pratikshyaMockData";
+import { MARKETING_PLACEMENTS } from "../config/mediaTypes";
+import { useActivePlacementMedia } from "../hooks/useMedia";
+import { resolvePlacementImage } from "../services/media/marketingMediaSource";
 import {
   Accent,
   AtelierButton,
@@ -39,6 +42,15 @@ export default function AtelierDesign() {
   const tileReveal = useReveal(distance.short);
   const articleReveal = useReveal(distance.medium);
 
+  /* Phase 12 seams. Each of these is the *same* frame the page has always
+     had — only the picture inside it can now be replaced from the Admin
+     Portal. With no ACTIVE marketing record the house artwork stands, so
+     the layout, motion and treatment are untouched. */
+  const heroMedia = useActivePlacementMedia(MARKETING_PLACEMENTS.HOME_HERO);
+  const sareeMedia = useActivePlacementMedia(MARKETING_PLACEMENTS.SAREE_SECTION);
+  const lehengaMedia = useActivePlacementMedia(MARKETING_PLACEMENTS.LEHENGA_SECTION);
+  const festiveMedia = useActivePlacementMedia(MARKETING_PLACEMENTS.FESTIVE_SECTION);
+
   const materials = [
     { name: "Silk", desc: fabricDetails.Silk.desc, img: imageRef("fabric-silk") },
     { name: "Cotton", desc: fabricDetails.Cotton.desc, img: imageRef("fabric-cotton") },
@@ -48,7 +60,7 @@ export default function AtelierDesign() {
   return (
     <main>
       <section id="top" className={`relative min-h-[100dvh] overflow-hidden ${header.offset}`}>
-        <PratikshyaImage image="hero-atelier" alt="PRATIKSHYA FASHON silk and textile campaign" loading="eager" fetchPriority="high" className={`${imageTreatment.fill} ${imageTreatment.heroScale}`} />
+        <PratikshyaImage image={resolvePlacementImage(heroMedia, "hero-atelier")} alt="PRATIKSHYA FASHON silk and textile campaign" loading="eager" fetchPriority="high" className={`${imageTreatment.fill} ${imageTreatment.heroScale}`} />
         <div aria-hidden="true" className={`absolute inset-0 ${overlays.heroScrim}`} />
         <Container width="content" padded className="relative z-10 min-h-[100dvh] flex flex-col justify-center py-24 md:py-0">
           <motion.div {...heroEnter}>
@@ -137,13 +149,13 @@ export default function AtelierDesign() {
           Saree & <Accent tone="gold">Lehenga</Accent>
         </EditorialHeading>
         <div className={`${grid.pair} ${gap.tile}`}>
-          <MediaFrame as="a" href="#women" image="saree-banarasi" alt="Pato, Banarasi and silk saree collection" aspect="panorama" zoom="soft" overlay="inkLeft" className="group">
+          <MediaFrame as="a" href="#women" image={resolvePlacementImage(sareeMedia, "saree-banarasi")} alt="Pato, Banarasi and silk saree collection" aspect="panorama" zoom="soft" overlay="inkLeft" className="group">
             <div className="absolute bottom-6 left-6 md:bottom-10 md:left-10">
               <h3 className={`${heading.xl} mb-2`}>Saree Collection</h3>
               <p className={`${body.captionDisplay} text-ash`}>Pato · cotton · silk · Banarasi · festive.</p>
             </div>
           </MediaFrame>
-          <MediaFrame as="a" href="#bridal" image="lehenga-bridal" alt="Bridal and wedding lehenga collection" aspect="panorama" zoom="soft" overlay="inkRight" className="group">
+          <MediaFrame as="a" href="#bridal" image={resolvePlacementImage(lehengaMedia, "lehenga-bridal")} alt="Bridal and wedding lehenga collection" aspect="panorama" zoom="soft" overlay="inkRight" className="group">
             <div className="absolute bottom-6 right-6 md:bottom-10 md:right-10 text-right">
               <h3 className={`${heading.xl} mb-2`}>Lehenga Collection</h3>
               <p className={`${body.captionDisplay} text-ash`}>Bridal · wedding · designer · party.</p>
@@ -191,7 +203,7 @@ export default function AtelierDesign() {
         innerClassName="relative z-10"
         backdrop={
           <>
-            <PratikshyaImage image={offer.images.atelier} alt="Festive fashion textile campaign" className={imageTreatment.campaignBackdrop} />
+            <PratikshyaImage image={resolvePlacementImage(festiveMedia, offer.images.atelier)} alt="Festive fashion textile campaign" className={imageTreatment.campaignBackdrop} />
             <div aria-hidden="true" className="absolute inset-0 opacity-[.08]" style={dotGrid} />
           </>
         }

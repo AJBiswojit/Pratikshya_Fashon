@@ -71,6 +71,27 @@ export function EmployeeManagementProvider({ children }) {
     [actor]
   );
 
+  /**
+   * Records a non-people event — media, for instance — in the same diary.
+   * Phase 12 uses this rather than standing up a second activity log.
+   *
+   * `actorOverride` lets the Admin Portal sign the entry with the signed-in
+   * administrator, whose session is separate from the employee one.
+   */
+  const noteEvent = useCallback(
+    (action, summary, actorOverride = null) => {
+      setActivity((current) =>
+        recordActivity(current, {
+          ...describeActor(actor),
+          ...(actorOverride ?? {}),
+          action,
+          summary,
+        })
+      );
+    },
+    [actor]
+  );
+
   const getEmployees = useCallback(
     (filters) => filterEmployees(employees, filters),
     [employees]
@@ -256,6 +277,7 @@ export function EmployeeManagementProvider({ children }) {
       deactivateEmployee,
       resetEmployeePassword,
       getActivity,
+      noteEvent,
     }),
     [
       employees,
@@ -273,6 +295,7 @@ export function EmployeeManagementProvider({ children }) {
       deactivateEmployee,
       resetEmployeePassword,
       getActivity,
+      noteEvent,
     ]
   );
 
@@ -299,6 +322,7 @@ const inertManagement = {
   deactivateEmployee: async () => ({ ok: false }),
   resetEmployeePassword: async () => ({ ok: false }),
   getActivity: () => [],
+  noteEvent: () => {},
 };
 
 export function useEmployeeManagement() {

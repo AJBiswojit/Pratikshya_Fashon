@@ -37,6 +37,13 @@ export const PERMISSIONS = {
   OFFERS_VIEW: "offers.view",
   OFFERS_MANAGE: "offers.manage",
 
+  MEDIA_VIEW: "media.view",
+  MEDIA_UPLOAD: "media.upload",
+  MEDIA_EDIT: "media.edit",
+  MEDIA_DELETE: "media.delete",
+  MEDIA_ASSIGN: "media.assign",
+  MEDIA_MANAGE: "media.manage",
+
   EMPLOYEES_VIEW: "employees.view",
   EMPLOYEES_CREATE: "employees.create",
   EMPLOYEES_EDIT: "employees.edit",
@@ -84,6 +91,17 @@ export const PERMISSION_CATALOGUE = [
       { key: PERMISSIONS.CUSTOMERS_MANAGE, label: "Manage customers" },
       { key: PERMISSIONS.OFFERS_VIEW, label: "View offers" },
       { key: PERMISSIONS.OFFERS_MANAGE, label: "Manage offers" },
+    ],
+  },
+  {
+    group: "Media",
+    items: [
+      { key: PERMISSIONS.MEDIA_VIEW, label: "View media library" },
+      { key: PERMISSIONS.MEDIA_UPLOAD, label: "Add media" },
+      { key: PERMISSIONS.MEDIA_EDIT, label: "Edit media details" },
+      { key: PERMISSIONS.MEDIA_DELETE, label: "Remove media" },
+      { key: PERMISSIONS.MEDIA_ASSIGN, label: "Assign media & set covers" },
+      { key: PERMISSIONS.MEDIA_MANAGE, label: "Manage marketing placements" },
     ],
   },
   {

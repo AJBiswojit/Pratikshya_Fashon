@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
 import { ProductCard, gap, useReveal } from "../../design-system";
 import { productHref } from "../../data/products";
+import { useProductCovers } from "../../hooks/useMedia";
 import { useWishlist } from "../../context/WishlistContext";
 import { cn } from "../../utils/cn";
 
@@ -24,10 +25,13 @@ import { cn } from "../../utils/cn";
 export default function ProductGrid({ products, className = "" }) {
   const wishlist = useWishlist();
   const reveal = useReveal();
+  /* Cards show one plate: the published cover when the Admin Portal has set
+     one, the authored catalogue image otherwise. Never video. */
+  const rows = useProductCovers(products);
 
   return (
     <div className={cn("grid grid-cols-2 lg:grid-cols-3", gap.tile, className)}>
-      {products.map((product, index) => (
+      {rows.map((product, index) => (
         <motion.div
           key={product.id}
           {...reveal}
