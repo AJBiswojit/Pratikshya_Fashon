@@ -101,6 +101,10 @@ const AdminOrders = lazy(() => import("./pages/admin/orders/AdminOrders"));
 const AdminOrderDetail = lazy(() => import("./pages/admin/orders/AdminOrderDetail"));
 const AdminOrderInvoice = lazy(() => import("./pages/admin/orders/AdminOrderInvoice"));
 const AdminNotFound = lazy(() => import("./pages/admin/AdminNotFound"));
+const AdminCustomers = lazy(() => import("./pages/admin/AdminCustomers"));
+const AdminCustomerDetail = lazy(() => import("./pages/admin/AdminCustomerDetail"));
+const AdminReturns = lazy(() => import("./pages/admin/AdminReturns"));
+const AdminReturnDetail = lazy(() => import("./pages/admin/AdminReturnDetail"));
 
 const dedicatedPaths = new Set([
   "/search",
@@ -170,8 +174,10 @@ export default function App() {
                           <Route path="/admin/orders" element={<AdminOrders />} />
                           <Route path="/admin/orders/:orderId" element={<AdminOrderDetail />} />
                           <Route path="/admin/orders/:orderId/invoice" element={<AdminOrderInvoice />} />
-                          <Route path="/admin/customers" element={<AdminModulePlaceholder />} />
-                          <Route path="/admin/returns" element={<AdminModulePlaceholder />} />
+                          <Route path="/admin/customers" element={<AdminCustomers />} />
+                          <Route path="/admin/customers/:customerId" element={<AdminCustomerDetail />} />
+                          <Route path="/admin/returns" element={<AdminReturns />} />
+                          <Route path="/admin/returns/:returnId" element={<AdminReturnDetail />} />
                           <Route path="/admin/inventory" element={<InventoryDashboardPage portal="admin" />} />
                           <Route path="/admin/inventory/receive" element={<InventoryOperationPage portal="admin" operation="receive" />} />
                           <Route path="/admin/inventory/adjust" element={<InventoryOperationPage portal="admin" operation="adjust" />} />
