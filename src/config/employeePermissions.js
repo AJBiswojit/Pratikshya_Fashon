@@ -78,6 +78,13 @@ export const PERMISSIONS = {
   EMPLOYEES_MANAGE: "employees.manage",
 
   ANALYTICS_VIEW: "analytics.view",
+  ANALYTICS_SALES: "analytics.sales",
+  ANALYTICS_PRODUCTS: "analytics.products",
+  ANALYTICS_CUSTOMERS: "analytics.customers",
+  ANALYTICS_INVENTORY: "analytics.inventory",
+  ANALYTICS_RETURNS: "analytics.returns",
+  ANALYTICS_OFFERS: "analytics.offers",
+  ANALYTICS_EMPLOYEES: "analytics.employees",
 
   PROFILE_VIEW: "profile.view",
   PROFILE_EDIT: "profile.edit",
@@ -197,6 +204,13 @@ export const PERMISSION_CATALOGUE = [
     items: [
       { key: PERMISSIONS.TEAM_VIEW, label: "View assigned team" },
       { key: PERMISSIONS.ANALYTICS_VIEW, label: "View store reports" },
+      { key: PERMISSIONS.ANALYTICS_SALES, label: "View sales analytics" },
+      { key: PERMISSIONS.ANALYTICS_PRODUCTS, label: "View product analytics" },
+      { key: PERMISSIONS.ANALYTICS_CUSTOMERS, label: "View customer analytics" },
+      { key: PERMISSIONS.ANALYTICS_INVENTORY, label: "View inventory analytics" },
+      { key: PERMISSIONS.ANALYTICS_RETURNS, label: "View return analytics" },
+      { key: PERMISSIONS.ANALYTICS_OFFERS, label: "View offer analytics" },
+      { key: PERMISSIONS.ANALYTICS_EMPLOYEES, label: "View employee analytics" },
       { key: PERMISSIONS.EMPLOYEES_VIEW, label: "View employees" },
       { key: PERMISSIONS.EMPLOYEES_CREATE, label: "Create employees" },
       { key: PERMISSIONS.EMPLOYEES_EDIT, label: "Edit employees" },

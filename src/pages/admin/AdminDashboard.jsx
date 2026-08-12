@@ -66,7 +66,10 @@ export default function AdminDashboard() {
   const media = useMediaMetrics();
   const inventory = useInventory();
 
-  const metrics = useMemo(() => getBusinessMetrics(employees, attendanceToday), [employees, attendanceToday]);
+  const metrics = useMemo(
+    () => getBusinessMetrics(employees, attendanceToday, allOrders),
+    [employees, attendanceToday, allOrders]
+  );
   const trends = getMetricTrends();
   const series = getSalesSeries();
   const categories = getSalesByCategory();
@@ -127,7 +130,10 @@ export default function AdminDashboard() {
       description="Your PRATIKSHYA FASHON operation at a glance."
       actions={
         <>
-          <AtelierButton as={Link} to="/admin/employees/new" size="chip">
+          <AtelierButton as={Link} to="/admin/analytics" size="chip">
+            View analytics
+          </AtelierButton>
+          <AtelierButton as={Link} to="/admin/employees/new" size="chip" variant="outline">
             <UserPlus size={12} aria-hidden="true" /> Add employee
           </AtelierButton>
           <AtelierButton as={Link} to="/admin/employees" variant="outline" size="chip">

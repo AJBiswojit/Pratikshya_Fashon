@@ -77,6 +77,9 @@ export const ACTIVITY_ACTIONS = {
   OFFER_ARCHIVED: "OFFER_ARCHIVED",
   OFFER_REDEEMED: "OFFER_REDEEMED",
 
+  /* Analytics — export only. Page views are not logged. */
+  ANALYTICS_EXPORT: "ANALYTICS_EXPORT",
+
   /* Workforce — attendance, leave and performance. Same diary, never a second log. */
   ATTENDANCE_CHECKED_IN: "ATTENDANCE_CHECKED_IN",
   ATTENDANCE_CHECKED_OUT: "ATTENDANCE_CHECKED_OUT",

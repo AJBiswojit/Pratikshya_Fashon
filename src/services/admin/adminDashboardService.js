@@ -26,6 +26,9 @@ import { EMPLOYEE_STATUS } from "../../config/employeeStatus";
 import { getDepartmentLabel } from "../../config/employeeDepartments";
 import { getRoleLabel } from "../../config/employeeRoles";
 import { employeeFullName } from "../../utils/employee";
+import { ANALYTICS_PRESETS } from "../analytics/dateRange";
+import { getAnalyticsSnapshot, loadCustomerRegistry } from "../analytics/analyticsService";
+import { getReturnMetrics } from "../orders/returnService";
 
 /* ------------------------------------------------------------------ */
 /* Headline metrics                                                    */
@@ -36,13 +39,34 @@ import { employeeFullName } from "../../utils/employee";
  * register when one is supplied, so a newly created colleague is reflected
  * immediately.
  */
-export const getBusinessMetrics = (employees = [], attendanceSummary = null) => {
+export const getBusinessMetrics = (employees = [], attendanceSummary = null, orders = []) => {
   const activeEmployees = employees.filter(
     (person) => person.status === EMPLOYEE_STATUS.ACTIVE
   ).length;
 
+  const today = getAnalyticsSnapshot({
+    orders,
+    period: { preset: ANALYTICS_PRESETS.TODAY },
+  });
+  const month = getAnalyticsSnapshot({
+    orders,
+    period: { preset: ANALYTICS_PRESETS.THIS_MONTH },
+  });
+  const openReturns = getReturnMetrics(
+    (orders || []).flatMap((order) => order.returns || [])
+  );
+
   return {
     ...BUSINESS_METRICS,
+    todaysSales: today.overview.revenue.current,
+    totalOrders: month.overview.orders.current,
+    customers: loadCustomerRegistry().length || month.overview.customers.current,
+    pendingOrders: (orders || []).filter((order) =>
+      ["PENDING_PAYMENT", "PLACED", "PAYMENT_CONFIRMED", "ORDER_CONFIRMED", "CONFIRMED", "PROCESSING"].includes(
+        order.status
+      )
+    ).length,
+    returns: openReturns.pendingReview || month.overview.returns.current,
     employeesPresent:
       attendanceSummary?.presentToday ?? activeEmployees ?? BUSINESS_METRICS.employeesPresent,
   };
