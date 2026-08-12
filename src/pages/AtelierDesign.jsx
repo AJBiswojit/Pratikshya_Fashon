@@ -1,12 +1,11 @@
 import { motion } from "framer-motion";
-import { ArrowRight } from "lucide-react";
 import { useState } from "react";
-import PratikshyaImage from "../components/PratikshyaImage";
 import { imageRef } from "../data/pratikshyaImageManifest";
 import { editorialCollections } from "../data/pratikshyaMockData";
 import { MARKETING_PLACEMENTS } from "../config/mediaTypes";
 import { useActivePlacementMedia } from "../hooks/useMedia";
 import { resolvePlacementImage } from "../services/media/marketingMediaSource";
+import HeroCarousel from "../components/storefront/HeroCarousel";
 import ShopByCategory from "../components/storefront/ShopByCategory";
 import NewArrivals from "../components/storefront/NewArrivals";
 import SaleBanner from "../components/storefront/SaleBanner";
@@ -14,7 +13,6 @@ import {
   Accent,
   AtelierButton,
   AtelierSection,
-  Container,
   EditorialHeading,
   MediaFrame,
   Rule,
@@ -24,10 +22,6 @@ import {
   gap,
   grid,
   heading,
-  header,
-  imageTreatment,
-  overlays,
-  useEnter,
   useReveal,
 } from "../design-system";
 
@@ -39,14 +33,15 @@ const fabricDetails = {
 
 export default function AtelierDesign() {
   const [selectedFabric, setSelectedFabric] = useState("Silk");
-  const heroEnter = useEnter(distance.long);
   const tileReveal = useReveal(distance.short);
   const articleReveal = useReveal(distance.medium);
 
   /* Phase 12 seams. Each of these is the *same* frame the page has always
      had — only the picture inside it can now be replaced from the Admin
      Portal. With no ACTIVE marketing record the house artwork stands, so
-     the layout, motion and treatment are untouched. */
+     the layout, motion and treatment are untouched. The hero carousel
+     honours an ACTIVE HOME_HERO record by letting it stand in for the
+     lead editorial plate. */
   const heroMedia = useActivePlacementMedia(MARKETING_PLACEMENTS.HOME_HERO);
   const sareeMedia = useActivePlacementMedia(MARKETING_PLACEMENTS.SAREE_SECTION);
   const lehengaMedia = useActivePlacementMedia(MARKETING_PLACEMENTS.LEHENGA_SECTION);
@@ -58,21 +53,8 @@ export default function AtelierDesign() {
   ];
 
   return (
-    <main>
-      <section id="top" className={`relative min-h-[100dvh] overflow-hidden ${header.offset}`}>
-        <PratikshyaImage image={resolvePlacementImage(heroMedia, "hero-atelier")} alt="PRATIKSHYA FASHON silk and textile campaign" loading="eager" fetchPriority="high" className={`${imageTreatment.fill} ${imageTreatment.heroScale}`} />
-        <div aria-hidden="true" className={`absolute inset-0 ${overlays.heroScrim}`} />
-        <Container width="content" padded className="relative z-10 min-h-[100dvh] flex flex-col justify-center py-24 md:py-0">
-          <motion.div {...heroEnter}>
-            <p className={`${eyebrow.hero} text-accent mb-6`}>PRATIKSHYA FASHON · Ladies' Atelier</p>
-            <EditorialHeading as="h1" size="hero" spacing={{ title: "mb-6 md:mb-8" }} titleClassName="text-ink">
-              DRESS THE<br />MOMENT. <Accent>KEEP THE STORY.</Accent>
-            </EditorialHeading>
-            <p className={`${body.lead} text-cocoa max-w-md mb-10`}>Sarees, lehengas and heirloom details for the way you gather, celebrate and remember.</p>
-            <AtelierButton href="#women">Explore Women's Edit <ArrowRight size={14} /></AtelierButton>
-          </motion.div>
-        </Container>
-      </section>
+    <main id="top">
+      <HeroCarousel heroMedia={heroMedia} />
 
       <AtelierSection id="women" rhythm="spacious">
         <EditorialHeading
