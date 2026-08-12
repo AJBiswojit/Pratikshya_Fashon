@@ -406,6 +406,15 @@ export function CheckoutProvider({ children }) {
 
   const startPayment = useCallback(() => {
     const current = stateRef.current;
+    // Authentication is checked before any reservation or payment side effect.
+    if (!user?.id) {
+      setState((s) => ({
+        ...s,
+        paymentStatus: PAYMENT_STATUS.FAILURE,
+        paymentMessage: "Please sign in or create an account to complete your order.",
+      }));
+      return;
+    }
     if (current.paymentStatus === PAYMENT_STATUS.PENDING || activeReservationRef.current || paymentStartingRef.current) return;
     if (!current.paymentMethod || !current.address) return;
     paymentStartingRef.current = true;
@@ -459,7 +468,7 @@ export function CheckoutProvider({ children }) {
           paymentMessage: "The sandbox payment could not start. Reserved stock has been released.",
         }));
       });
-  }, [handlePaymentResolution]);
+  }, [handlePaymentResolution, user]);
 
   const cancelActivePayment = useCallback(() => {
     const current = stateRef.current;

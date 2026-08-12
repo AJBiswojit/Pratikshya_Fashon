@@ -151,7 +151,14 @@ export const buildOrderRecord = (snapshot) => {
   };
 };
 
+export const CUSTOMER_AUTH_REQUIRED = "CUSTOMER_AUTH_REQUIRED";
+
+/** Customer storefront orders must always carry a real authenticated identity.
+ * Employee-assisted orders explicitly opt into the existing employee path. */
 export const addOrder = (orders, snapshot) => {
+  if (!snapshot?.customerId && snapshot?.source !== "employee_assisted") {
+    return { ok: false, orders, order: null, code: CUSTOMER_AUTH_REQUIRED, message: CUSTOMER_AUTH_REQUIRED };
+  }
   const record = buildOrderRecord(snapshot);
   if (!record) return { ok: false, orders, order: null, message: "" };
   if (orders.some((order) => order.id === record.id)) {
