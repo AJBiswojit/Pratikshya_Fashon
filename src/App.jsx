@@ -87,6 +87,7 @@ const AdminRoleDetail = lazy(() => import("./pages/admin/AdminRoleDetail"));
 const AdminActivity = lazy(() => import("./pages/admin/AdminActivity"));
 const AdminProfile = lazy(() => import("./pages/admin/AdminProfile"));
 const AdminModulePlaceholder = lazy(() => import("./pages/admin/AdminModulePlaceholder"));
+const AdminSettings = lazy(() => import("./pages/admin/AdminSettings"));
 const AdminAttendance = lazy(() => import("./pages/admin/attendance/AdminAttendance"));
 const AdminAttendanceDetail = lazy(() => import("./pages/admin/attendance/AdminAttendanceDetail"));
 const AdminPerformance = lazy(() => import("./pages/admin/performance/AdminPerformance"));
@@ -231,7 +232,7 @@ export default function App() {
                           <Route path="/admin/analytics/returns" element={<AdminAnalytics />} />
                           <Route path="/admin/analytics/offers" element={<AdminAnalytics />} />
                           <Route path="/admin/analytics/employees" element={<AdminAnalytics />} />
-                          <Route path="/admin/settings" element={<AdminModulePlaceholder />} />
+                          <Route path="/admin/settings" element={<AdminSettings />} />
 
                           <Route path="/admin/*" element={<AdminNotFound />} />
                         </Route>

@@ -9,7 +9,7 @@ import {
   ATTENDANCE_SETTINGS_KEY,
   HOUSE_HOLIDAYS,
 } from "../../config/attendanceConfig";
-import { readStorage, writeStorage } from "../../utils/shopping";
+import { getSection, updateSection } from "../settingsRepository";
 
 const normaliseSettings = (raw) => {
   const source = raw && typeof raw === "object" ? raw : {};
@@ -34,18 +34,13 @@ const normaliseSettings = (raw) => {
 };
 
 export const loadAttendanceSettings = () => {
-  const stored = readStorage(ATTENDANCE_SETTINGS_KEY, null);
-  const settings = normaliseSettings(stored);
-  if (!stored || typeof stored !== "object") {
-    writeStorage(ATTENDANCE_SETTINGS_KEY, settings);
-  }
-  return settings;
+  const central = getSection("attendance");
+  const settings = normaliseSettings(central);
+  return { ...settings, holidays: getSection("holidays")?.items?.filter((item) => item.active !== false).map((item) => ({ date: item.date, name: item.name })) || settings.holidays };
 };
 
 export const saveAttendanceSettings = (patch = {}) => {
-  const next = normaliseSettings({ ...loadAttendanceSettings(), ...patch });
-  writeStorage(ATTENDANCE_SETTINGS_KEY, next);
-  return next;
+  return normaliseSettings(updateSection("attendance", { ...loadAttendanceSettings(), ...patch }));
 };
 
 export default {

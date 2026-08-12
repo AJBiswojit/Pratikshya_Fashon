@@ -75,7 +75,7 @@ export const ADMIN_NAV_GROUPS = [
     label: "System",
     items: [
       { id: "activity", label: "Activity Logs", to: "/admin/activity", icon: "list", status: MODULE_STATUS.READY },
-      { id: "settings", label: "Settings", to: "/admin/settings", icon: "sliders", status: MODULE_STATUS.SOON },
+      { id: "settings", label: "Settings", to: "/admin/settings", icon: "sliders", status: MODULE_STATUS.READY },
       { id: "profile", label: "Profile", to: "/admin/profile", icon: "user", status: MODULE_STATUS.READY },
     ],
   },

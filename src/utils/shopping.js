@@ -172,7 +172,15 @@ export const calculateCouponDiscount = (items, coupon) => {
 /** Demo shipping: free at the threshold, a flat fee below it, nothing on an empty bag. */
 export const calculateShipping = (payableSubtotal) => {
   if (payableSubtotal <= 0) return 0;
-  return payableSubtotal >= FREE_SHIPPING_THRESHOLD ? 0 : FLAT_SHIPPING_FEE;
+  try {
+    const shipping = JSON.parse(localStorage.getItem("pratikshya_settings"))?.shipping;
+    if (shipping?.enabled === false) return 0;
+    const threshold = Number(shipping?.freeShippingThreshold ?? FREE_SHIPPING_THRESHOLD);
+    const fee = Number(shipping?.defaultShippingFee ?? FLAT_SHIPPING_FEE);
+    return payableSubtotal >= threshold ? 0 : fee;
+  } catch {
+    return payableSubtotal >= FREE_SHIPPING_THRESHOLD ? 0 : FLAT_SHIPPING_FEE;
+  }
 };
 
 /**
