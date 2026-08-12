@@ -3,10 +3,13 @@ import { ArrowRight } from "lucide-react";
 import { useState } from "react";
 import PratikshyaImage from "../components/PratikshyaImage";
 import { imageRef } from "../data/pratikshyaImageManifest";
-import { editorialCollections, offer, products } from "../data/pratikshyaMockData";
+import { editorialCollections } from "../data/pratikshyaMockData";
 import { MARKETING_PLACEMENTS } from "../config/mediaTypes";
 import { useActivePlacementMedia } from "../hooks/useMedia";
 import { resolvePlacementImage } from "../services/media/marketingMediaSource";
+import ShopByCategory from "../components/storefront/ShopByCategory";
+import NewArrivals from "../components/storefront/NewArrivals";
+import SaleBanner from "../components/storefront/SaleBanner";
 import {
   Accent,
   AtelierButton,
@@ -14,11 +17,9 @@ import {
   Container,
   EditorialHeading,
   MediaFrame,
-  ProductCard,
   Rule,
   body,
   distance,
-  dotGrid,
   eyebrow,
   gap,
   grid,
@@ -49,7 +50,6 @@ export default function AtelierDesign() {
   const heroMedia = useActivePlacementMedia(MARKETING_PLACEMENTS.HOME_HERO);
   const sareeMedia = useActivePlacementMedia(MARKETING_PLACEMENTS.SAREE_SECTION);
   const lehengaMedia = useActivePlacementMedia(MARKETING_PLACEMENTS.LEHENGA_SECTION);
-  const festiveMedia = useActivePlacementMedia(MARKETING_PLACEMENTS.FESTIVE_SECTION);
 
   const materials = [
     { name: "Silk", desc: fabricDetails.Silk.desc, img: imageRef("fabric-silk") },
@@ -185,34 +185,11 @@ export default function AtelierDesign() {
         </div>
       </AtelierSection>
 
-      <AtelierSection>
-        <EditorialHeading size="subsection" spacing={{ title: "mb-14" }}>
-          Selected <Accent>Pieces</Accent>
-        </EditorialHeading>
-        <div className={`${grid.products} ${gap.tile}`}>
-          {products.map((product) => (
-            <ProductCard key={product.id} product={product} href="#collections" />
-          ))}
-        </div>
-      </AtelierSection>
+      <ShopByCategory />
 
-      <AtelierSection
-        tone="accent"
-        width="prose"
-        className="text-center relative overflow-hidden"
-        innerClassName="relative z-10"
-        backdrop={
-          <>
-            <PratikshyaImage image={resolvePlacementImage(festiveMedia, offer.images.atelier)} alt="Festive fashion textile campaign" className={imageTreatment.campaignBackdrop} />
-            <div aria-hidden="true" className="absolute inset-0 opacity-[.08]" style={dotGrid} />
-          </>
-        }
-      >
-        <EditorialHeading size="campaign" spacing={{ title: "mb-2" }}>{offer.title}</EditorialHeading>
-        <h3 className={`${heading.sm} text-blush mb-6`}>{offer.subtitle}</h3>
-        <p className={`${body.base} text-blush-deep mb-10`}>{offer.desc}</p>
-        <AtelierButton href="#collections" variant="inverse" size="lg">Shop the Edit <ArrowRight size={14} /></AtelierButton>
-      </AtelierSection>
+      <NewArrivals />
+
+      <SaleBanner />
 
       <AtelierSection rhythm="spacious" width="narrow" className="text-center">
         <EditorialHeading
