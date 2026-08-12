@@ -1,4 +1,10 @@
+import { useMemo } from "react";
+import { useEmployeeAuth } from "../../../context/EmployeeAuthContext";
 import { useEmployeeManagement } from "../../../context/EmployeeManagementContext";
+import { useWorkforce } from "../../../context/WorkforceContext";
+import { todayHouseSummary } from "../../../services/workforce/attendanceService";
+import { housePerformanceSummary } from "../../../services/workforce/performanceService";
+import { pendingLeaveCount } from "../../../services/workforce/leaveService";
 import { getRoleLabel } from "../../../config/employeeRoles";
 import { getDepartmentLabel } from "../../../config/employeeDepartments";
 import { getAssistedOrders } from "../../../services/employees/operationsService";
@@ -11,16 +17,21 @@ import DashboardFrame from "./DashboardFrame";
 import { employeeFullName } from "../../../utils/employee";
 
 export default function ManagerDashboard() {
+  const { employee } = useEmployeeAuth();
+  const { revision } = useWorkforce();
   const { employees } = useEmployeeManagement();
   const team = employees.filter((person) => person.role !== "SUPER_ADMIN");
   const floor = getAssistedOrders().slice(0, 5);
   const inventory = useInventory();
+  const attendance = useMemo(() => todayHouseSummary(employee), [employee, revision]);
+  const performance = useMemo(() => housePerformanceSummary(employee), [employee, revision]);
+  const leavePending = useMemo(() => pendingLeaveCount(employee), [employee, revision]);
   const metrics = {
     primary: [
-      { label: "Store stock", value: String(inventory.metrics.storeStock || 0), hint: "Units on hand" },
-      { label: "Low stock", value: String(inventory.metrics.lowStock || 0), hint: "Needs action" },
-      { label: "Pending transfers", value: String(inventory.metrics.pendingTransfers || 0), hint: "Open workflow" },
-      { label: "Team on floor", value: "14", hint: "Checked in · demo" },
+      { label: "Team present", value: String(attendance.presentToday || 0), hint: "Checked in today" },
+      { label: "Team late", value: String(attendance.lateToday || 0), hint: "After the house threshold" },
+      { label: "Team on leave", value: String(attendance.onLeave || 0), hint: `${leavePending} leave requests waiting` },
+      { label: "Team achievement", value: `${performance.averageAchievement || 0}%`, hint: `${performance.pending} reviews pending` },
     ],
   };
 

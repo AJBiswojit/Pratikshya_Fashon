@@ -26,6 +26,10 @@ import StatusBadge from "../../components/employee/StatusBadge";
 import OrderStatusBadge from "../../components/orders/OrderStatusBadge";
 import { useAdminAuth } from "../../context/AdminAuthContext";
 import { useEmployeeManagement } from "../../context/EmployeeManagementContext";
+import { useWorkforce } from "../../context/WorkforceContext";
+import { todayHouseSummary } from "../../services/workforce/attendanceService";
+import { housePerformanceSummary } from "../../services/workforce/performanceService";
+import { pendingLeaveCount } from "../../services/workforce/leaveService";
 import { useOrder } from "../../context/OrderContext";
 import { useMediaMetrics } from "../../hooks/useMedia";
 import { useInventory } from "../../context/InventoryContext";
@@ -52,13 +56,17 @@ import { formatINR } from "../../utils/shopping";
 export default function AdminDashboard() {
   const { admin } = useAdminAuth();
   const { employees } = useEmployeeManagement();
+  const { revision } = useWorkforce();
   const { getOrders } = useOrder();
+  const attendanceToday = useMemo(() => todayHouseSummary(admin), [admin, revision]);
+  const performanceToday = useMemo(() => housePerformanceSummary(admin), [admin, revision]);
+  const leavePending = useMemo(() => pendingLeaveCount(admin), [admin, revision]);
   /* One line of media health, read from the same register the Media
      Library uses. */
   const media = useMediaMetrics();
   const inventory = useInventory();
 
-  const metrics = useMemo(() => getBusinessMetrics(employees), [employees]);
+  const metrics = useMemo(() => getBusinessMetrics(employees, attendanceToday), [employees, attendanceToday]);
   const trends = getMetricTrends();
   const series = getSalesSeries();
   const categories = getSalesByCategory();
@@ -89,7 +97,7 @@ export default function AdminDashboard() {
     { label: "Out of stock", value: formatAdminNumber(inventory.metrics.outOfStock), hint: "Live inventory ledger", icon: PackageX, tone: "alert" },
     { label: "Pending orders", value: formatAdminNumber(metrics.pendingOrders), hint: trends.pendingOrders, icon: Timer },
     { label: "Returns", value: formatAdminNumber(metrics.returns), hint: trends.returns, icon: RotateCcw },
-    { label: "Employees present", value: formatAdminNumber(metrics.employeesPresent), hint: trends.employeesPresent, icon: UsersRound },
+    { label: "Employees present", value: formatAdminNumber(metrics.employeesPresent), hint: `${attendanceToday.lateToday} late · ${attendanceToday.onLeave} on leave`, icon: UsersRound },
     {
       label: "Media library",
       value: formatAdminNumber(media.total),
@@ -271,17 +279,19 @@ export default function AdminDashboard() {
           eyebrow="People"
           title="Employee overview"
           action={
-            <AtelierButton as={Link} to="/admin/employees" variant="outline" size="chip">
-              Open
+            <AtelierButton as={Link} to="/admin/attendance" variant="outline" size="chip">
+              Attendance
             </AtelierButton>
           }
         >
           <dl className="grid grid-cols-2 gap-4">
             {[
               ["Total employees", overview.total],
-              ["Active", overview.active],
-              ["On leave", overview.onLeave],
-              ["Suspended", overview.suspended],
+              ["Present today", attendanceToday.presentToday],
+              ["On leave", attendanceToday.onLeave],
+              ["Late today", attendanceToday.lateToday],
+              ["Pending reviews", performanceToday.pending],
+              ["Leave requests", leavePending],
             ].map(([label, value]) => (
               <div key={label} className="border border-mist/70 bg-canvas/70 p-4">
                 <dt className="font-ui text-[10px] uppercase tracking-[.16em] text-taupe">{label}</dt>
@@ -366,6 +376,8 @@ export default function AdminDashboard() {
           {[
             { label: "View orders", to: "/admin/orders", ready: true },
             { label: "View inventory", to: "/admin/inventory", ready: true },
+            { label: "Attendance", to: "/admin/attendance", ready: true },
+            { label: "Performance", to: "/admin/performance", ready: true },
             { label: "Add product", to: "/admin/products", ready: true },
           ].map((action) => (
             <Link

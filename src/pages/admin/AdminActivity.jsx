@@ -19,7 +19,7 @@ export default function AdminActivity() {
           Activity <span className="italic text-accent">log.</span>
         </>
       }
-      description="People events recorded across both portals: accounts created, roles and departments changed, passwords reset, accounts suspended and activated."
+      description="People, catalogue and workforce events recorded across both portals. Check-ins, leave decisions and performance reviews sit in this same diary."
     >
       <ActivityFeed entries={activity} />
       <p className="mt-6 font-ui text-[11px] text-taupe">

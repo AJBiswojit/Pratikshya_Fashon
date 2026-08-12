@@ -14,7 +14,9 @@ import { PERMISSIONS } from "../../../config/employeePermissions";
 import { getDepartmentLabel, getSectionLabel, getStoreLabel } from "../../../config/employeeDepartments";
 import { getRoleLabel } from "../../../config/employeeRoles";
 import { employeeFullName, formatEmployeeDate, formatEmployeeDateTime } from "../../../utils/employee";
-import { attendanceFor } from "../../../services/employees/operationsService";
+import { getTodayAttendance } from "../../../services/workforce/attendanceService";
+import { formatTime } from "../../../services/workforce/dateUtils";
+import { AttendanceStatusBadge } from "../../../components/workforce/WorkforceBadges";
 
 export default function EmployeeDetail() {
   const { employeeId } = useParams();
@@ -48,7 +50,7 @@ export default function EmployeeDetail() {
   const canSuspend = hasPermission(PERMISSIONS.EMPLOYEES_SUSPEND) || canManage;
   const canReset = hasPermission(PERMISSIONS.EMPLOYEES_RESET_PASSWORD) || canManage;
   const canEdit = hasPermission(PERMISSIONS.EMPLOYEES_EDIT) || canManage;
-  const attendance = attendanceFor(person.employeeId);
+  const attendance = getTodayAttendance(person.employeeId);
 
   const run = async () => {
     if (confirm === "suspend") await suspendEmployee(person.employeeId);
@@ -139,12 +141,20 @@ export default function EmployeeDetail() {
         <div className="space-y-6">
           <section className="border border-mist/80 bg-surface/40 p-6">
             <h2 className="font-display text-2xl font-light">Attendance today</h2>
-            <p className="mt-2 font-ui text-sm text-taupe">
-              {attendance.status.replaceAll("_", " ").toLowerCase()}
-              {attendance.checkedInAt ? ` · in ${formatEmployeeDateTime(attendance.checkedInAt)}` : ""}
-            </p>
+            <div className="mt-3 flex flex-wrap items-center gap-3">
+              <AttendanceStatusBadge status={attendance?.status} />
+              <p className="font-ui text-sm text-taupe">
+                {attendance?.checkIn ? `In ${formatTime(attendance.checkIn)}` : "Not checked in"}
+                {attendance?.checkOut ? ` · out ${formatTime(attendance.checkOut)}` : ""}
+              </p>
+            </div>
+            {hasPermission(PERMISSIONS.ATTENDANCE_MANAGE) ? (
+              <Link to="/employee/attendance" className="mt-3 inline-block font-ui text-[12px] text-brass hover:text-accent">
+                Open attendance
+              </Link>
+            ) : null}
           </section>
-          <PerformancePanel employeeId={person.employeeId} compact />
+          <PerformancePanel employeeId={person.employeeId} compact to={`/employee/performance/${person.employeeId}`} />
         </div>
       </div>
 

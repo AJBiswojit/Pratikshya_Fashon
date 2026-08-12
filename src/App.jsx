@@ -12,6 +12,7 @@ import { OrderProvider } from "./context/OrderContext";
 import { EmployeeAuthProvider } from "./context/EmployeeAuthContext";
 import { EmployeeManagementProvider } from "./context/EmployeeManagementContext";
 import { AdminAuthProvider } from "./context/AdminAuthContext";
+import { WorkforceProvider } from "./context/WorkforceContext";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 import EmployeeProtectedRoute from "./components/employee/EmployeeProtectedRoute";
 import AdminProtectedRoute from "./components/admin/AdminProtectedRoute";
@@ -53,6 +54,7 @@ const EmployeeChangePassword = lazy(() => import("./pages/employee/EmployeeChang
 const EmployeeDashboard = lazy(() => import("./pages/employee/EmployeeDashboard"));
 const EmployeeProfile = lazy(() => import("./pages/employee/EmployeeProfile"));
 const EmployeeAttendance = lazy(() => import("./pages/employee/EmployeeAttendance"));
+const EmployeeLeave = lazy(() => import("./pages/employee/EmployeeLeave"));
 const EmployeePerformance = lazy(() => import("./pages/employee/EmployeePerformance"));
 const EmployeeProducts = lazy(() => import("./pages/employee/EmployeeProducts"));
 const EmployeeProductForm = lazy(() => import("./pages/employee/EmployeeProductForm"));
@@ -85,6 +87,10 @@ const AdminRoleDetail = lazy(() => import("./pages/admin/AdminRoleDetail"));
 const AdminActivity = lazy(() => import("./pages/admin/AdminActivity"));
 const AdminProfile = lazy(() => import("./pages/admin/AdminProfile"));
 const AdminModulePlaceholder = lazy(() => import("./pages/admin/AdminModulePlaceholder"));
+const AdminAttendance = lazy(() => import("./pages/admin/attendance/AdminAttendance"));
+const AdminAttendanceDetail = lazy(() => import("./pages/admin/attendance/AdminAttendanceDetail"));
+const AdminPerformance = lazy(() => import("./pages/admin/performance/AdminPerformance"));
+const AdminPerformanceDetail = lazy(() => import("./pages/admin/performance/AdminPerformanceDetail"));
 const AdminProducts = lazy(() => import("./pages/admin/AdminProducts"));
 const ProductForm = lazy(() => import("./pages/admin/ProductForm"));
 const AdminProductDetail = lazy(() => import("./pages/admin/AdminProductDetail"));
@@ -150,6 +156,7 @@ export default function App() {
                   <EmployeeAuthProvider>
                   <EmployeeManagementProvider>
                     <AdminAuthProvider>
+                    <WorkforceProvider>
                     <Suspense fallback={<LoadingState label="Opening PRATIKSHYA FASHON" />}>
                     <Routes>
                       <Route path="/admin/login" element={<AdminLogin />} />
@@ -210,8 +217,10 @@ export default function App() {
                           <Route path="/admin/inventory/low-stock" element={<InventoryLowStockPage portal="admin" />} />
                           <Route path="/admin/warehouses" element={<Navigate to="/admin/inventory?locationType=WAREHOUSE" replace />} />
                           <Route path="/admin/stock-movements" element={<Navigate to="/admin/inventory/movements" replace />} />
-                          <Route path="/admin/attendance" element={<AdminModulePlaceholder />} />
-                          <Route path="/admin/performance" element={<AdminModulePlaceholder />} />
+                          <Route path="/admin/attendance" element={<AdminAttendance />} />
+                          <Route path="/admin/attendance/:employeeId" element={<AdminAttendanceDetail />} />
+                          <Route path="/admin/performance" element={<AdminPerformance />} />
+                          <Route path="/admin/performance/:employeeId" element={<AdminPerformanceDetail />} />
                           <Route path="/admin/analytics/sales" element={<AdminModulePlaceholder />} />
                           <Route path="/admin/analytics/products" element={<AdminModulePlaceholder />} />
                           <Route path="/admin/analytics/customers" element={<AdminModulePlaceholder />} />
@@ -231,7 +240,9 @@ export default function App() {
                           <Route path="/employee" element={<EmployeeDashboard />} />
                           <Route path="/employee/profile" element={<EmployeeProfile />} />
                           <Route path="/employee/attendance" element={<EmployeeAttendance />} />
+                          <Route path="/employee/attendance/leave" element={<EmployeeLeave />} />
                           <Route path="/employee/performance" element={<EmployeePerformance />} />
+                          <Route path="/employee/performance/:employeeId" element={<EmployeePerformance />} />
                           <Route path="/employee/access-denied" element={<EmployeeAccessDenied />} />
                           <Route path="/employee/media" element={<EmployeeMediaDashboard />} />
                           <Route path="/employee/media/upload" element={<EmployeeMediaUpload />} />
@@ -336,6 +347,7 @@ export default function App() {
                       </Route>
                     </Routes>
                     </Suspense>
+                    </WorkforceProvider>
                     </AdminAuthProvider>
                   </EmployeeManagementProvider>
                   </EmployeeAuthProvider>

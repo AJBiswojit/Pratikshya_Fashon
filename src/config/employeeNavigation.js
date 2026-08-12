@@ -43,6 +43,7 @@ export const EMPLOYEE_ROUTE_RULES = [
   { path: "/employee/returns", permission: P.RETURNS_VIEW, prefix: true },
   { path: "/employee/support", permission: P.SUPPORT_VIEW, prefix: true },
   { path: "/employee/styling", permission: P.STYLING_VIEW, prefix: true },
+  { path: "/employee/attendance/leave", permission: P.LEAVE_VIEW, prefix: true },
   { path: "/employee/attendance", permission: P.ATTENDANCE_VIEW, prefix: true },
   { path: "/employee/performance", permission: P.PERFORMANCE_VIEW, prefix: true },
   { path: "/employee/profile", permission: P.PROFILE_VIEW, prefix: true },
@@ -115,6 +116,7 @@ export const ROLE_NAV_SEQUENCE = {
     "media",
     "reports",
     "attendance",
+    "performance",
     "profile",
   ],
   STORE_MANAGER: [
@@ -132,6 +134,7 @@ export const ROLE_NAV_SEQUENCE = {
     "team",
     "reports",
     "attendance",
+    "performance",
     "profile",
   ],
   SALES_EXECUTIVE: [
@@ -157,6 +160,8 @@ export const ROLE_NAV_SEQUENCE = {
     "products",
     "media",
     "reports",
+    "attendance",
+    "performance",
     "profile",
   ],
   INVENTORY_STAFF: [
@@ -167,6 +172,7 @@ export const ROLE_NAV_SEQUENCE = {
     "transfers",
     "low-stock",
     "attendance",
+    "performance",
     "profile",
   ],
   WAREHOUSE_STAFF: [
@@ -179,6 +185,7 @@ export const ROLE_NAV_SEQUENCE = {
     "movements",
     "media",
     "attendance",
+    "performance",
     "profile",
   ],
   CUSTOMER_SUPPORT: [
@@ -189,6 +196,7 @@ export const ROLE_NAV_SEQUENCE = {
     "offers",
     "support",
     "inventory",
+    "attendance",
     "performance",
     "profile",
   ],
@@ -201,6 +209,7 @@ export const ROLE_NAV_SEQUENCE = {
     "customers",
     "products",
     "inventory",
+    "attendance",
     "performance",
     "profile",
   ],

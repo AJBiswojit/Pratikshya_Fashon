@@ -83,7 +83,20 @@ export const PERMISSIONS = {
   PROFILE_EDIT: "profile.edit",
 
   ATTENDANCE_VIEW: "attendance.view",
+  ATTENDANCE_CHECKIN: "attendance.checkin",
+  ATTENDANCE_CHECKOUT: "attendance.checkout",
+  ATTENDANCE_MANAGE: "attendance.manage",
+  ATTENDANCE_CORRECT: "attendance.correct",
+
+  LEAVE_CREATE: "leave.create",
+  LEAVE_VIEW: "leave.view",
+  LEAVE_APPROVE: "leave.approve",
+  LEAVE_REJECT: "leave.reject",
+  LEAVE_MANAGE: "leave.manage",
+
   PERFORMANCE_VIEW: "performance.view",
+  PERFORMANCE_MANAGE: "performance.manage",
+  PERFORMANCE_REVIEW: "performance.review",
   TEAM_VIEW: "team.view",
 
   SUPPORT_VIEW: "support.view",
@@ -102,6 +115,10 @@ export const PERMISSION_CATALOGUE = [
       { key: PERMISSIONS.PROFILE_VIEW, label: "View profile" },
       { key: PERMISSIONS.PROFILE_EDIT, label: "Edit own profile" },
       { key: PERMISSIONS.ATTENDANCE_VIEW, label: "View attendance" },
+      { key: PERMISSIONS.ATTENDANCE_CHECKIN, label: "Check in" },
+      { key: PERMISSIONS.ATTENDANCE_CHECKOUT, label: "Check out" },
+      { key: PERMISSIONS.LEAVE_VIEW, label: "View leave" },
+      { key: PERMISSIONS.LEAVE_CREATE, label: "Request leave" },
       { key: PERMISSIONS.PERFORMANCE_VIEW, label: "View performance" },
     ],
   },

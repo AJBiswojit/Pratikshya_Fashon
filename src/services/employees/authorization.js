@@ -27,6 +27,27 @@ export const hasPermission = (employee, permission) => {
   ) {
     return true;
   }
+  if (
+    String(permission).startsWith("attendance.") &&
+    permission !== PERMISSIONS.ATTENDANCE_MANAGE &&
+    employee.permissions.includes(PERMISSIONS.ATTENDANCE_MANAGE)
+  ) {
+    return true;
+  }
+  if (
+    String(permission).startsWith("leave.") &&
+    permission !== PERMISSIONS.LEAVE_MANAGE &&
+    employee.permissions.includes(PERMISSIONS.LEAVE_MANAGE)
+  ) {
+    return true;
+  }
+  if (
+    String(permission).startsWith("performance.") &&
+    permission !== PERMISSIONS.PERFORMANCE_MANAGE &&
+    employee.permissions.includes(PERMISSIONS.PERFORMANCE_MANAGE)
+  ) {
+    return true;
+  }
   return false;
 };
 
