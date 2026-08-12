@@ -31,9 +31,44 @@ import {
 export function SectionContent({ draft, patch }) {
   return (
     <div className="space-y-8">
+      {/* Short & Full Description */}
+      <div className="grid gap-6 lg:grid-cols-2 border-b border-mist/70 pb-8">
+        <Field
+          label="Short description"
+          hint="One considered line for cards, headers and quick previews."
+          htmlFor="pf-content-short"
+          className="lg:col-span-2"
+        >
+          <TextArea
+            id="pf-content-short"
+            rows={2}
+            value={draft.shortDescription}
+            onChange={(event) => patch({ shortDescription: event.target.value })}
+            placeholder="A handloom Banarasi silk saree in rich tones with delicate gold zari."
+          />
+        </Field>
+
+        <Field
+          label="Full description"
+          required
+          hint="The story told in the product details section."
+          htmlFor="pf-content-description"
+          className="lg:col-span-2"
+        >
+          <TextArea
+            id="pf-content-description"
+            rows={5}
+            value={draft.description}
+            onChange={(event) => patch({ description: event.target.value })}
+            placeholder="Woven with pure silk threads, this piece celebrates traditional craftsmanship with intricate zari motifs..."
+          />
+        </Field>
+      </div>
+
+      {/* Highlights */}
       <Field
         label="Highlights"
-        hint="Short bullet points shown beside the price."
+        hint="Key features and selling points, shown beside the price on the product page."
       >
         <ListEditor
           ariaLabel="Product highlights"
@@ -43,29 +78,34 @@ export function SectionContent({ draft, patch }) {
         />
       </Field>
 
-      <Field label="Specifications" hint="Structured facts, shown in the details accordion.">
+      {/* Specifications */}
+      <Field label="Specifications" hint="Structured product attributes shown in the details accordion.">
         <KeyValueEditor
           value={draft.specifications}
           onChange={(specifications) => patch({ specifications })}
+          keyPlaceholder="e.g. Saree Length, Blouse Piece, Weave"
+          valuePlaceholder="e.g. 5.5 Metres, 0.8 Metre Included, Handloom"
         />
       </Field>
 
+      {/* Care Instructions */}
       <Field
         label="Care instructions"
-        hint="Blank falls back to the house care copy for the fabric."
+        hint="Fabric care guidelines for longevity. Blank falls back to house defaults."
       >
         <ListEditor
           ariaLabel="Care instructions"
           value={draft.careInstructions}
           onChange={(careInstructions) => patch({ careInstructions })}
-          placeholder="Dry clean only…"
+          placeholder="Dry clean only with a specialist familiar with Indian occasion wear…"
         />
       </Field>
 
-      <div className="grid gap-6 lg:grid-cols-2">
+      {/* Delivery & Returns */}
+      <div className="grid gap-6 lg:grid-cols-2 border-t border-mist/70 pt-6">
         <Field
           label="Delivery information"
-          hint="Stored once here — never hardcoded into components."
+          hint="Delivery timelines and dispatch details."
           htmlFor="pf-delivery"
         >
           <TextArea
@@ -73,7 +113,7 @@ export function SectionContent({ draft, patch }) {
             rows={3}
             value={draft.deliveryInfo}
             onChange={(event) => patch({ deliveryInfo: event.target.value })}
-            placeholder="Dispatch within 2–3 working days."
+            placeholder="Complimentary express delivery across India. Dispatched within 2–3 working days."
           />
         </Field>
 
@@ -85,7 +125,7 @@ export function SectionContent({ draft, patch }) {
               onChange={(event) =>
                 patch({ returnPolicy: { ...draft.returnPolicy, eligibility: event.target.value } })
               }
-              placeholder="House default"
+              placeholder="House default (Returnable)"
               options={RETURN_ELIGIBILITY_OPTIONS.map((option) => ({
                 value: option.id,
                 label: option.label,
@@ -110,7 +150,7 @@ export function SectionContent({ draft, patch }) {
               onChange={(event) =>
                 patch({ returnPolicy: { ...draft.returnPolicy, notes: event.target.value } })
               }
-              placeholder="Unworn, with original tags."
+              placeholder="Unworn, with original tags intact."
             />
           </Field>
         </div>
@@ -118,7 +158,7 @@ export function SectionContent({ draft, patch }) {
 
       <Field
         label="Customer-facing return line"
-        hint="Composed automatically from the fields above — edit only to override."
+        hint="Composed summary shown to customers — edit only to override."
         htmlFor="pf-return-line"
       >
         <TextArea
@@ -126,6 +166,7 @@ export function SectionContent({ draft, patch }) {
           rows={2}
           value={draft.returnInfo}
           onChange={(event) => patch({ returnInfo: event.target.value })}
+          placeholder="Easy returns within 7 days of delivery, subject to unworn condition and original tags."
         />
       </Field>
     </div>
@@ -136,7 +177,7 @@ export function SectionContent({ draft, patch }) {
 /* 6 · Media — summary of the Phase 12 register, never a second store  */
 /* ------------------------------------------------------------------ */
 
-export function SectionMedia({ draft, portal }) {
+export function SectionMedia({ draft, patch, portal }) {
   const { items, summary } = useProductMedia(draft.id);
   const isSaved = Boolean(draft.id && draft.exists);
   const cover = items.find((item) => item.role === "COVER") ?? items[0];
@@ -145,71 +186,101 @@ export function SectionMedia({ draft, portal }) {
       ? `/admin/products/${draft.id}/media`
       : `/employee/media/upload?product=${draft.id}`;
 
-  if (!isSaved) {
-    return (
-      <div className="border border-mist/80 bg-canvas p-6">
-        <p className="font-display text-xl font-light text-ink">Save the product first.</p>
-        <p className="mt-2 max-w-lg font-ui text-sm leading-relaxed text-taupe">
-          Media lives in the shared PRATIKSHYA FASHON media register and attaches to a product
-          id. Once this product is saved, photos and film can be added, covered and reordered
-          from the media manager.
-        </p>
-      </div>
-    );
-  }
+  const hasCoverImage = Boolean(summary.hasCover || draft.image || cover?.url || cover?.thumbnail);
+  const imageCount = isSaved ? summary.images : (draft.image ? 1 : 0);
+  const videoCount = isSaved ? summary.videos : 0;
 
   return (
     <div className="space-y-6">
+      {/* Media Metrics Display */}
       <div className="grid gap-3 sm:grid-cols-3">
         <div className="border border-mist/80 bg-canvas p-4">
-          <p className="font-ui text-[10px] uppercase tracking-[.18em] text-taupe">Cover</p>
+          <p className="font-ui text-[10px] uppercase tracking-[.18em] text-taupe">Cover Image</p>
           <p className="mt-2 flex items-center gap-2 font-ui text-sm text-ink">
-            {summary.hasCover || draft.image ? (
+            {hasCoverImage ? (
               <>
-                <Check size={14} className="text-ink" aria-hidden="true" /> Cover set
+                <Check size={14} className="text-accent" aria-hidden="true" /> Cover set
               </>
             ) : (
-              <span className="text-accent">Needs cover</span>
+              <span className="text-accent font-medium">Needs cover</span>
             )}
           </p>
         </div>
         <div className="border border-mist/80 bg-canvas p-4">
           <p className="font-ui text-[10px] uppercase tracking-[.18em] text-taupe">Images</p>
           <p className="mt-2 flex items-center gap-2 font-ui text-sm text-ink">
-            <ImageIcon size={14} aria-hidden="true" /> {summary.images} image{summary.images === 1 ? "" : "s"}
+            <ImageIcon size={14} aria-hidden="true" /> {imageCount} image{imageCount === 1 ? "" : "s"}
           </p>
         </div>
         <div className="border border-mist/80 bg-canvas p-4">
           <p className="font-ui text-[10px] uppercase tracking-[.18em] text-taupe">Videos</p>
           <p className="mt-2 flex items-center gap-2 font-ui text-sm text-ink">
-            <Film size={14} aria-hidden="true" /> {summary.videos} video{summary.videos === 1 ? "" : "s"}
+            <Film size={14} aria-hidden="true" /> {videoCount} video{videoCount === 1 ? "" : "s"}
             <span className="text-[10px] uppercase tracking-[.14em] text-taupe">optional</span>
           </p>
         </div>
       </div>
 
-      {cover?.url || cover?.thumbnail ? (
-        <img
-          src={cover.url || cover.thumbnail}
-          alt={cover.alt || `${draft.name} cover`}
-          className="h-56 w-full max-w-sm object-cover"
-        />
-      ) : draft.image ? (
-        <img src={draft.image} alt={`${draft.name} catalogue plate`} className="h-56 w-full max-w-sm object-cover" />
-      ) : null}
+      {/* Cover image preview or assignment */}
+      <div className="grid gap-6 sm:grid-cols-2">
+        <div>
+          <Field
+            label="Cover image URL / plate"
+            hint="Manifest key, plate id or direct image URL for the primary cover."
+            htmlFor="pf-cover-input"
+          >
+            <TextInput
+              id="pf-cover-input"
+              value={draft.image || ""}
+              onChange={(event) => patch({ image: event.target.value })}
+              placeholder="saree-banarasi or https://images.pratikshya.com/..."
+            />
+          </Field>
+        </div>
 
-      <div className="border border-mist/80 bg-surface/40 p-5">
-        <p className="font-ui text-sm leading-relaxed text-ink">
-          Add photos and videos, set the cover and reorder the gallery in the media manager —
-          the same register the storefront reads.
-        </p>
-        <Link
-          to={mediaHref}
-          className="mt-3 inline-flex items-center gap-2 border border-ink px-4 py-2 font-ui text-[10px] uppercase tracking-[.14em] text-ink transition-colors hover:bg-ink hover:text-ivory"
-        >
-          <Star size={12} aria-hidden="true" /> Manage media <ExternalLink size={11} aria-hidden="true" />
-        </Link>
+        <div>
+          <p className="mb-2 font-ui text-[10px] uppercase tracking-[.18em] text-ink">Cover Preview</p>
+          {cover?.url || cover?.thumbnail ? (
+            <img
+              src={cover.url || cover.thumbnail}
+              alt={cover.alt || `${draft.name} cover`}
+              className="h-44 w-full max-w-xs object-cover border border-mist"
+            />
+          ) : draft.image ? (
+            <img
+              src={draft.image.startsWith("http") || draft.image.startsWith("/") || draft.image.startsWith("data:") ? draft.image : `/images/${draft.image}.jpg`}
+              alt={`${draft.name} catalogue plate`}
+              className="h-44 w-full max-w-xs object-cover border border-mist"
+              onError={(e) => {
+                e.currentTarget.style.display = "none";
+              }}
+            />
+          ) : (
+            <div className="flex h-44 w-full max-w-xs items-center justify-center border border-dashed border-mist bg-canvas text-center p-4">
+              <span className="font-ui text-xs text-taupe">No cover image specified yet.</span>
+            </div>
+          )}
+        </div>
       </div>
+
+      {isSaved ? (
+        <div className="border border-mist/80 bg-surface/40 p-5">
+          <p className="font-ui text-sm leading-relaxed text-ink">
+            Manage the complete gallery, reorder images, upload lookbook photos and add videos
+            via the dedicated Media Manager.
+          </p>
+          <Link
+            to={mediaHref}
+            className="mt-3 inline-flex items-center gap-2 border border-ink bg-ink px-4 py-2 font-ui text-[10px] uppercase tracking-[.14em] text-ivory transition-colors hover:bg-transparent hover:text-ink"
+          >
+            <Star size={12} aria-hidden="true" /> Manage Product Media <ExternalLink size={11} aria-hidden="true" />
+          </Link>
+        </div>
+      ) : (
+        <div className="border border-mist/80 bg-canvas p-4 text-taupe font-ui text-xs">
+          Tip: Save this product as a draft to upload multi-angle photos and videos via the Media Manager.
+        </div>
+      )}
     </div>
   );
 }
@@ -240,21 +311,23 @@ export function SectionSeo({ draft, patch, errors }) {
       <Field label="SEO title" hint="Defaults to the product name when blank." htmlFor="pf-seo-title">
         <TextInput
           id="pf-seo-title"
-          value={draft.seo.title}
-          onChange={(event) => patch({ seo: { ...draft.seo, title: event.target.value } })}
+          value={draft.seo?.title || ""}
+          onChange={(event) => patch({ seo: { ...(draft.seo || {}), title: event.target.value } })}
+          placeholder={draft.name || "Product title for search engines"}
         />
       </Field>
 
       <Field
         label="SEO description"
-        hint="Shown in search results. Keep it under 160 characters."
+        hint="Shown in search engine results snippets. Recommended under 160 characters."
         htmlFor="pf-seo-description"
       >
         <TextArea
           id="pf-seo-description"
           rows={3}
-          value={draft.seo.description}
-          onChange={(event) => patch({ seo: { ...draft.seo, description: event.target.value } })}
+          value={draft.seo?.description || ""}
+          onChange={(event) => patch({ seo: { ...(draft.seo || {}), description: event.target.value } })}
+          placeholder="A brief search engine summary of this piece..."
         />
       </Field>
     </div>
@@ -276,24 +349,49 @@ export function SectionPublishing({ draft, patch, publishIssues }) {
 
   return (
     <div className="space-y-8">
+      {/* Current Publishing Status */}
       <div className="border border-mist/80 bg-canvas p-5">
         <p className="font-ui text-[10px] uppercase tracking-[.18em] text-taupe">Current status</p>
-        <p className="mt-2 font-display text-2xl font-light text-ink">
-          {getProductStatusLabel(draft.status)}
-        </p>
-        {draft.review?.state === "REJECTED" && draft.review.rejectionReason ? (
-          <p className="mt-3 border border-accent/40 bg-accent/[0.05] p-3 font-ui text-sm text-accent">
-            Rejected — {draft.review.rejectionReason}
+        <div className="mt-2 flex items-center gap-3">
+          <p className="font-display text-2xl font-light text-ink">
+            {getProductStatusLabel(draft.status)}
           </p>
+          <span
+            className={
+              draft.status === "PUBLISHED"
+                ? "border border-ink bg-ink px-2.5 py-0.5 font-ui text-[10px] uppercase tracking-wider text-ivory"
+                : draft.status === "PENDING_REVIEW"
+                  ? "border border-amber-600 bg-amber-50 px-2.5 py-0.5 font-ui text-[10px] uppercase tracking-wider text-amber-800"
+                  : "border border-mist bg-surface px-2.5 py-0.5 font-ui text-[10px] uppercase tracking-wider text-taupe"
+            }
+          >
+            {draft.status}
+          </span>
+        </div>
+
+        {draft.review?.state === "REJECTED" && draft.review.rejectionReason ? (
+          <div className="mt-4 border border-accent/40 bg-accent/[0.05] p-4">
+            <p className="font-ui text-[10px] uppercase tracking-[.18em] text-accent font-semibold">
+              Rejection Reason from Reviewer
+            </p>
+            <p className="mt-1 font-ui text-sm text-accent">
+              {draft.review.rejectionReason}
+            </p>
+            <p className="mt-2 font-ui text-xs text-taupe">
+              Please update the requested fields and click &quot;Submit for review&quot; below to resubmit.
+            </p>
+          </div>
         ) : null}
+
         {draft.review?.state === "PENDING" ? (
           <p className="mt-3 font-ui text-[11px] text-taupe">
             Submitted {draft.review.submittedAt ? new Date(draft.review.submittedAt).toLocaleString("en-IN") : ""}
-            {draft.review.submittedBy ? ` by ${draft.review.submittedBy}` : ""} — awaiting review.
+            {draft.review.submittedBy ? ` by ${draft.review.submittedBy}` : ""} — awaiting manager or admin approval.
           </p>
         ) : null}
       </div>
 
+      {/* Merchandising Flags */}
       <div>
         <p className="mb-2 font-ui text-[10px] uppercase tracking-[.18em] text-ink">Merchandising flags</p>
         <div className="border border-mist/80 bg-canvas px-4 py-1">
@@ -309,10 +407,11 @@ export function SectionPublishing({ draft, patch, publishIssues }) {
         </div>
       </div>
 
+      {/* Inventory preparation */}
       <div>
         <p className="mb-2 font-ui text-[10px] uppercase tracking-[.18em] text-ink">Inventory preparation</p>
         <p className="mb-3 font-ui text-[11px] text-taupe">
-          Fields for Phase 14 — no stock movements are managed in this phase.
+          Preparation fields for stock tracking. Movements arrive in future phases.
         </p>
         <div className="border border-mist/80 bg-canvas px-4 py-1">
           <ToggleRow
@@ -344,9 +443,12 @@ export function SectionPublishing({ draft, patch, publishIssues }) {
         </div>
       </div>
 
+      {/* Publishing Readiness Checklist */}
       {publishIssues.length ? (
         <div className="border border-accent/40 bg-accent/[0.05] p-4">
-          <p className="font-ui text-[10px] uppercase tracking-[.18em] text-accent">Before publishing</p>
+          <p className="font-ui text-[10px] uppercase tracking-[.18em] text-accent font-semibold">
+            Before Publishing ({publishIssues.length} issue{publishIssues.length === 1 ? "" : "s"} to resolve)
+          </p>
           <ul className="mt-2 space-y-1.5">
             {publishIssues.map((issue) => (
               <li key={issue} className="font-ui text-sm text-accent">
@@ -357,7 +459,7 @@ export function SectionPublishing({ draft, patch, publishIssues }) {
         </div>
       ) : (
         <p className="border border-mist/80 bg-canvas p-4 font-ui text-sm text-ink">
-          ✓ This product meets every publishing requirement.
+          ✓ This product meets every publishing requirement and is ready to go live.
         </p>
       )}
     </div>

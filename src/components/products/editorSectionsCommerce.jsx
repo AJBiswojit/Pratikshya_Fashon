@@ -4,7 +4,7 @@
  * file only renders it.
  */
 
-import { Plus, X } from "lucide-react";
+import { Plus, Trash2, X } from "lucide-react";
 import {
   COLOR_OPTIONS,
   GST_RATES,
@@ -12,7 +12,7 @@ import {
   TAX_MODE_OPTIONS,
   VARIANT_STATUSES,
 } from "../../config/productCatalogConfig";
-import { DISCOUNT_TYPE_OPTIONS, computePricing } from "../../utils/pricing";
+import { DISCOUNT_TYPE_OPTIONS, computePricing, resolveVariantPrice } from "../../utils/pricing";
 import { formatINR } from "../../utils/shopping";
 import catalogRepository from "../../services/catalogRepository";
 import { cn } from "../../utils/cn";
@@ -30,6 +30,7 @@ export function SectionPricing({ draft, patch }) {
 
   return (
     <div className="space-y-8">
+      {/* Input controls */}
       <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
         <Field
           label="MRP (₹)"
@@ -43,6 +44,7 @@ export function SectionPricing({ draft, patch }) {
             step="1"
             value={pricing.mrp}
             onChange={(event) => setPricing({ mrp: event.target.value })}
+            placeholder="8999"
           />
         </Field>
 
@@ -58,6 +60,7 @@ export function SectionPricing({ draft, patch }) {
             step="1"
             value={pricing.sellingPrice}
             onChange={(event) => setPricing({ sellingPrice: event.target.value })}
+            placeholder="7499"
           />
         </Field>
 
@@ -82,43 +85,95 @@ export function SectionPricing({ draft, patch }) {
               step={pricing.discountType === "percentage" ? "0.5" : "1"}
               value={pricing.discountValue}
               onChange={(event) => setPricing({ discountValue: event.target.value })}
+              placeholder={pricing.discountType === "percentage" ? "10" : "500"}
             />
           </Field>
         ) : null}
-
-        <div aria-live="polite" className="border border-mist/80 bg-canvas p-4 sm:col-span-2 lg:col-span-1">
-          <p className={labelClass}>Final price</p>
-          <p className="mt-2 font-display text-3xl font-light text-ink">
-            {formatINR(computed.finalPrice)}
-          </p>
-          <p className="mt-1 font-ui text-[11px] text-taupe">
-            {computed.discountAmount > 0
-              ? `${formatINR(computed.discountAmount)} discount applied`
-              : "No discount applied"}
-            {computed.savings > 0 ? ` · saves ${formatINR(computed.savings)} on MRP` : ""}
-          </p>
-        </div>
       </div>
 
+      {/* Visible Pricing Summary & Calculation Matrix */}
+      <div
+        aria-live="polite"
+        className="border border-mist bg-canvas p-5 sm:p-6"
+      >
+        <p className="font-ui text-[10px] uppercase tracking-[.22em] text-accent">
+          Pricing Calculation Summary
+        </p>
+        <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
+          <div className="border-l border-mist/80 pl-3">
+            <p className="font-ui text-[10px] uppercase tracking-wider text-taupe">MRP</p>
+            <p className="mt-1 font-display text-lg text-ink">
+              {computed.mrp > 0 ? formatINR(computed.mrp) : "—"}
+            </p>
+          </div>
+          <div className="border-l border-mist/80 pl-3">
+            <p className="font-ui text-[10px] uppercase tracking-wider text-taupe">Selling Price</p>
+            <p className="mt-1 font-display text-lg text-ink">
+              {computed.sellingPrice > 0 ? formatINR(computed.sellingPrice) : "—"}
+            </p>
+          </div>
+          <div className="border-l border-mist/80 pl-3">
+            <p className="font-ui text-[10px] uppercase tracking-wider text-taupe">Discount</p>
+            <p className="mt-1 font-display text-lg text-ink">
+              {pricing.discountType === "percentage" && pricing.discountValue > 0
+                ? `${pricing.discountValue}%`
+                : pricing.discountType === "fixed" && pricing.discountValue > 0
+                  ? formatINR(pricing.discountValue)
+                  : computed.effectiveDiscountPercent > 0
+                    ? `${computed.effectiveDiscountPercent}%`
+                    : "0%"}
+            </p>
+          </div>
+          <div className="border-l border-mist/80 pl-3">
+            <p className="font-ui text-[10px] uppercase tracking-wider text-taupe">GST Rate</p>
+            <p className="mt-1 font-display text-lg text-ink">{pricing.taxRate ?? 0}%</p>
+          </div>
+          <div className="border-l border-mist/80 pl-3">
+            <p className="font-ui text-[10px] uppercase tracking-wider text-taupe">Tax Mode</p>
+            <p className="mt-1 font-display text-lg text-ink">
+              {pricing.taxMode === "EXCLUSIVE" ? "Exclusive" : "Inclusive"}
+            </p>
+          </div>
+          <div className="border-l-2 border-ink pl-3 bg-surface/30 p-2">
+            <p className="font-ui text-[10px] uppercase tracking-wider text-ink font-semibold">Final Price</p>
+            <p className="mt-1 font-display text-xl font-medium text-ink">
+              {computed.finalPrice > 0 ? formatINR(computed.finalPrice) : "—"}
+            </p>
+          </div>
+        </div>
+
+        {computed.savings > 0 ? (
+          <p className="mt-4 font-ui text-[11px] text-taupe border-t border-mist/60 pt-3">
+            Customer saves <span className="font-medium text-ink">{formatINR(computed.savings)}</span> ({computed.effectiveDiscountPercent}% off list MRP)
+          </p>
+        ) : null}
+      </div>
+
+      {/* Real-time Pricing Validation Announcements */}
       {computed.errors.length ? (
-        <ul
+        <div
           role="alert"
-          className="space-y-1.5 border border-accent/40 bg-accent/[0.05] p-4"
-          aria-label="Pricing issues"
+          className="border border-accent/40 bg-accent/[0.05] p-4"
+          aria-label="Pricing validation errors"
         >
-          {computed.errors.map((error) => (
-            <li key={error} className="font-ui text-sm text-accent">
-              — {error}
-            </li>
-          ))}
-        </ul>
+          <p className="font-ui text-[10px] uppercase tracking-[.18em] text-accent font-semibold">
+            Pricing Validation Issues ({computed.errors.length})
+          </p>
+          <ul className="mt-2 space-y-1">
+            {computed.errors.map((error) => (
+              <li key={error} className="font-ui text-sm text-accent">
+                — {error}
+              </li>
+            ))}
+          </ul>
+        </div>
       ) : null}
 
+      {/* Tax / GST section */}
       <div className="border-t border-mist/70 pt-6">
         <p className="font-ui text-[10px] uppercase tracking-[.24em] text-accent">Tax / GST</p>
         <p className="mt-2 max-w-xl font-ui text-[11px] leading-relaxed text-taupe">
-          Preparation fields for production integration. This is a client demo — no legal GST
-          claim is made from these values.
+          Specify the GST rate and whether customer pricing is tax-inclusive or exclusive.
         </p>
         <div className="mt-4 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           <Field label="Tax mode" htmlFor="pf-tax-mode">
@@ -157,6 +212,7 @@ export function SectionPricing({ draft, patch }) {
                 step="0.5"
                 value={pricing.taxRate}
                 onChange={(event) => setPricing({ taxRate: event.target.value })}
+                placeholder="18"
               />
             </Field>
           ) : null}
@@ -170,11 +226,11 @@ export function SectionPricing({ draft, patch }) {
 /* 4 · Variants                                                        */
 /* ------------------------------------------------------------------ */
 
-const emptyVariant = () => ({
+const emptyVariant = (color = "", size = "") => ({
   id: `var-new-${Date.now().toString(36)}-${Math.floor(Math.random() * 999)}`,
   sku: "",
-  color: "",
-  size: "",
+  color: color || "",
+  size: size || "",
   priceOverride: "",
   stock: 0,
   barcode: "",
@@ -192,20 +248,30 @@ export function SectionVariants({ draft, patch, errors }) {
 
   const variantSkus = variants.map((variant) => variant.sku).filter(Boolean);
 
+  const handleAddVariant = () => {
+    const defaultColor = draft.colors?.[0] || draft.primaryColor || "";
+    const defaultSize = draft.sizes?.[0] || "Free Size";
+    patch({ variants: [...variants, emptyVariant(defaultColor, defaultSize)] });
+  };
+
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <p className="max-w-xl font-ui text-[11px] leading-relaxed text-taupe">
-          Each variant pairs a colour with a size and may carry its own SKU, barcode and price
-          override. Stock counts are preparation fields — movements arrive with Phase 14.
-          Inactive variants stay stored but are hidden from customers.
-        </p>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <p className="font-ui text-sm font-medium text-ink">
+            Product Variants ({variants.length})
+          </p>
+          <p className="mt-1 max-w-xl font-ui text-[11px] leading-relaxed text-taupe">
+            Each variant pairs a colour with a size and may carry its own SKU, barcode, price override and status.
+            Inactive variants stay stored but are hidden from customers.
+          </p>
+        </div>
         <button
           type="button"
-          onClick={() => patch({ variants: [...variants, emptyVariant()] })}
-          className="inline-flex items-center gap-2 border border-ink px-4 py-2 font-ui text-[10px] uppercase tracking-[.14em] text-ink transition-colors hover:bg-ink hover:text-ivory"
+          onClick={handleAddVariant}
+          className="inline-flex items-center gap-2 border border-ink bg-ink px-4 py-2 font-ui text-[10px] uppercase tracking-[.14em] text-ivory transition-colors hover:bg-transparent hover:text-ink"
         >
-          <Plus size={12} aria-hidden="true" /> Add variant
+          <Plus size={13} aria-hidden="true" /> Add variant
         </button>
       </div>
 
@@ -216,35 +282,51 @@ export function SectionVariants({ draft, patch, errors }) {
       ) : null}
 
       {!variants.length ? (
-        <p className="border border-mist/70 bg-canvas px-4 py-8 text-center font-ui text-sm text-taupe">
-          No variants yet. A product without variants sells in its base colour and size.
-        </p>
+        <div className="border border-dashed border-mist/90 bg-canvas px-4 py-12 text-center">
+          <p className="font-ui text-sm text-taupe">
+            No variants created yet. A product without variants sells in its base colour and size.
+          </p>
+          <button
+            type="button"
+            onClick={handleAddVariant}
+            className="mt-4 inline-flex items-center gap-2 border border-ink px-4 py-2 font-ui text-[10px] uppercase tracking-[.14em] text-ink transition-colors hover:bg-ink hover:text-ivory"
+          >
+            <Plus size={12} aria-hidden="true" /> Create first variant
+          </button>
+        </div>
       ) : (
-        <ul className="space-y-4">
+        <div className="space-y-4">
           {variants.map((variant, index) => {
             const duplicateSku =
               variant.sku && variantSkus.filter((sku) => sku === variant.sku).length > 1;
             const clashWithRegister =
               variant.sku && catalogRepository.skuTaken(variant.sku, draft.id);
 
+            const effectivePrice = resolveVariantPrice(variant, draft.pricing);
+            const variantSummary = `${variant.color || "No color"} | ${variant.size || "No size"} | ${variant.sku || "No SKU"} | ${formatINR(effectivePrice)} | ${variant.status === VARIANT_STATUSES.ACTIVE ? "Active" : "Inactive"}`;
+
             return (
-              <li key={variant.id} className="border border-mist/80 bg-canvas p-4">
-                <div className="mb-3 flex items-center justify-between gap-3">
-                  <p className="font-ui text-[10px] uppercase tracking-[.18em] text-taupe">
-                    Variant {index + 1}
-                    {variant.status === VARIANT_STATUSES.INACTIVE ? " · inactive" : ""}
-                  </p>
+              <div key={variant.id} className="border border-mist/80 bg-canvas p-4 sm:p-5">
+                <div className="mb-4 flex flex-wrap items-center justify-between gap-2 border-b border-mist/60 pb-3">
+                  <div className="flex items-center gap-3">
+                    <span className="bg-ink px-2 py-0.5 font-ui text-[9px] uppercase tracking-wider text-ivory">
+                      #{index + 1}
+                    </span>
+                    <span className="font-ui text-xs text-ink font-medium">
+                      {variantSummary}
+                    </span>
+                  </div>
                   <button
                     type="button"
                     aria-label={`Remove variant ${index + 1}`}
                     onClick={() => removeVariant(variant.id)}
-                    className="inline-flex items-center gap-1 font-ui text-[10px] uppercase tracking-[.14em] text-taupe transition-colors hover:text-accent"
+                    className="inline-flex items-center gap-1 font-ui text-[11px] uppercase tracking-[.14em] text-taupe transition-colors hover:text-accent"
                   >
-                    <X size={12} aria-hidden="true" /> Remove
+                    <Trash2 size={13} aria-hidden="true" /> Remove
                   </button>
                 </div>
 
-                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
                   <Field label="Colour">
                     <Select
                       value={variant.color}
@@ -282,6 +364,21 @@ export function SectionVariants({ draft, patch, errors }) {
                     />
                   </Field>
 
+                  <Field label="Price override" hint="Blank uses product price">
+                    <NumberInput
+                      min="0"
+                      step="1"
+                      value={variant.priceOverride ?? ""}
+                      onChange={(event) =>
+                        setVariant(variant.id, {
+                          priceOverride: event.target.value === "" ? "" : event.target.value,
+                        })
+                      }
+                      placeholder={String(pricing.finalPrice || "")}
+                      aria-label={`Price override for variant ${index + 1}`}
+                    />
+                  </Field>
+
                   <Field label="Barcode">
                     <TextInput
                       value={variant.barcode}
@@ -290,38 +387,8 @@ export function SectionVariants({ draft, patch, errors }) {
                     />
                   </Field>
 
-                  <Field label="Price" hint="Blank uses the product price.">
-                    <div className="flex items-center gap-2">
-                      <NumberInput
-                        min="0"
-                        step="1"
-                        value={variant.priceOverride ?? ""}
-                        onChange={(event) =>
-                          setVariant(variant.id, {
-                            priceOverride: event.target.value === "" ? "" : event.target.value,
-                          })
-                        }
-                        aria-label={`Price override for variant ${index + 1}`}
-                      />
-                      <span className="whitespace-nowrap font-ui text-[10px] uppercase tracking-[.14em] text-taupe">
-                        {variant.priceOverride === "" || variant.priceOverride == null
-                          ? `= ${formatINR(pricing.finalPrice)}`
-                          : "override"}
-                      </span>
-                    </div>
-                  </Field>
-
-                  <Field label="Stock (placeholder)">
-                    <NumberInput
-                      min="0"
-                      step="1"
-                      value={variant.stock}
-                      onChange={(event) => setVariant(variant.id, { stock: event.target.value })}
-                    />
-                  </Field>
-
                   <Field label="Status">
-                    <div className="flex gap-2" role="radiogroup" aria-label={`Variant ${index + 1} status`}>
+                    <div className="flex gap-1 pt-0.5" role="radiogroup" aria-label={`Variant ${index + 1} status`}>
                       {[VARIANT_STATUSES.ACTIVE, VARIANT_STATUSES.INACTIVE].map((status) => (
                         <button
                           key={status}
@@ -330,9 +397,9 @@ export function SectionVariants({ draft, patch, errors }) {
                           aria-checked={variant.status === status}
                           onClick={() => setVariant(variant.id, { status })}
                           className={cn(
-                            "border px-3 py-2 font-ui text-[10px] uppercase tracking-[.14em] transition-colors",
+                            "flex-1 border px-2.5 py-2 font-ui text-[10px] uppercase tracking-[.14em] transition-colors",
                             variant.status === status
-                              ? "border-ink bg-ink text-ivory"
+                              ? "border-ink bg-ink text-ivory font-medium"
                               : "border-mist text-taupe hover:border-ink hover:text-ink"
                           )}
                         >
@@ -342,10 +409,20 @@ export function SectionVariants({ draft, patch, errors }) {
                     </div>
                   </Field>
                 </div>
-              </li>
+              </div>
             );
           })}
-        </ul>
+
+          <div className="pt-2">
+            <button
+              type="button"
+              onClick={handleAddVariant}
+              className="inline-flex items-center gap-2 border border-mist px-4 py-2 font-ui text-[10px] uppercase tracking-[.14em] text-taupe transition-colors hover:border-ink hover:text-ink"
+            >
+              <Plus size={12} aria-hidden="true" /> Add another variant
+            </button>
+          </div>
+        </div>
       )}
     </div>
   );

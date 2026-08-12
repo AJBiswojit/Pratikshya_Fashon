@@ -13,7 +13,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, ArrowLeft, ArrowRight, RotateCcw, Archive } from "lucide-react";
 import { AtelierButton } from "../../design-system";
 import catalogRepository, { getPublishIssues } from "../../services/catalogRepository";
 import { computePricing } from "../../utils/pricing";
@@ -63,6 +63,7 @@ const emptyDraft = () => ({
   collection: "",
   collections: [],
   tags: [],
+  image: "",
   pricing: {
     mrp: "",
     sellingPrice: "",
@@ -93,19 +94,30 @@ const draftFromProduct = (product) => ({
   ...product,
   exists: true,
   id: product.id,
+  image: product.image?.src || product.image || "",
   pricing: {
-    mrp: product.pricing.mrp || "",
-    sellingPrice: product.pricing.sellingPrice || "",
-    discountType: product.pricing.discountType || "none",
-    discountValue: product.pricing.discountValue || "",
-    taxMode: product.pricing.taxMode || "INCLUSIVE",
-    taxRate: product.pricing.taxRate ?? 0,
-    customTaxRate: Boolean(product.pricing.customTaxRate),
+    mrp: product.pricing?.mrp ?? product.originalPrice ?? product.price ?? "",
+    sellingPrice: product.pricing?.sellingPrice ?? product.price ?? "",
+    discountType: product.pricing?.discountType || "none",
+    discountValue: product.pricing?.discountValue || "",
+    taxMode: product.pricing?.taxMode || "INCLUSIVE",
+    taxRate: product.pricing?.taxRate ?? 0,
+    customTaxRate: Boolean(product.pricing?.customTaxRate),
   },
-  variants: product.variants.map((variant) => ({
+  variants: (product.variants || []).map((variant) => ({
     ...variant,
     priceOverride: variant.priceOverride ?? "",
   })),
+  highlights: Array.isArray(product.highlights) ? [...product.highlights] : [],
+  careInstructions: Array.isArray(product.careInstructions) ? [...product.careInstructions] : [],
+  specifications:
+    product.specifications && typeof product.specifications === "object"
+      ? { ...product.specifications }
+      : {},
+  returnPolicy:
+    product.returnPolicy && typeof product.returnPolicy === "object"
+      ? { ...product.returnPolicy }
+      : { eligibility: "", window: "", notes: "" },
 });
 
 /* ------------------------------------------------------------------ */
@@ -288,12 +300,30 @@ export default function ProductEditor({
     }
     const product = persist();
     if (!product) return;
-    announce("Draft saved.");
+    announce("Draft saved successfully.");
     if (isNew) navigate(`${portal === "admin" ? "/admin" : "/employee"}/products/${product.id}/edit`, { replace: true });
   };
 
   const handleSaveAndContinue = () => {
-    handleSaveDraft();
+    if (!draft.name.trim()) {
+      setSection("basics");
+      announce("Give the product a name before saving.", "error");
+      return;
+    }
+    if (errors.sku) {
+      setSection("basics");
+      announce(errors.sku, "error");
+      return;
+    }
+    const product = persist();
+    if (!product) return;
+    const currentIndex = SECTIONS.findIndex((s) => s.id === section);
+    if (currentIndex < SECTIONS.length - 1) {
+      setSection(SECTIONS[currentIndex + 1].id);
+      announce("Progress saved. Moved to next section.");
+    } else {
+      announce("Draft saved successfully.");
+    }
   };
 
   const handleSubmitForReview = () => {
@@ -335,6 +365,28 @@ export default function ProductEditor({
     announce("Published — this piece is now live in the storefront.");
   };
 
+  const handleArchive = () => {
+    if (!draft.id) return;
+    const result = catalogRepository.archiveProduct(draft.id, actor);
+    if (result.ok) {
+      const nextDraft = draftFromProduct(result.product);
+      setDraft(nextDraft);
+      setBaseline(JSON.stringify(nextDraft));
+      announce("Product archived.");
+    }
+  };
+
+  const handleRestore = () => {
+    if (!draft.id) return;
+    const result = catalogRepository.restoreProduct(draft.id, actor);
+    if (result.ok) {
+      const nextDraft = draftFromProduct(result.product);
+      setDraft(nextDraft);
+      setBaseline(JSON.stringify(nextDraft));
+      announce("Product restored to draft.");
+    }
+  };
+
   const handleCancel = () => {
     if (dirty) {
       setConfirmCancel(true);
@@ -359,6 +411,10 @@ export default function ProductEditor({
     }
   };
 
+  const currentSectionIndex = SECTIONS.findIndex((s) => s.id === section);
+  const prevSection = currentSectionIndex > 0 ? SECTIONS[currentSectionIndex - 1] : null;
+  const nextSection = currentSectionIndex < SECTIONS.length - 1 ? SECTIONS[currentSectionIndex + 1] : null;
+
   if (productId && !savedProduct) {
     return (
       <div className="border border-mist/80 bg-canvas p-8 text-center">
@@ -376,6 +432,21 @@ export default function ProductEditor({
 
   return (
     <div className="pb-24">
+      {/* Rejection Alert Header */}
+      {draft.review?.state === "REJECTED" && draft.review.rejectionReason ? (
+        <div className="mb-6 border-l-4 border-accent bg-accent/[0.06] p-4 text-ink">
+          <p className="font-ui text-[11px] uppercase tracking-wider text-accent font-semibold">
+            Action Required: Reviewer Rejection
+          </p>
+          <p className="mt-1 font-ui text-sm font-medium text-accent">
+            &ldquo;{draft.review.rejectionReason}&rdquo;
+          </p>
+          <p className="mt-2 font-ui text-xs text-taupe">
+            Please make the necessary corrections across the tabs below and click &quot;Submit for review&quot; to resubmit.
+          </p>
+        </div>
+      ) : null}
+
       {/* Section tabs */}
       <div className="mb-8 overflow-x-auto border-b border-mist/80" role="tablist" aria-label="Product sections" onKeyDown={onTabKeyDown}>
         <div className="flex min-w-max gap-1">
@@ -398,7 +469,7 @@ export default function ProductEditor({
                 className={cn(
                   "relative whitespace-nowrap px-4 py-3 font-ui text-[10px] uppercase tracking-[.16em] transition-colors",
                   active
-                    ? "border-b-2 border-accent text-ink"
+                    ? "border-b-2 border-accent text-ink font-semibold"
                     : "border-b-2 border-transparent text-taupe hover:text-ink"
                 )}
               >
@@ -451,11 +522,36 @@ export default function ProductEditor({
         {section === "pricing" ? <SectionPricing draft={draft} patch={patch} /> : null}
         {section === "variants" ? <SectionVariants draft={draft} patch={patch} errors={errors} /> : null}
         {section === "content" ? <SectionContent draft={draft} patch={patch} /> : null}
-        {section === "media" ? <SectionMedia draft={draft} portal={portal} /> : null}
+        {section === "media" ? <SectionMedia draft={draft} patch={patch} portal={portal} /> : null}
         {section === "seo" ? <SectionSeo draft={draft} patch={patch} errors={errors} /> : null}
         {section === "publishing" ? (
           <SectionPublishing draft={draft} patch={patch} publishIssues={publishIssues} />
         ) : null}
+
+        {/* Section stepping navigation */}
+        <div className="mt-8 flex flex-wrap items-center justify-between gap-3 border-t border-mist/70 pt-5">
+          {prevSection ? (
+            <button
+              type="button"
+              onClick={() => setSection(prevSection.id)}
+              className="inline-flex items-center gap-1.5 font-ui text-[11px] uppercase tracking-wider text-taupe transition-colors hover:text-ink"
+            >
+              <ArrowLeft size={13} aria-hidden="true" /> {prevSection.label}
+            </button>
+          ) : (
+            <span />
+          )}
+
+          {nextSection ? (
+            <button
+              type="button"
+              onClick={() => setSection(nextSection.id)}
+              className="inline-flex items-center gap-1.5 font-ui text-[11px] uppercase tracking-wider text-ink transition-colors hover:text-accent font-medium"
+            >
+              {nextSection.label} <ArrowRight size={13} aria-hidden="true" />
+            </button>
+          ) : null}
+        </div>
       </div>
 
       {/* Action bar */}
@@ -471,12 +567,23 @@ export default function ProductEditor({
           ) : null}
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          {draft.exists && draft.status === PRODUCT_STATUSES.ARCHIVED ? (
+            <AtelierButton variant="outline" size="chip" onClick={handleRestore}>
+              <RotateCcw size={12} className="mr-1 inline" aria-hidden="true" /> Restore
+            </AtelierButton>
+          ) : draft.exists && canPublish ? (
+            <AtelierButton variant="outline" size="chip" onClick={handleArchive}>
+              <Archive size={12} className="mr-1 inline" aria-hidden="true" /> Archive
+            </AtelierButton>
+          ) : null}
+
           <AtelierButton variant="outline" size="chip" onClick={handleSaveDraft}>
             Save draft
           </AtelierButton>
           <AtelierButton variant="outline" size="chip" onClick={handleSaveAndContinue}>
             Save &amp; continue
           </AtelierButton>
+
           {canPublish ? (
             <AtelierButton size="chip" onClick={handlePublish}>
               Publish

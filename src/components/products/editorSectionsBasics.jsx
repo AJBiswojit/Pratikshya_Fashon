@@ -121,6 +121,20 @@ export function SectionBasics({ draft, patch, errors, isNew }) {
       </Field>
 
       <Field
+        label="Cover image / Catalogue plate"
+        hint="Manifest plate key (e.g. saree-banarasi) or direct image URL."
+        htmlFor="pf-cover-plate"
+        className="lg:col-span-2"
+      >
+        <TextInput
+          id="pf-cover-plate"
+          value={draft.image || ""}
+          onChange={(event) => patch({ image: event.target.value })}
+          placeholder="saree-banarasi or https://images.pratikshya.com/..."
+        />
+      </Field>
+
+      <Field
         label="Short description"
         hint="One considered line for cards and previews."
         htmlFor="pf-short"

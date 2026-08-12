@@ -20,7 +20,7 @@
  *   · nothing is hard-deleted; retirement is ARCHIVED
  */
 
-import { products as seedProducts, slugify } from "../data/products/index.js";
+import catalogue from "../data/products/catalogue.js";
 import { getProductMediaSummary } from "./media/mediaRepository";
 import {
   ACTIVITY_ACTIONS,
@@ -30,6 +30,13 @@ import {
 } from "./employees/activityService";
 import { DISCOUNT_TYPES, computePricing } from "../utils/pricing";
 import { formatINR } from "../utils/shopping";
+
+export const slugify = (value) =>
+  String(value)
+    .toLowerCase()
+    .replace(/&/g, " and ")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
 
 const KEY = "pratikshya_products";
 export const PRODUCTS_CHANGED_EVENT = "pratikshya-products-changed";
@@ -72,9 +79,17 @@ const imageIdOf = (value) => {
   return value;
 };
 
+let memoryStorage = null;
+
 const read = () => {
   try {
-    const value = JSON.parse(localStorage.getItem(KEY));
+    let raw = null;
+    if (typeof localStorage !== "undefined") {
+      raw = localStorage.getItem(KEY);
+    } else {
+      raw = memoryStorage;
+    }
+    const value = raw ? JSON.parse(raw) : null;
     if (Array.isArray(value) && value.length) {
       /* Heals early rows that persisted plate objects instead of ids. */
       return value.map((record) =>
@@ -83,7 +98,7 @@ const read = () => {
           : record
       );
     }
-    return seedProducts.map((p, i) => ({
+    return catalogue.map((p, i) => ({
       ...p,
       image: imageIdOf(p.image),
       hoverImage: imageIdOf(p.hoverImage),
@@ -94,17 +109,24 @@ const read = () => {
       updatedAt: new Date().toISOString(),
     }));
   } catch {
-    return seedProducts;
+    return catalogue;
   }
 };
 
 const save = (items) => {
   try {
-    localStorage.setItem(KEY, JSON.stringify(items));
+    const json = JSON.stringify(items);
+    if (typeof localStorage !== "undefined") {
+      localStorage.setItem(KEY, json);
+    } else {
+      memoryStorage = json;
+    }
   } catch {
     /* Storage failure never breaks the register. */
   }
-  window.dispatchEvent(new Event(PRODUCTS_CHANGED_EVENT));
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new Event(PRODUCTS_CHANGED_EVENT));
+  }
   return items;
 };
 
@@ -349,18 +371,20 @@ export const getPublishIssues = (product) => {
   if (!product.name?.trim()) issues.push("Product name is required.");
   if (!product.sku?.trim()) issues.push("SKU is required.");
   if (!product.category) issues.push("Category is required.");
-  if (!(Number(product.price) > 0)) issues.push("Selling price must be greater than zero.");
+  const computed = computePricing(product.pricing);
+  if (!(Number(product.price) > 0) && !(computed.finalPrice > 0)) {
+    issues.push("Selling price must be greater than zero.");
+  }
   if (!product.description?.trim() && !product.shortDescription?.trim()) {
     issues.push("A description is required.");
   }
   const summary = getProductMediaSummary(product.id);
-  const hasCataloguePlate = Boolean(product.image);
-  if (!summary.hasCover && !hasCataloguePlate) {
+  const hasCataloguePlate = Boolean(product.image) || Boolean(summary.hasCover);
+  if (!hasCataloguePlate) {
     issues.push("At least one cover image is required before publishing.");
   }
-  const pricingIssues = computePricing(product.pricing).errors;
-  issues.push(...pricingIssues);
-  return issues;
+  issues.push(...computed.errors);
+  return [...new Set(issues)];
 };
 
 /* ------------------------------------------------------------------ */

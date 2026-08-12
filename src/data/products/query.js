@@ -11,7 +11,7 @@
  */
 
 import { getPriceBand, filterFacets, sortOptions, defaultSort } from "./taxonomy";
-import { normaliseSearchText, products as allProducts } from "./index";
+import { normaliseSearchText, getLiveStorefrontProducts, products as defaultProducts } from "./index";
 
 /* ------------------------------------------------------------------ */
 /* Matching                                                            */
@@ -147,13 +147,14 @@ export const countBand = (base, filters, facetId, optionIds) => {
  * They are applied together, but only the latter can be cleared.
  */
 export const queryCatalogue = ({
-  source = allProducts,
+  source = null,
   scopeFilters = {},
   filters = {},
   search = "",
   sort = defaultSort,
 } = {}) => {
-  const scoped = source.filter(
+  const productSource = source || getLiveStorefrontProducts();
+  const scoped = productSource.filter(
     (product) => product.status !== "DRAFT" && product.status !== "ARCHIVED" && product.published !== false && matchesFilters(product, scopeFilters) && matchesSearch(product, search)
   );
   const matched = scoped.filter((product) => matchesFilters(product, filters));
