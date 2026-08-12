@@ -55,8 +55,8 @@ export const ADMIN_NAV_GROUPS = [
     label: "Sales",
     items: [
       { id: "orders", label: "Orders", to: "/admin/orders", icon: "bag", status: MODULE_STATUS.READY },
-      { id: "customers", label: "Customers", to: "/admin/customers", icon: "users", status: MODULE_STATUS.SOON },
-      { id: "returns", label: "Returns", to: "/admin/returns", icon: "undo", status: MODULE_STATUS.SOON },
+      { id: "customers", label: "Customers", to: "/admin/customers", icon: "users", status: MODULE_STATUS.READY },
+      { id: "returns", label: "Returns", to: "/admin/returns", icon: "undo", status: MODULE_STATUS.READY },
     ],
   },
   {
