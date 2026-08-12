@@ -50,6 +50,7 @@ export default function ProductCard({
     image,
     hoverImage,
     inStock = true,
+    availabilityText = "",
   } = product;
 
   const discount = showDiscount ? discountPercent(price, originalPrice) : null;
@@ -71,7 +72,7 @@ export default function ProductCard({
 
         {showAvailability && !inStock ? (
           <span className="absolute inset-0 flex items-center justify-center bg-ink/50 font-ui text-[10px] uppercase tracking-[.2em] text-ivory">
-            Sold out
+            {availabilityText || "Currently unavailable"}
           </span>
         ) : null}
 
@@ -110,6 +111,11 @@ export default function ProductCard({
         ) : null}
         {discount ? <span className={priceType.discount}>{discount}% off</span> : null}
       </div>
+      {showAvailability && inStock && availabilityText ? (
+        <p className="mt-1.5 font-ui text-[9px] uppercase tracking-[.15em] text-accent">
+          {availabilityText}
+        </p>
+      ) : null}
     </Tag>
   );
 }

@@ -411,12 +411,12 @@ export function SectionPublishing({ draft, patch, publishIssues }) {
       <div>
         <p className="mb-2 font-ui text-[10px] uppercase tracking-[.18em] text-ink">Inventory preparation</p>
         <p className="mb-3 font-ui text-[11px] text-taupe">
-          Preparation fields for stock tracking. Movements arrive in future phases.
+          These settings feed the central inventory ledger. Opening stock is written once when the product is first published.
         </p>
         <div className="border border-mist/80 bg-canvas px-4 py-1">
           <ToggleRow
             label="Track inventory for this product"
-            hint="Marks the product for future stock management."
+            hint="Uses variant/location stock for availability, cart and checkout."
             checked={Boolean(draft.inventoryTracked)}
             onChange={(checked) => patch({ inventoryTracked: checked })}
           />
@@ -431,7 +431,11 @@ export function SectionPublishing({ draft, patch, publishIssues }) {
               onChange={(event) => patch({ lowStockThreshold: event.target.value })}
             />
           </Field>
-          <Field label="Opening stock (placeholder)" htmlFor="pf-stock">
+          <Field
+            label="Opening stock"
+            htmlFor="pf-stock"
+            hint={draft.variants?.length ? "Fallback when variant opening values are blank" : "Written once on first publication"}
+          >
             <TextInput
               id="pf-stock"
               type="number"

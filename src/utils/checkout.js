@@ -311,10 +311,12 @@ export const buildOrderSnapshot = ({
   coupon = null,
   deliveryEstimate,
   customerId = null,
+  inventoryReservationId = null,
   createdAt = new Date(),
 }) => ({
   id: orderId,
   customerId,
+  inventoryReservationId,
   customer: {
     fullName: customer.fullName,
     email: customer.email,

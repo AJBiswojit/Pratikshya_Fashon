@@ -17,9 +17,6 @@ export const BUSINESS_METRICS = {
   todaysSales: 124850,
   totalOrders: 184,
   customers: 2486,
-  inventoryValue: 1842600,
-  lowStock: 7,
-  outOfStock: 3,
   pendingOrders: 18,
   returns: 4,
   employeesPresent: 32,
@@ -30,9 +27,6 @@ export const METRIC_TRENDS = {
   todaysSales: "+12.4% vs yesterday",
   totalOrders: "This month",
   customers: "Registered accounts",
-  inventoryValue: "Across all floors",
-  lowStock: "Needs reorder",
-  outOfStock: "Unavailable now",
   pendingOrders: "Awaiting fulfilment",
   returns: "Open requests",
   employeesPresent: "Checked in today",
@@ -76,19 +70,6 @@ export const DEPARTMENT_PERFORMANCE = [
   { id: "MENS_KURTA", label: "Men's Kurta", sales: 49250, orders: 22, target: 55000 },
   { id: "INNER_WEAR", label: "Inner Wear", sales: 21400, orders: 31, target: 30000 },
   { id: "ACCESSORIES", label: "Accessories", sales: 34800, orders: 41, target: 35000 },
-];
-
-/* ------------------------------------------------------------------ */
-/* Inventory alerts                                                    */
-/* ------------------------------------------------------------------ */
-
-export const INVENTORY_ALERTS = [
-  { id: "inv-01", piece: "Banarasi Silk Saree", sku: "PF-SARE-003", department: "Women's Sarees", level: "LOW", remaining: 3 },
-  { id: "inv-02", piece: "Bridal Lehenga · Ivory", sku: "PF-BRDL-008", department: "Bridal", level: "OUT", remaining: 0 },
-  { id: "inv-03", piece: "Temple-work Bangles Set", sku: "PF-JWL-021", department: "Bangles & Jewellery", level: "LOW", remaining: 5 },
-  { id: "inv-04", piece: "Sambalpuri Pato Saree", sku: "PF-SARE-014", department: "Women's Sarees", level: "LOW", remaining: 4 },
-  { id: "inv-05", piece: "Groom Sherwani · Gold", sku: "PF-GRM-006", department: "Groom", level: "OUT", remaining: 0 },
-  { id: "inv-06", piece: "Kids Festive Lehenga", sku: "PF-KIDS-011", department: "Kids", level: "LOW", remaining: 6 },
 ];
 
 /* ------------------------------------------------------------------ */
@@ -154,17 +135,12 @@ export const TOP_DEPARTMENTS = [
   { id: "KIDS", label: "Kids", achievement: 104 },
 ];
 
-export const QUICK_ACTION_NOTE =
-  "Employee actions are live. Product, order and inventory actions arrive with their modules.";
-
 export default {
   BUSINESS_METRICS,
   METRIC_TRENDS,
   SALES_SERIES,
   SALES_BY_CATEGORY,
   DEPARTMENT_PERFORMANCE,
-  INVENTORY_ALERTS,
   DEMO_RECENT_ORDERS,
   TOP_DEPARTMENTS,
-  QUICK_ACTION_NOTE,
 };

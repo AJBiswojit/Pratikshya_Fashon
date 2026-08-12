@@ -57,9 +57,9 @@ export default function DataTable({
                 <span className="font-ui text-[10px] uppercase tracking-[.16em] text-taupe">
                   {column.label}
                 </span>
-                <span className="text-right font-ui text-sm text-ink">
+                <div className="min-w-0 text-right font-ui text-sm text-ink">
                   {column.render ? column.render(row) : row[column.id]}
-                </span>
+                </div>
               </div>
             ))}
           </li>

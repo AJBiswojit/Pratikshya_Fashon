@@ -29,7 +29,7 @@ import {
   useState,
 } from "react";
 import { useAuth } from "./AuthContext";
-import { ORDER_STATUS, nextJourneyStatus } from "../config/orderConfig";
+import { ORDER_STATUS, RETURN_STATUS, nextJourneyStatus } from "../config/orderConfig";
 import * as orderService from "../services/orders/orderService";
 import { getTracking as buildTracking } from "../services/orders/trackingService";
 import {
@@ -37,6 +37,7 @@ import {
   createReturnRecord,
 } from "../services/orders/returnService";
 import { latestReturn } from "../utils/orders";
+import inventoryRepository from "../services/inventory/inventoryRepository";
 
 export const ORDERS_STORAGE_KEY = orderService.ORDERS_STORAGE_KEY;
 export const CURRENT_ORDER_KEY = orderService.CURRENT_ORDER_KEY;
@@ -202,6 +203,23 @@ export function OrderProvider({ children }) {
             "This order can no longer be cancelled. Please contact the atelier.",
         };
       }
+
+      /* A successful checkout has already converted its reservation to a
+         sale. Cancellation restores those exact allocations before the
+         order transition is persisted; legacy orders without a reservation
+         link keep their existing Phase 9 behaviour. */
+      if (result.order.inventoryReservationId) {
+        const restock = inventoryRepository.restockCancelledOrder(result.order, {
+          label: result.order.customer?.fullName || "Customer",
+        });
+        if (!restock.ok) {
+          return {
+            ok: false,
+            message: restock.error || "Inventory could not be restored, so the order was not cancelled.",
+          };
+        }
+      }
+
       ordersRef.current = result.orders;
       setOrders(result.orders);
       return { ok: true, order: result.order, message: result.message };
@@ -271,6 +289,12 @@ export function OrderProvider({ children }) {
       if (!updated.ok) return { ok: false, message: "Return could not be updated." };
       ordersRef.current = updated.orders;
       setOrders(updated.orders);
+      /* Received customer returns enter inventory quarantine exactly once.
+         Inspection into sellable/damaged stock remains an authorised
+         inventory operation, never an automatic customer-side decision. */
+      if (nextStatus === RETURN_STATUS.RECEIVED) {
+        inventoryRepository.recordOrderReturn(advanced.record);
+      }
       return { ok: true, record: advanced.record, message: "" };
     },
     [customerId]

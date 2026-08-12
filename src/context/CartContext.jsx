@@ -24,17 +24,32 @@ import {
 } from "react";
 import { getProductById } from "../data/products";
 import { getCoupon, validateCoupon } from "../data/shopping/coupons";
+import inventoryRepository, { INVENTORY_CHANGED_EVENT } from "../services/inventory/inventoryRepository";
+import { PRODUCTS_CHANGED_EVENT } from "../services/catalogRepository";
 import {
   calculateCartTotals,
   cartLineId,
   CART_STORAGE_KEY,
-  clampQuantity,
   getMaxQuantity,
   readStorage,
   writeStorage,
 } from "../utils/shopping";
 
 const CartContext = createContext(null);
+
+/** Inventory-tracked pieces use the central ledger; untracked and
+ * made-to-order pieces preserve the Phase 6 catalogue rule. */
+const maximumFor = (product, selection = {}) => {
+  const availability = inventoryRepository.getCustomerAvailability(product, selection);
+  if (availability.tracked) return availability.available;
+  return availability.status === "UNAVAILABLE" ? 0 : getMaxQuantity(product);
+};
+
+const clampFor = (product, selection, quantity) => {
+  const maximum = maximumFor(product, selection);
+  if (maximum <= 0) return 0;
+  return Math.min(maximum, Math.max(1, Math.floor(Number(quantity) || 1)));
+};
 
 /* ------------------------------------------------------------------ */
 /* Initialisation                                                      */
@@ -59,8 +74,9 @@ const restoreCart = () => {
     const color = typeof line.color === "string" ? line.color : null;
     const size = typeof line.size === "string" ? line.size : null;
     const id = cartLineId(product.id, { color, size });
-    const quantity = clampQuantity(
+    const quantity = clampFor(
       product,
+      { color, size },
       (byId.get(id)?.quantity ?? 0) + (Number(line.quantity) || 0)
     );
     if (quantity < 1) return;
@@ -90,6 +106,18 @@ const restoreCart = () => {
 export function CartProvider({ children }) {
   const [{ lines, couponCode }, setState] = useState(restoreCart);
   const [isDrawerOpen, setDrawerOpen] = useState(false);
+  const [inventoryRevision, setInventoryRevision] = useState(0);
+
+  /* A stock operation elsewhere in the app immediately revalidates the bag. */
+  useEffect(() => {
+    const refresh = () => setInventoryRevision((value) => value + 1);
+    window.addEventListener(INVENTORY_CHANGED_EVENT, refresh);
+    window.addEventListener(PRODUCTS_CHANGED_EVENT, refresh);
+    return () => {
+      window.removeEventListener(INVENTORY_CHANGED_EVENT, refresh);
+      window.removeEventListener(PRODUCTS_CHANGED_EVENT, refresh);
+    };
+  }, []);
 
   /* Persist identity only — never the product record, never anything sensitive. */
   useEffect(() => {
@@ -110,12 +138,12 @@ export function CartProvider({ children }) {
           return {
             ...line,
             product,
-            maximum: getMaxQuantity(product),
+            maximum: maximumFor(product, line),
             lineTotal: product.price * line.quantity,
           };
         })
         .filter(Boolean),
-    [lines]
+    [lines, inventoryRevision]
   );
 
   const coupon = useMemo(() => (couponCode ? getCoupon(couponCode) : null), [couponCode]);
@@ -153,7 +181,7 @@ export function CartProvider({ children }) {
         return { ok: false, message: "This piece is currently unavailable." };
       }
 
-      const maximum = getMaxQuantity(product);
+      const maximum = maximumFor(product, selection);
       if (maximum === 0) {
         return { ok: false, message: "This piece is currently unavailable." };
       }
@@ -166,7 +194,7 @@ export function CartProvider({ children }) {
       if (held >= maximum) {
         return {
           ok: false,
-          message: `Your bag already holds every available piece (${maximum}).`,
+          message: "Your bag already holds the maximum quantity currently available.",
         };
       }
 
@@ -202,7 +230,7 @@ export function CartProvider({ children }) {
       return capped
         ? {
             ok: true,
-            message: `Only ${maximum} ${maximum === 1 ? "piece is" : "pieces are"} available — your bag now holds them all.`,
+            message: "The requested quantity exceeds current availability — your bag was adjusted.",
           }
         : { ok: true, message: "Added to your collection." };
     },
@@ -227,7 +255,7 @@ export function CartProvider({ children }) {
         lines: current.lines.map((line) => {
           if (line.id !== lineId) return line;
           const product = getProductById(line.productId);
-          const next = product ? clampQuantity(product, quantity) : 0;
+          const next = product ? clampFor(product, line, quantity) : 0;
           return next > 0 ? { ...line, quantity: next } : line;
         }),
       };

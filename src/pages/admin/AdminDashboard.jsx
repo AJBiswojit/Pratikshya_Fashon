@@ -28,12 +28,12 @@ import { useAdminAuth } from "../../context/AdminAuthContext";
 import { useEmployeeManagement } from "../../context/EmployeeManagementContext";
 import { useOrder } from "../../context/OrderContext";
 import { useMediaMetrics } from "../../hooks/useMedia";
+import { useInventory } from "../../context/InventoryContext";
 import {
   getBusinessMetrics,
   getDepartmentPerformance,
   getEmployeeOverview,
   getEmployeesNeedingAttention,
-  getInventoryAlerts,
   getMetricTrends,
   getRecentOrders,
   getSalesByCategory,
@@ -56,6 +56,7 @@ export default function AdminDashboard() {
   /* One line of media health, read from the same register the Media
      Library uses. */
   const media = useMediaMetrics();
+  const inventory = useInventory();
 
   const metrics = useMemo(() => getBusinessMetrics(employees), [employees]);
   const trends = getMetricTrends();
@@ -63,7 +64,17 @@ export default function AdminDashboard() {
   const categories = getSalesByCategory();
   const summary = useMemo(() => getSalesSummary(), []);
   const departments = useMemo(() => getDepartmentPerformance(), []);
-  const alerts = getInventoryAlerts();
+  const alerts = inventory.records
+    .filter((row) => row.status === "LOW_STOCK" || row.status === "OUT_OF_STOCK")
+    .slice(0, 6)
+    .map((row) => ({
+      id: row.id,
+      piece: row.productName,
+      department: row.placement.department || row.category,
+      sku: row.sku,
+      level: row.status === "OUT_OF_STOCK" ? "OUT" : "LOW",
+      remaining: row.quantity.available,
+    }));
   const overview = useMemo(() => getEmployeeOverview(employees), [employees]);
   const attention = useMemo(() => getEmployeesNeedingAttention(employees), [employees]);
   const orders = useMemo(() => getRecentOrders(getOrders()), [getOrders]);
@@ -73,9 +84,9 @@ export default function AdminDashboard() {
     { label: "Today's sales", value: formatINR(metrics.todaysSales), hint: trends.todaysSales, icon: IndianRupee },
     { label: "Total orders", value: formatAdminNumber(metrics.totalOrders), hint: trends.totalOrders, icon: ShoppingBag },
     { label: "Customers", value: formatAdminNumber(metrics.customers), hint: trends.customers, icon: Users },
-    { label: "Inventory value", value: formatCompactINR(metrics.inventoryValue), hint: trends.inventoryValue, icon: Boxes },
-    { label: "Low stock", value: formatAdminNumber(metrics.lowStock), hint: trends.lowStock, icon: AlertTriangle, tone: "alert" },
-    { label: "Out of stock", value: formatAdminNumber(metrics.outOfStock), hint: trends.outOfStock, icon: PackageX, tone: "alert" },
+    { label: "Inventory value", value: formatCompactINR(inventory.metrics.estimatedValue), hint: "Estimated · available × selling price", icon: Boxes },
+    { label: "Low stock", value: formatAdminNumber(inventory.metrics.lowStock), hint: "Live inventory ledger", icon: AlertTriangle, tone: "alert" },
+    { label: "Out of stock", value: formatAdminNumber(inventory.metrics.outOfStock), hint: "Live inventory ledger", icon: PackageX, tone: "alert" },
     { label: "Pending orders", value: formatAdminNumber(metrics.pendingOrders), hint: trends.pendingOrders, icon: Timer },
     { label: "Returns", value: formatAdminNumber(metrics.returns), hint: trends.returns, icon: RotateCcw },
     { label: "Employees present", value: formatAdminNumber(metrics.employeesPresent), hint: trends.employeesPresent, icon: UsersRound },
@@ -226,7 +237,7 @@ export default function AdminDashboard() {
           title="Stock alerts"
           action={
             <span className="font-ui text-[11px] text-taupe">
-              {metrics.lowStock} low · {metrics.outOfStock} out
+              {inventory.metrics.lowStock} low · {inventory.metrics.outOfStock} out
             </span>
           }
         >

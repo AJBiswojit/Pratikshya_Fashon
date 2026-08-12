@@ -15,6 +15,8 @@ import AdminPanel from "../../components/admin/AdminPanel";
 import StatusBadge from "../../components/employee/StatusBadge";
 import { AtelierButton } from "../../design-system";
 import catalogRepository, { getPublishIssues } from "../../services/catalogRepository";
+import inventoryRepository from "../../services/inventory/inventoryRepository";
+import { useInventory } from "../../context/InventoryContext";
 import { useProduct } from "../../hooks/useProducts";
 import { useProductMedia } from "../../hooks/useMedia";
 import { useActivityLog } from "../../hooks/useProducts";
@@ -51,6 +53,7 @@ export default function AdminProductDetail() {
   const actor = admin ? { adminId: admin.adminId, name: admin.name || "Administrator" } : null;
 
   const product = useProduct(productId);
+  const inventory = useInventory();
   const { summary } = useProductMedia(productId);
   const activity = useActivityLog();
   const [rejection, setRejection] = useState("");
@@ -73,10 +76,20 @@ export default function AdminProductDetail() {
   const issues = getPublishIssues(product);
   const productActivity = activityForProduct(activity, product.id);
   const previewHref = `/product/${product.slug}?preview=1`;
+  const stockRows = inventory.records.filter((row) => row.productId === product.id);
+  const inventorySummary = stockRows.reduce((summary, row) => ({
+    available: summary.available + row.quantity.available,
+    reserved: summary.reserved + row.quantity.reserved,
+    locations: summary.locations.add(row.locationId),
+    low: summary.low + (row.status === "LOW_STOCK" ? 1 : 0),
+  }), { available: 0, reserved: 0, locations: new Set(), low: 0 });
 
   const run = (fn, successMessage) => {
     const result = fn();
     if (result.ok) {
+      if (result.product?.status === "PUBLISHED") {
+        inventoryRepository.ensureOpeningStock(result.product, actor);
+      }
       setNotice(successMessage);
     } else {
       setNotice((result.errors ?? [result.error]).join(" "));
@@ -382,6 +395,24 @@ export default function AdminProductDetail() {
             ) : (
               <p className="font-ui text-sm text-taupe">No variants — the product sells in its base colour and size.</p>
             )}
+          </AdminPanel>
+
+          <AdminPanel
+            eyebrow="Inventory"
+            title="Stock summary"
+            action={
+              <AtelierButton as={Link} to={`/admin/inventory?search=${encodeURIComponent(product.sku)}`} variant="outline" size="chip">
+                View inventory
+              </AtelierButton>
+            }
+          >
+            <dl className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+              <Term label="Inventory tracking" value={product.inventoryTracked || stockRows.length ? "Enabled" : "Not tracked"} />
+              <Term label="Available" value={String(inventorySummary.available)} />
+              <Term label="Reserved" value={String(inventorySummary.reserved)} />
+              <Term label="Locations" value={String(inventorySummary.locations.size)} />
+              <Term label="Low-stock rows" value={String(inventorySummary.low)} />
+            </dl>
           </AdminPanel>
 
           <AdminPanel eyebrow="Product record" title="Attributes &amp; Specifications">

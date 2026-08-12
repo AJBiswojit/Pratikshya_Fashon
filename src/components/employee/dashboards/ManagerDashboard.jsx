@@ -1,7 +1,8 @@
 import { useEmployeeManagement } from "../../../context/EmployeeManagementContext";
 import { getRoleLabel } from "../../../config/employeeRoles";
 import { getDepartmentLabel } from "../../../config/employeeDepartments";
-import { getAssistedOrders, getCatalogueStock } from "../../../services/employees/operationsService";
+import { getAssistedOrders } from "../../../services/employees/operationsService";
+import { useInventory } from "../../../context/InventoryContext";
 import { formatINR } from "../../../utils/shopping";
 import DataTable from "../DataTable";
 import FutureNote from "../FutureNote";
@@ -13,10 +14,18 @@ export default function ManagerDashboard() {
   const { employees } = useEmployeeManagement();
   const team = employees.filter((person) => person.role !== "SUPER_ADMIN");
   const floor = getAssistedOrders().slice(0, 5);
-  const stock = getCatalogueStock();
+  const inventory = useInventory();
+  const metrics = {
+    primary: [
+      { label: "Store stock", value: String(inventory.metrics.storeStock || 0), hint: "Units on hand" },
+      { label: "Low stock", value: String(inventory.metrics.lowStock || 0), hint: "Needs action" },
+      { label: "Pending transfers", value: String(inventory.metrics.pendingTransfers || 0), hint: "Open workflow" },
+      { label: "Team on floor", value: "14", hint: "Checked in · demo" },
+    ],
+  };
 
   return (
-    <DashboardFrame description="Sales, orders, customers and the team on the floor. Credentials and global people administration stay with Super Admin.">
+    <DashboardFrame metrics={metrics} description="Sales, orders, customers and the team on the floor. Credentials and global people administration stay with Super Admin.">
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)]">
         <section>
           <h2 className="mb-3 font-display text-2xl font-light text-ink">Floor tickets</h2>
@@ -45,7 +54,7 @@ export default function ManagerDashboard() {
         </section>
       </div>
       <p className="mt-6 font-ui text-xs text-taupe">
-        Low stock across the house: {stock.low || 7} pieces need a look before evening trade.
+        Store stock: {inventory.metrics.storeStock || 0} units · {inventory.metrics.lowStock || 0} low-stock rows · {inventory.metrics.pendingTransfers || 0} pending transfers.
       </p>
       <div className="mt-4">
         <FutureNote title="Later · AI sales insights">

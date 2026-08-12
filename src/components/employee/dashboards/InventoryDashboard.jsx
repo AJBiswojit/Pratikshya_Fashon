@@ -1,86 +1,65 @@
 import { Link } from "react-router-dom";
-import {
-  getCatalogueStock,
-  getStockMovements,
-  getTransfers,
-} from "../../../services/employees/operationsService";
-import { formatEmployeeDateTime } from "../../../utils/employee";
-import { formatINR } from "../../../utils/shopping";
+import { useInventory } from "../../../context/InventoryContext";
 import { useEmployeeAuth } from "../../../context/EmployeeAuthContext";
 import { ROLES } from "../../../config/employeeRoles";
+import { formatEmployeeDateTime } from "../../../utils/employee";
 import DataTable from "../DataTable";
-import FutureNote from "../FutureNote";
 import DashboardFrame from "./DashboardFrame";
 
 export default function InventoryDashboard() {
   const { employee } = useEmployeeAuth();
+  const inventory = useInventory();
   const isManager = employee?.role === ROLES.INVENTORY_MANAGER;
-  const stock = getCatalogueStock();
-  const movements = getStockMovements().slice(0, 5);
-  const transfers = getTransfers();
+  const metrics = {
+    primary: [
+      { label: "Total units", value: String(inventory.metrics.totalUnits || 0), hint: "On hand" },
+      { label: "Low stock", value: String(inventory.metrics.lowStock || 0), hint: "Needs action" },
+      { label: "Out of stock", value: String(inventory.metrics.outOfStock || 0), hint: "Unavailable" },
+      { label: "Pending transfers", value: String(inventory.metrics.pendingTransfers || 0), hint: "Open workflow" },
+    ],
+  };
 
   return (
     <DashboardFrame
-      description={
-        isManager
-          ? "Stock health across the house — receiving, adjustments, transfers and the pieces running low."
-          : "Today's stock desk. Receive, adjust and raise transfer requests. Manager reports stay with inventory leadership."
-      }
+      metrics={metrics}
+      description={isManager
+        ? "Stock health across the house — receiving, adjustments, transfers and the pieces running low."
+        : "Today's stock desk. Receive, adjust and raise transfer requests within your permissions."}
     >
       <div className="mb-6 flex flex-wrap gap-3">
-        <Link to="/employee/inventory/low-stock" className="border border-pearl px-3 py-2 font-ui text-[11px] uppercase tracking-[.14em] text-ink hover:border-ink">
-          Low stock · {stock.low || 7}
-        </Link>
-        <Link to="/employee/inventory/out-of-stock" className="border border-pearl px-3 py-2 font-ui text-[11px] uppercase tracking-[.14em] text-ink hover:border-ink">
-          Out of stock · {stock.out || 3}
-        </Link>
-        <Link to="/employee/inventory/receive" className="border border-pearl px-3 py-2 font-ui text-[11px] uppercase tracking-[.14em] text-ink hover:border-ink">
-          Receive
-        </Link>
+        <Link to="/employee/inventory" className="border border-ink bg-ink px-3 py-2 font-ui text-[11px] uppercase tracking-[.14em] text-ivory">Open inventory</Link>
+        <Link to="/employee/inventory/low-stock" className="border border-pearl px-3 py-2 font-ui text-[11px] uppercase tracking-[.14em] text-ink hover:border-ink">Low stock · {inventory.metrics.lowStock || 0}</Link>
+        <Link to="/employee/inventory/receive" className="border border-pearl px-3 py-2 font-ui text-[11px] uppercase tracking-[.14em] text-ink hover:border-ink">Receive stock</Link>
       </div>
 
       <div className="grid gap-6 xl:grid-cols-2">
         <section>
-          <h2 className="mb-3 font-display text-2xl font-light text-ink">Stock movements</h2>
+          <h2 className="mb-3 font-display text-2xl font-light text-ink">Recent stock movements</h2>
           <DataTable
-            rows={movements}
+            rows={inventory.movements.slice(0, 5)}
             columns={[
-              { id: "type", label: "Type" },
-              { id: "piece", label: "Piece" },
-              { id: "qty", label: "Qty" },
-              { id: "location", label: "Location" },
-              { id: "at", label: "When", render: (row) => formatEmployeeDateTime(row.at) },
+              { id: "type", label: "Type", render: (row) => row.type.replaceAll("_", " ") },
+              { id: "productName", label: "Piece" },
+              { id: "quantity", label: "Qty", render: (row) => `${row.quantity > 0 ? "+" : ""}${row.quantity}` },
+              { id: "location", label: "Location", render: (row) => row.location?.name || "—" },
+              { id: "timestamp", label: "When", render: (row) => formatEmployeeDateTime(row.timestamp) },
             ]}
           />
         </section>
         <section>
-          <h2 className="mb-3 font-display text-2xl font-light text-ink">Transfers</h2>
+          <h2 className="mb-3 font-display text-2xl font-light text-ink">Transfer queue</h2>
           <DataTable
-            rows={transfers}
+            rows={inventory.transfers.slice(0, 5)}
             columns={[
               { id: "id", label: "Ref" },
-              { id: "piece", label: "Piece" },
-              { id: "from", label: "From" },
-              { id: "to", label: "To" },
-              { id: "status", label: "Status" },
+              { id: "productName", label: "Piece" },
+              { id: "source", label: "From", render: (row) => row.source?.name || "—" },
+              { id: "destination", label: "To", render: (row) => row.destination?.name || "—" },
+              { id: "status", label: "Status", render: (row) => row.status.replaceAll("_", " ") },
             ]}
           />
         </section>
       </div>
-
-      {isManager ? (
-        <div className="mt-6">
-          <FutureNote title="Later · AI stock prediction">
-            Inventory leadership will later see predicted stock-outs from this same catalogue. Nothing is predicted in this preview.
-          </FutureNote>
-        </div>
-      ) : null}
-
-      {stock.lowItems[0] ? (
-        <p className="mt-6 font-ui text-xs text-taupe">
-          Next low piece: {stock.lowItems[0].name} · {formatINR(stock.lowItems[0].price)}
-        </p>
-      ) : null}
     </DashboardFrame>
   );
 }

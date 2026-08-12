@@ -326,7 +326,7 @@ export function SectionVariants({ draft, patch, errors }) {
                   </button>
                 </div>
 
-                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                   <Field label="Colour">
                     <Select
                       value={variant.color}
@@ -376,6 +376,16 @@ export function SectionVariants({ draft, patch, errors }) {
                       }
                       placeholder={String(pricing.finalPrice || "")}
                       aria-label={`Price override for variant ${index + 1}`}
+                    />
+                  </Field>
+
+                  <Field label="Variant opening stock" hint="Written once on first publication">
+                    <NumberInput
+                      min="0"
+                      step="1"
+                      value={variant.stock ?? 0}
+                      onChange={(event) => setVariant(variant.id, { stock: event.target.value })}
+                      aria-label={`Opening stock for variant ${index + 1}`}
                     />
                   </Field>
 
