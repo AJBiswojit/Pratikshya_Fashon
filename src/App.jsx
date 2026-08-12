@@ -47,6 +47,7 @@ const OrderReturn = lazy(() => import("./pages/account/OrderReturn"));
 const AccountSettings = lazy(() => import("./pages/account/AccountSettings"));
 const AccountSecurity = lazy(() => import("./pages/account/AccountSecurity"));
 const AccountPreferences = lazy(() => import("./pages/account/AccountPreferences"));
+const AiMirror = lazy(() => import("./pages/account/AiMirror"));
 
 const EmployeeLogin = lazy(() => import("./pages/employee/EmployeeLogin"));
 const EmployeeForgotPassword = lazy(() => import("./pages/employee/EmployeeForgotPassword"));
@@ -140,6 +141,7 @@ const dedicatedPaths = new Set([
   "/account/settings",
   "/account/security",
   "/account/preferences",
+  "/account/ai-mirror",
   "/account/wishlist",
   "/signin",
   "/signup",
@@ -332,6 +334,7 @@ export default function App() {
                           <Route path="/account/orders" element={<AccountOrders />} />
                           <Route path="/account/settings" element={<AccountSettings />} />
                           <Route path="/account/security" element={<AccountSecurity />} />
+                          <Route path="/account/ai-mirror" element={<AiMirror />} />
                         </Route>
 
                         {routeManifest

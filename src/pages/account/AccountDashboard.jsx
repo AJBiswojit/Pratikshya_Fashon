@@ -1,6 +1,6 @@
 import { useEffect, useMemo } from "react";
 import { Link } from "react-router-dom";
-import { Heart } from "lucide-react";
+import { ArrowRight, Heart, Sparkles } from "lucide-react";
 import AccountShell from "../../components/account/AccountShell";
 import OrderStatusBadge from "../../components/orders/OrderStatusBadge";
 import { useAccount } from "../../context/AccountContext";
@@ -230,6 +230,36 @@ export default function AccountDashboard() {
                 <p className="mt-2 font-display text-lg font-light text-ink">{item.value}</p>
               </Link>
             ))}
+          </div>
+        </section>
+
+        <section aria-labelledby="ai-mirror-dashboard-heading" className="relative isolate overflow-hidden border border-ink/15 bg-ink text-ivory">
+          <MediaFrame
+            image={imageRef("saree-ivory-silk")}
+            alt="PRATIKSHYA AI Mirror curated preview scene"
+            aspect="landscape"
+            className="absolute inset-0 z-0 h-full w-full opacity-25 mix-blend-luminosity"
+            imageClassName="object-cover"
+          />
+          <div aria-hidden="true" className="absolute inset-0 z-[1] bg-gradient-to-r from-ink via-ink/90 to-ink/45" />
+          <div className="relative z-10 grid gap-6 px-6 py-8 sm:px-8 sm:py-10 lg:grid-cols-[1fr_auto] lg:items-end lg:gap-12 lg:px-10">
+            <div className="max-w-2xl">
+              <p className="flex items-center gap-2 font-ui text-[10px] uppercase tracking-[.24em] text-gold">
+                <Sparkles size={14} aria-hidden="true" /> PRATIKSHYA AI MIRROR
+              </p>
+              <h2 id="ai-mirror-dashboard-heading" className="mt-4 font-display text-4xl font-light leading-[.92] sm:text-5xl">
+                Your digital <span className="italic text-gold">fitting room.</span>
+              </h2>
+              <p className="mt-4 max-w-xl font-ui text-sm leading-relaxed text-ash">
+                Explore your next look with AI Mirror. Step into a live camera view or enjoy the curated preview experience — no photos are stored.
+              </p>
+            </div>
+            <div className="flex flex-col items-start gap-3 lg:items-end">
+              <AtelierButton as={Link} to="/account/ai-mirror" variant="inverse" size="md">
+                Open AI Mirror <ArrowRight size={15} aria-hidden="true" />
+              </AtelierButton>
+              <p className="font-ui text-[9px] uppercase tracking-[.16em] text-ash">Demo preview · Apparel edit</p>
+            </div>
           </div>
         </section>
 
