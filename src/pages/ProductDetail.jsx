@@ -19,6 +19,7 @@ import { getProductByIdentifier, toStorefrontProduct } from "../data/products";
 import { getProductRecommendations } from "../data/products/recommendations";
 import { imageRef } from "../data/pratikshyaImageManifest";
 import catalogRepository from "../services/catalogRepository";
+import taxonomyRepository from "../services/taxonomyRepository";
 
 /**
  * Admin/employee preview: `?preview=1` renders any workspace record —
@@ -93,11 +94,12 @@ export default function ProductDetail() {
 
   if (!product) return <ProductNotFound />;
 
-  const categoryPath = `/category/${product.category}`;
+  const category = taxonomyRepository.findCategory(product.category);
+  const categoryPath = `/category/${category?.slug || product.category}`;
   const subcategoryPath = `${categoryPath}?subcategory=${encodeURIComponent(product.subcategory)}`;
   const breadcrumbs = [
     { label: "Shop", to: "/shop" },
-    { label: product.categoryLabel, to: categoryPath },
+    { label: category?.name || product.categoryLabel, to: categoryPath },
     { label: product.subcategory, to: subcategoryPath },
     { label: product.name },
   ];

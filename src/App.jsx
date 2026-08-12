@@ -110,6 +110,12 @@ const AdminReturnDetail = lazy(() => import("./pages/admin/AdminReturnDetail"));
 const AdminOffers = lazy(() => import("./pages/admin/offers/AdminOffers"));
 const AdminOfferFormPage = lazy(() => import("./pages/admin/offers/AdminOfferFormPage"));
 const AdminOfferDetail = lazy(() => import("./pages/admin/offers/AdminOfferDetail"));
+const AdminCategories = lazy(() => import("./pages/admin/taxonomy/AdminCategories"));
+const AdminCategoryForm = lazy(() => import("./pages/admin/taxonomy/AdminCategoryForm"));
+const AdminCategoryDetail = lazy(() => import("./pages/admin/taxonomy/AdminCategoryDetail"));
+const AdminCollections = lazy(() => import("./pages/admin/taxonomy/AdminCollections"));
+const AdminCollectionForm = lazy(() => import("./pages/admin/taxonomy/AdminCollectionForm"));
+const AdminCollectionDetail = lazy(() => import("./pages/admin/taxonomy/AdminCollectionDetail"));
 
 const dedicatedPaths = new Set([
   "/search",
@@ -172,8 +178,16 @@ export default function App() {
                           <Route path="/admin/media/review" element={<AdminMediaReview />} />
                           <Route path="/admin/media/marketing" element={<AdminMarketingMedia />} />
                           <Route path="/admin/media/:mediaId" element={<AdminMediaDetail />} />
-                          <Route path="/admin/categories" element={<AdminModulePlaceholder />} />
-                          <Route path="/admin/collections" element={<AdminModulePlaceholder />} />
+                          <Route path="/admin/categories" element={<AdminCategories />} />
+                          <Route path="/admin/categories/new" element={<AdminCategoryForm />} />
+                          <Route path="/admin/categories/:categoryId/edit" element={<AdminCategoryForm />} />
+                          <Route path="/admin/categories/:categoryId/subcategories" element={<AdminCategoryDetail />} />
+                          <Route path="/admin/categories/:categoryId" element={<AdminCategoryDetail />} />
+                          <Route path="/admin/collections" element={<AdminCollections />} />
+                          <Route path="/admin/collections/new" element={<AdminCollectionForm />} />
+                          <Route path="/admin/collections/:collectionId/edit" element={<AdminCollectionForm />} />
+                          <Route path="/admin/collections/:collectionId/products" element={<AdminCollectionDetail />} />
+                          <Route path="/admin/collections/:collectionId" element={<AdminCollectionDetail />} />
                           <Route path="/admin/offers" element={<AdminOffers />} />
                           <Route path="/admin/offers/new" element={<AdminOfferFormPage />} />
                           <Route path="/admin/offers/:offerId/edit" element={<AdminOfferFormPage />} />

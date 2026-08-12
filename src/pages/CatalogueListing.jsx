@@ -8,8 +8,10 @@ import {
 } from "../design-system";
 import CatalogueBrowser from "../components/storefront/CatalogueBrowser";
 import { categoryRoutes, collectionRoutes, navigationScopes } from "../data/products/taxonomy";
+import taxonomyRepository from "../services/taxonomyRepository";
 import { getRouteMeta } from "../config/navigationConfig";
 import { imageRef } from "../data/pratikshyaImageManifest";
+import { getById as getMediaById } from "../services/media/mediaRepository";
 import { cn } from "../utils/cn";
 import NotFound from "./NotFound";
 
@@ -33,8 +35,36 @@ export default function CatalogueListing({ variant }) {
 
   if (variant === "category") {
     scope = categoryRoutes[params.slug] ?? null;
+    if (!scope) {
+      const category = taxonomyRepository.findCategory(params.slug);
+      if (category?.status === "ACTIVE") {
+        scope = {
+          id: category.id,
+          title: category.name,
+          eyebrow: category.eyebrow || "Category",
+          description: category.description,
+          image: category.image,
+          heroMediaId: category.bannerMediaId,
+          filters: { category: category.id },
+        };
+      }
+    }
   } else if (variant === "collection") {
     scope = collectionRoutes[params.slug] ?? null;
+    if (!scope) {
+      const collection = taxonomyRepository.findCollection(params.slug);
+      if (collection?.displayStatus === "ACTIVE") {
+        scope = {
+          id: collection.id,
+          title: collection.name,
+          eyebrow: collection.eyebrow || "Collection",
+          description: collection.description,
+          image: collection.image,
+          heroMediaId: collection.heroMediaId,
+          filters: { collectionId: collection.id },
+        };
+      }
+    }
   } else {
     /* A Phase 3 navigation path. Its masthead copy already exists in the
        navigation manifest, so only the filters come from the scope table. */
@@ -52,7 +82,16 @@ export default function CatalogueListing({ variant }) {
     }
   }
 
-  /* An unknown slug is a missing page, not an empty grid. */
+  if (variant === "category" && scope) {
+    const currentCategory = taxonomyRepository.findCategory(params.slug) || taxonomyRepository.findCategory(scope.id);
+    if (currentCategory?.status !== "ACTIVE") scope = null;
+  }
+  if (variant === "collection" && scope) {
+    const currentCollection = taxonomyRepository.findCollection(params.slug) || taxonomyRepository.findCollection(scope.id);
+    if (currentCollection?.displayStatus !== "ACTIVE") scope = null;
+  }
+
+  /* An unknown or hidden slug is a missing page, not an empty grid. */
   if (!scope) return <NotFound />;
 
   const breadcrumb =
@@ -64,6 +103,11 @@ export default function CatalogueListing({ variant }) {
             : { label: "Shop", to: "/shop" },
           { label: scope.title },
         ];
+
+  const heroMedia = scope.heroMediaId ? getMediaById(scope.heroMediaId) : null;
+  const heroImage = heroMedia?.status === "ACTIVE" && heroMedia.url
+    ? { id: heroMedia.id, src: heroMedia.url, alt: heroMedia.alt || scope.title }
+    : imageRef(scope.image);
 
   return (
     <>
@@ -79,7 +123,7 @@ export default function CatalogueListing({ variant }) {
       {scope.image ? (
         <AtelierSection rhythm="none" width="wide" className="pb-16 md:pb-24">
           <MediaFrame
-            image={imageRef(scope.image)}
+            image={heroImage}
             alt={scope.title}
             aspect="panorama"
             surface

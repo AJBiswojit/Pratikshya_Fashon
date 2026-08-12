@@ -12,13 +12,12 @@
  */
 
 import {
-  categories,
-  collections,
   colors,
   fabrics,
   materials,
   occasions,
 } from "../data/products/taxonomy";
+import taxonomyRepository from "../services/taxonomyRepository";
 
 /* ------------------------------------------------------------------ */
 /* Product type                                                        */
@@ -66,7 +65,7 @@ export const REVIEW_STATES = {
 /* Categories — from the storefront taxonomy, never redeclared         */
 /* ------------------------------------------------------------------ */
 
-export const CATEGORY_OPTIONS = categories.map((category) => ({
+export const CATEGORY_OPTIONS = taxonomyRepository.categoryOptions().map((category) => ({
   id: category.id,
   label: category.label,
 }));
@@ -201,7 +200,7 @@ export const SUBCATEGORY_OPTIONS = {
 };
 
 export const subcategoryOptionsFor = (categoryId) =>
-  SUBCATEGORY_OPTIONS[categoryId] ?? [];
+  [...new Set([...(taxonomyRepository.subcategoryOptionsFor(categoryId) ?? []), ...(SUBCATEGORY_OPTIONS[categoryId] ?? [])])];
 
 /* ------------------------------------------------------------------ */
 /* Gender                                                              */
@@ -309,7 +308,7 @@ export const OCCASION_OPTIONS = mergeUnique(occasions, [
  * first (primary) value so the existing storefront facet keeps working.
  */
 export const COLLECTION_OPTIONS = mergeUnique(
-  collections.map((collection) => collection.label),
+  taxonomyRepository.collectionOptions().map((collection) => collection.label),
   [
     "New Arrivals",
     "Bestsellers",

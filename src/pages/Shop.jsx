@@ -11,7 +11,8 @@ import {
 } from "../design-system";
 import CatalogueBrowser from "../components/storefront/CatalogueBrowser";
 import CategoryShortcuts from "../components/storefront/CategoryShortcuts";
-import { categories, collectionRoutes } from "../data/products/taxonomy";
+import { collectionRoutes } from "../data/products/taxonomy";
+import taxonomyRepository from "../services/taxonomyRepository";
 import { categoryCounts, products } from "../data/products";
 import { imageRef } from "../data/pratikshyaImageManifest";
 import { cn } from "../utils/cn";
@@ -40,16 +41,18 @@ const shortcutRoutes = {
 };
 
 export default function Shop() {
+  const activeCategories = taxonomyRepository.activeCategories();
   const shortcuts = SHORTCUT_ORDER.map((id) => {
-    const category = categories.find((entry) => entry.id === id);
+    const category = activeCategories.find((entry) => entry.id === id);
+    if (!category) return null;
     return {
-      to: shortcutRoutes[id],
-      label: category.label,
+      to: shortcutRoutes[id] || `/category/${category.slug}`,
+      label: category.name,
       eyebrow: category.eyebrow,
       image: category.image,
       count: categoryCounts[id] ?? 0,
     };
-  });
+  }).filter(Boolean);
 
   const featured = collectionRoutes.featured;
   const featuredCount = products.filter((product) => product.isFeatured).length;
