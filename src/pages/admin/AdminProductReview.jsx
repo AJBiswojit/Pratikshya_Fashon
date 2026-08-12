@@ -15,6 +15,7 @@ import AdminPanel from "../../components/admin/AdminPanel";
 import StatusBadge from "../../components/employee/StatusBadge";
 import { AtelierButton } from "../../design-system";
 import catalogRepository, { getPublishIssues } from "../../services/catalogRepository";
+import inventoryRepository from "../../services/inventory/inventoryRepository";
 import { useProducts } from "../../hooks/useProducts";
 import { useProductMediaSummaries } from "../../hooks/useMedia";
 import { useAdminAuth } from "../../context/AdminAuthContext";
@@ -44,7 +45,10 @@ export default function AdminProductReview() {
 
   const approve = (product) => {
     const result = catalogRepository.approveProduct(product.id, actor);
-    if (result.ok) setNotice(`Approved and published “${product.name}”.`);
+    if (result.ok) {
+      inventoryRepository.ensureOpeningStock(result.product, actor);
+      setNotice(`Approved and published “${product.name}”.`);
+    }
     else setNotice(`Could not approve “${product.name}”: ${(result.errors ?? []).join(" ")}`);
   };
 

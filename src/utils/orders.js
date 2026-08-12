@@ -212,6 +212,9 @@ export const normaliseOrder = (raw) => {
   return {
     id: String(raw.id),
     customerId: raw.customerId ?? null,
+    inventoryReservationId: raw.inventoryReservationId
+      ? String(raw.inventoryReservationId)
+      : null,
     customer: {
       fullName: raw.customer?.fullName ?? "Guest",
       email: raw.customer?.email ?? "",

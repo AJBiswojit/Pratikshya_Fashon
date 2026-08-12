@@ -91,15 +91,32 @@ const read = () => {
     }
     const value = raw ? JSON.parse(raw) : null;
     if (Array.isArray(value) && value.length) {
-      /* Heals early rows that persisted plate objects instead of ids. */
-      return value.map((record) =>
-        record && typeof record.image === "object"
-          ? { ...record, image: imageIdOf(record.image), hoverImage: imageIdOf(record.hoverImage) }
-          : record
-      );
+      /* Heals early rows that persisted plate objects or had no explicit id.
+         Authored products are matched by name so an inserted workspace row
+         can never shift the catalogue identity inventory already references. */
+      return value.map((record, index) => {
+        if (!record || typeof record !== "object") return record;
+        const authoredIndex = catalogue.findIndex((product) => product.name === record.name);
+        const id = record.id || (authoredIndex >= 0
+          ? `pf-${String(authoredIndex + 1).padStart(3, "0")}`
+          : `pf-legacy-${String(index + 1).padStart(3, "0")}`);
+        return {
+          ...record,
+          id,
+          image: imageIdOf(record.image),
+          hoverImage: imageIdOf(record.hoverImage),
+          variants: Array.isArray(record.variants)
+            ? record.variants.map((variant, variantIndex) => ({
+                ...variant,
+                id: variant.id || `${id}-var-${String(variantIndex + 1).padStart(2, "0")}`,
+              }))
+            : record.variants,
+        };
+      });
     }
     return catalogue.map((p, i) => ({
       ...p,
+      id: p.id || `pf-${String(i + 1).padStart(3, "0")}`,
       image: imageIdOf(p.image),
       hoverImage: imageIdOf(p.hoverImage),
       additionalImages: Array.isArray(p.additionalImages) ? p.additionalImages.map(imageIdOf) : p.additionalImages,
@@ -151,8 +168,9 @@ const normalisePricing = (raw) => {
   };
 };
 
-const normaliseVariant = (variant, index) => ({
-  id: variant.id || `var-${Date.now().toString(36)}-${index}`,
+const normaliseVariant = (variant, index, productId) => ({
+  /* Variant identity must be stable before inventory can reference it. */
+  id: variant.id || `${productId}-var-${String(index + 1).padStart(2, "0")}`,
   sku: variant.sku || "",
   color: variant.color || "",
   size: variant.size || "",
@@ -172,13 +190,21 @@ const normaliseVariant = (variant, index) => ({
  * dropped, and ids are never regenerated.
  */
 export const normaliseProductRecord = (raw = {}, index = 0) => {
-  const id = raw.id || `pf-${Date.now().toString(36)}-${index}`;
+  /*
+   * Authored catalogue rows pre-date explicit ids. Their index has always
+   * been their storefront identity (`pf-001`, `pf-002`, …); keep that value
+   * deterministic so stock records can safely reference it across reads.
+   * Stored/workspace products already carry ids and are never changed.
+   */
+  const id = raw.id || `pf-${String(index + 1).padStart(3, "0")}`;
   const name = raw.name || "";
   const slug = raw.slug || slugify(name || id);
   const pricing = normalisePricing(raw);
   const computed = computePricing(pricing);
 
-  const variants = asArray(raw.variants).map(normaliseVariant);
+  const variants = asArray(raw.variants).map((variant, variantIndex) =>
+    normaliseVariant(variant, variantIndex, id)
+  );
 
   /* Collections: authored single label + Phase 13 multi-select. */
   const collections = asArray(raw.collections);
@@ -827,9 +853,6 @@ export const catalogMetrics = (items) => {
     newArrivals: list.filter((p) => p.isNew).length,
     needsMedia: list.filter(needsMedia).length,
     needsPricingReview: list.filter(needsPricingReview).length,
-    /* Legacy Phase 11 tiles keep their fields. */
-    lowStock: list.filter((p) => p.stock > 0 && p.stock <= 5).length,
-    out: list.filter((p) => !p.stock || p.status === "ARCHIVED").length,
   };
 };
 

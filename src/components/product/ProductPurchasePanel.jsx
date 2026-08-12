@@ -13,6 +13,7 @@ import {
 import { colorSwatches } from "../../data/products/taxonomy";
 import { useCart } from "../../context/CartContext";
 import { useWishlist } from "../../context/WishlistContext";
+import { useInventory } from "../../context/InventoryContext";
 import { getMaxQuantity } from "../../utils/shopping";
 import { cn } from "../../utils/cn";
 import QuantityStepper from "../cart/QuantityStepper";
@@ -26,10 +27,18 @@ const sizeLabelFor = (product) => {
   return "Size";
 };
 
-const availabilityCopy = (product) => {
+const availabilityCopy = (product, inventoryAvailability) => {
+  if (inventoryAvailability?.status === "UNAVAILABLE") return "Currently unavailable";
+  if (inventoryAvailability?.tracked) {
+    if (inventoryAvailability.status === "OUT_OF_STOCK" || inventoryAvailability.status === "UNAVAILABLE") {
+      return "Currently unavailable";
+    }
+    if (inventoryAvailability.status === "LOW_STOCK") return "Only a few left";
+    return "In stock · Ready to dispatch";
+  }
   if (product.availability === "unavailable") return "Currently unavailable";
   if (product.availability === "made-to-order") return "Available for order · Made for you";
-  if (product.availability === "low-stock") return `Only ${Math.max(product.stock, 1)} ${product.stock === 1 ? "piece" : "pieces"} left`;
+  if (product.availability === "low-stock") return "Only a few left";
   return "In stock · Ready to dispatch";
 };
 
@@ -112,6 +121,7 @@ function DeliveryCheck({ product }) {
 export default function ProductPurchasePanel({ product }) {
   const wishlist = useWishlist();
   const cart = useCart();
+  const inventory = useInventory();
   const navigate = useNavigate();
   const requiresSize = !isFreeSizeOnly(product.sizes);
   const availableColors = product.colors.filter((color) => !product.unavailableColors.includes(color));
@@ -120,8 +130,14 @@ export default function ProductPurchasePanel({ product }) {
   const [quantity, setQuantity] = useState(1);
   const [feedback, setFeedback] = useState({ message: "", kind: "success" });
   const isSaved = wishlist.isSaved(product);
-  const unavailable = product.availability === "unavailable";
-  const maximum = getMaxQuantity(product);
+  const selectedSize = requiresSize ? size : product.sizes[0] ?? null;
+  const inventoryAvailability = inventory.getAvailability(product, { color, size: selectedSize });
+  const unavailable = inventoryAvailability.tracked
+    ? inventoryAvailability.available <= 0
+    : inventoryAvailability.status === "UNAVAILABLE" || product.availability === "unavailable";
+  const maximum = inventoryAvailability.tracked
+    ? inventoryAvailability.available
+    : getMaxQuantity(product);
   const discount = discountPercent(product.price, product.originalPrice);
 
   useEffect(() => {
@@ -130,6 +146,10 @@ export default function ProductPurchasePanel({ product }) {
     setQuantity(1);
     setFeedback({ message: "", kind: "success" });
   }, [product.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (maximum > 0 && quantity > maximum) setQuantity(maximum);
+  }, [maximum, quantity]);
 
   useEffect(() => {
     if (!feedback.message) return undefined;
@@ -151,7 +171,7 @@ export default function ProductPurchasePanel({ product }) {
     [product]
   );
 
-  const selection = { color, size: requiresSize ? size : product.sizes[0] ?? null, quantity };
+  const selection = { color, size: selectedSize, quantity };
 
   const validate = () => {
     if (unavailable) {
@@ -240,8 +260,8 @@ export default function ProductPurchasePanel({ product }) {
       </div>
 
       <div className="mt-6 flex items-center gap-2 font-ui text-[11px] tracking-wide text-cocoa">
-        <span className={cn("h-1.5 w-1.5 rounded-full", unavailable ? "bg-taupe" : product.availability === "low-stock" ? "bg-accent" : "bg-gold")} aria-hidden="true" />
-        {availabilityCopy(product)}
+        <span className={cn("h-1.5 w-1.5 rounded-full", unavailable ? "bg-taupe" : inventoryAvailability.status === "LOW_STOCK" || (!inventoryAvailability.tracked && product.availability === "low-stock") ? "bg-accent" : "bg-gold")} aria-hidden="true" />
+        {availabilityCopy(product, inventoryAvailability)}
       </div>
 
       {product.highlights?.length ? (

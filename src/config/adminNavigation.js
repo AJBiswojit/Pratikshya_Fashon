@@ -47,6 +47,7 @@ export const ADMIN_NAV_GROUPS = [
       { id: "offers", label: "Offers", to: "/admin/offers", icon: "tag", status: MODULE_STATUS.SOON },
       { id: "media", label: "Media Management", to: "/admin/media", icon: "image", status: MODULE_STATUS.READY },
       { id: "marketing-media", label: "Marketing Media", to: "/admin/media/marketing", icon: "film", status: MODULE_STATUS.READY },
+      { id: "inventory", label: "Inventory", to: "/admin/inventory", icon: "boxes", status: MODULE_STATUS.READY },
     ],
   },
   {
@@ -56,15 +57,6 @@ export const ADMIN_NAV_GROUPS = [
       { id: "orders", label: "Orders", to: "/admin/orders", icon: "bag", status: MODULE_STATUS.SOON },
       { id: "customers", label: "Customers", to: "/admin/customers", icon: "users", status: MODULE_STATUS.SOON },
       { id: "returns", label: "Returns", to: "/admin/returns", icon: "undo", status: MODULE_STATUS.SOON },
-    ],
-  },
-  {
-    id: "inventory",
-    label: "Inventory",
-    items: [
-      { id: "stock", label: "Stock", to: "/admin/inventory", icon: "boxes", status: MODULE_STATUS.SOON },
-      { id: "warehouses", label: "Warehouses", to: "/admin/warehouses", icon: "warehouse", status: MODULE_STATUS.SOON },
-      { id: "movements", label: "Stock Movements", to: "/admin/stock-movements", icon: "swap", status: MODULE_STATUS.SOON },
     ],
   },
   {
@@ -125,9 +117,6 @@ export const ADMIN_PLACEHOLDER_COPY = {
   orders: "Full order administration arrives with the order-operations module. Recent orders are already on the dashboard.",
   customers: "Customer administration arrives with the CRM module.",
   returns: "Return administration arrives with the order-operations module.",
-  stock: "Stock control, receiving and adjustment arrive with the inventory module.",
-  warehouses: "Warehouse administration arrives with the inventory module.",
-  movements: "Stock movement history arrives with the inventory module.",
   attendance: "House-wide attendance reporting arrives with the workforce module.",
   performance: "House-wide performance reporting arrives with the workforce module.",
   "sales-analytics": "Deep sales analytics arrive with the analytics module. A seven-day overview is on the dashboard.",

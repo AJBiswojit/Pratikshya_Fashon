@@ -16,6 +16,7 @@ import { useNavigate } from "react-router-dom";
 import { AlertTriangle, ArrowLeft, ArrowRight, RotateCcw, Archive } from "lucide-react";
 import { AtelierButton } from "../../design-system";
 import catalogRepository, { getPublishIssues } from "../../services/catalogRepository";
+import inventoryRepository from "../../services/inventory/inventoryRepository";
 import { computePricing } from "../../utils/pricing";
 import { PRODUCT_STATUSES, REVIEW_STATES } from "../../config/productCatalogConfig";
 import { SectionBasics, SectionAttributes } from "./editorSectionsBasics";
@@ -277,6 +278,9 @@ export default function ProductEditor({
       setFeedback({ kind: "error", message: result.error || "The product could not be saved." });
       return null;
     }
+    if (result.product.status === PRODUCT_STATUSES.PUBLISHED) {
+      inventoryRepository.ensureOpeningStock(result.product, actor);
+    }
     const nextDraft = draftFromProduct(result.product);
     setDraft(nextDraft);
     setBaseline(JSON.stringify(nextDraft));
@@ -359,6 +363,7 @@ export default function ProductEditor({
       announce((result.errors ?? [result.error]).join(" "), "error");
       return;
     }
+    inventoryRepository.ensureOpeningStock(result.product, actor);
     const nextDraft = draftFromProduct(result.product);
     setDraft(nextDraft);
     setBaseline(JSON.stringify(nextDraft));

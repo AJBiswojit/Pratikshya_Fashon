@@ -17,11 +17,12 @@ export default function DashboardFrame({
   title,
   description,
   extras = null,
+  metrics: metricsOverride = null,
   children,
 }) {
   const { employee } = useEmployeeAuth();
   const role = getRole(employee?.role);
-  const metrics = defaultDashboardMetrics(employee?.role);
+  const metrics = metricsOverride || defaultDashboardMetrics(employee?.role);
 
   return (
     <div className="pb-16">

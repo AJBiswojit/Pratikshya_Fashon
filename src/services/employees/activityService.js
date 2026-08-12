@@ -54,6 +54,10 @@ export const ACTIVITY_ACTIONS = {
   PRODUCT_RESTORED: "PRODUCT_RESTORED",
   PRODUCT_DUPLICATED: "PRODUCT_DUPLICATED",
   PRODUCT_BULK_UPDATED: "PRODUCT_BULK_UPDATED",
+
+  /* Inventory — Phase 14. The stock ledger holds quantity-level detail;
+     this shared diary carries the readable cross-module activity note. */
+  INVENTORY_MOVEMENT: "INVENTORY_MOVEMENT",
 };
 
 const ACTION_LABELS = {
@@ -94,6 +98,7 @@ const ACTION_LABELS = {
   [ACTIVITY_ACTIONS.PRODUCT_RESTORED]: "Product restored",
   [ACTIVITY_ACTIONS.PRODUCT_DUPLICATED]: "Product duplicated",
   [ACTIVITY_ACTIONS.PRODUCT_BULK_UPDATED]: "Products updated in bulk",
+  [ACTIVITY_ACTIONS.INVENTORY_MOVEMENT]: "Inventory updated",
 };
 
 export const getActivityLabel = (action) => ACTION_LABELS[action] ?? "Activity";

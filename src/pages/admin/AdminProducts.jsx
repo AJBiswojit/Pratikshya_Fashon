@@ -28,6 +28,7 @@ import AdminMetricCard from "../../components/admin/AdminMetricCard";
 import StatusBadge from "../../components/employee/StatusBadge";
 import { AtelierButton } from "../../design-system";
 import catalogRepository, { catalogMetrics } from "../../services/catalogRepository";
+import inventoryRepository from "../../services/inventory/inventoryRepository";
 import { useProducts } from "../../hooks/useProducts";
 import { useProductMediaSummaries } from "../../hooks/useMedia";
 import { useAdminAuth } from "../../context/AdminAuthContext";
@@ -128,12 +129,19 @@ export default function AdminProducts() {
         result.skipped ? `, ${result.skipped} skipped (publish requirements unmet)` : ""
       }.`
     );
+    if (patch.status === "PUBLISHED") {
+      selected.forEach((id) => {
+        const published = catalogRepository.find(id);
+        if (published?.status === "PUBLISHED") inventoryRepository.ensureOpeningStock(published, actor);
+      });
+    }
     setSelected([]);
   };
 
   const publishQuick = (product) => {
     const result = catalogRepository.publishProduct(product.id, actor);
     if (result.ok) {
+      inventoryRepository.ensureOpeningStock(result.product, actor);
       setNotice(`Published “${product.name}” — now visible to customers.`);
     } else {
       setNotice(`Could not publish “${product.name}”: ${(result.errors ?? [result.error]).join(" ")}`);

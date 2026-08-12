@@ -83,32 +83,6 @@ export const MOCK_OFFERS = [
   { id: "off-04", name: "Jewellery Pairing", applies: "Bangles with saree purchase", value: "15% on selected kada", status: "Live", until: "18 August 2026" },
 ];
 
-export const MOCK_STOCK_MOVEMENTS = [
-  { id: "mv-441", type: "Received", sku: "PF-SARE-014", piece: "Sambalpuri Pato Silk Saree", qty: 12, location: "Main Floor", at: "2026-08-11T08:40:00.000Z", by: "Riya Banerjee" },
-  { id: "mv-440", type: "Transfer", sku: "PF-BRDL-008", piece: "Ivory bridal lehenga", qty: 2, location: "Bridal Suite ← Warehouse", at: "2026-08-11T09:15:00.000Z", by: "Arjun Desai" },
-  { id: "mv-438", type: "Adjustment", sku: "PF-JWL-021", piece: "Temple-work bangle set", qty: -1, location: "Jewellery Salon", at: "2026-08-11T10:05:00.000Z", by: "Suresh Patil" },
-  { id: "mv-436", type: "Received", sku: "PF-KURT-011", piece: "Ivory silk kurta", qty: 18, location: "Warehouse", at: "2026-08-11T07:20:00.000Z", by: "Imran Qureshi" },
-  { id: "mv-433", type: "Outgoing", sku: "PF-SARE-003", piece: "Banarasi heritage saree", qty: 3, location: "Dispatch", at: "2026-08-10T17:45:00.000Z", by: "Imran Qureshi" },
-];
-
-export const MOCK_TRANSFERS = [
-  { id: "tr-208", from: "Warehouse", to: "Main Floor · Sarees", piece: "Cotton Pato — rust", qty: 8, status: "In transit", requestedBy: "Riya Banerjee" },
-  { id: "tr-207", from: "Warehouse", to: "Bridal Suite", piece: "Reception saree — champagne", qty: 2, status: "Pending approval", requestedBy: "Meera Nair" },
-  { id: "tr-205", from: "First Floor", to: "Main Floor", piece: "Kids lehenga set — marigold", qty: 4, status: "Completed", requestedBy: "Suresh Patil" },
-  { id: "tr-204", from: "Jewellery Salon", to: "Bridal Suite", piece: "Polki necklace set", qty: 1, status: "Completed", requestedBy: "Ishita Kapoor" },
-];
-
-export const MOCK_WAREHOUSE_TASKS = [
-  { id: "wh-incoming-01", kind: "Incoming", ref: "ASN-8821", detail: "Sambalpuri weaves — 42 pieces", status: "Unloading", eta: "Today · 1:30 PM" },
-  { id: "wh-incoming-02", kind: "Incoming", ref: "ASN-8814", detail: "Temple jewellery — 16 sets", status: "Expected", eta: "Tomorrow · 10:00 AM" },
-  { id: "wh-out-01", kind: "Outgoing", ref: "PF-2026-000184", detail: "Customer dispatch — 2 pieces", status: "Ready", eta: "Today · 4:00 PM" },
-  { id: "wh-out-02", kind: "Outgoing", ref: "PF-FLR-00016", detail: "Bridal suite replenishment", status: "Picking", eta: "Today · 2:15 PM" },
-  { id: "wh-pick-01", kind: "Pick", ref: "PICK-119", detail: "Banarasi silk · Gold zari · Size free", status: "Queued", eta: "Now" },
-  { id: "wh-pick-02", kind: "Pick", ref: "PICK-118", detail: "Men's wedding kurta · Ivory · L", status: "Packed", eta: "Done" },
-  { id: "wh-dmg-01", kind: "Damaged", ref: "DMG-044", detail: "Printed chiffon saree — selvedge tear", status: "Quarantine", eta: "Hold" },
-  { id: "wh-dmg-02", kind: "Damaged", ref: "DMG-041", detail: "Kids sherwani — missing button set", status: "Repair requested", eta: "Hold" },
-];
-
 export const MOCK_SUPPORT_CASES = [
   { id: "CS-1044", customer: "Rohan Mehta", topic: "Groom sherwani delivery window", status: "Open", priority: "Today", owner: "Divya Krishnan" },
   { id: "CS-1041", customer: "Ananya Sharma", topic: "Blouse stitch confirmation", status: "Waiting on atelier", priority: "Today", owner: "Divya Krishnan" },
@@ -284,9 +258,6 @@ export default {
   MOCK_ASSISTED_ORDERS,
   MOCK_FOLLOW_UPS,
   MOCK_OFFERS,
-  MOCK_STOCK_MOVEMENTS,
-  MOCK_TRANSFERS,
-  MOCK_WAREHOUSE_TASKS,
   MOCK_SUPPORT_CASES,
   MOCK_FEEDBACK,
   MOCK_STYLING_REQUESTS,

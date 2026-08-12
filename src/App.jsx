@@ -6,6 +6,7 @@ import { hasNavigationScope } from "./data/products/taxonomy";
 import { AuthProvider } from "./context/AuthContext";
 import { AccountProvider } from "./context/AccountContext";
 import { ShoppingProvider } from "./context/ShoppingContext";
+import { InventoryProvider } from "./context/InventoryContext";
 import { CheckoutProvider } from "./context/CheckoutContext";
 import { OrderProvider } from "./context/OrderContext";
 import { EmployeeAuthProvider } from "./context/EmployeeAuthContext";
@@ -94,6 +95,11 @@ const AdminMediaReview = lazy(() => import("./pages/admin/media/AdminMediaReview
 const AdminMarketingMedia = lazy(() => import("./pages/admin/media/AdminMarketingMedia"));
 const AdminMediaDetail = lazy(() => import("./pages/admin/media/AdminMediaDetail"));
 const AdminProductMedia = lazy(() => import("./pages/admin/media/AdminProductMedia"));
+const InventoryDashboardPage = lazy(() => import("./components/inventory/InventoryDashboardPage"));
+const InventoryOperationPage = lazy(() => import("./components/inventory/InventoryOperationPage"));
+const InventoryTransfersPage = lazy(() => import("./components/inventory/InventoryTransfersPage"));
+const InventoryMovementsPage = lazy(() => import("./components/inventory/InventoryMovementsPage"));
+const InventoryLowStockPage = lazy(() => import("./components/inventory/InventoryLowStockPage"));
 const AdminNotFound = lazy(() => import("./pages/admin/AdminNotFound"));
 
 /** Paths owned by dedicated pages rather than the generic interior shell. */
@@ -125,10 +131,11 @@ const dedicatedPaths = new Set([
  * Providers:
  * AuthProvider (customer)
  * └── AccountProvider
- *     └── ShoppingProvider
- *         └── OrderProvider
- *             └── CheckoutProvider
- *                 └── EmployeeAuthProvider
+ *     └── InventoryProvider
+ *         └── ShoppingProvider
+ *             └── OrderProvider
+ *                 └── CheckoutProvider
+ *                     └── EmployeeAuthProvider
  *                     └── EmployeeManagementProvider
  *                         └── AdminAuthProvider
  *
@@ -142,10 +149,11 @@ export default function App() {
     <BrowserRouter>
       <AuthProvider>
         <AccountProvider>
-          <ShoppingProvider>
-            <OrderProvider>
-              <CheckoutProvider>
-                <EmployeeAuthProvider>
+          <InventoryProvider>
+            <ShoppingProvider>
+              <OrderProvider>
+                <CheckoutProvider>
+                  <EmployeeAuthProvider>
                   <EmployeeManagementProvider>
                     <AdminAuthProvider>
                     <Suspense fallback={<LoadingState label="Opening PRATIKSHYA FASHON" />}>
@@ -194,9 +202,15 @@ export default function App() {
                           <Route path="/admin/orders" element={<AdminModulePlaceholder />} />
                           <Route path="/admin/customers" element={<AdminModulePlaceholder />} />
                           <Route path="/admin/returns" element={<AdminModulePlaceholder />} />
-                          <Route path="/admin/inventory" element={<AdminModulePlaceholder />} />
-                          <Route path="/admin/warehouses" element={<AdminModulePlaceholder />} />
-                          <Route path="/admin/stock-movements" element={<AdminModulePlaceholder />} />
+                          {/* Phase 14 — one catalogue-connected inventory ledger. */}
+                          <Route path="/admin/inventory" element={<InventoryDashboardPage portal="admin" />} />
+                          <Route path="/admin/inventory/receive" element={<InventoryOperationPage portal="admin" operation="receive" />} />
+                          <Route path="/admin/inventory/adjust" element={<InventoryOperationPage portal="admin" operation="adjust" />} />
+                          <Route path="/admin/inventory/transfers" element={<InventoryTransfersPage portal="admin" />} />
+                          <Route path="/admin/inventory/movements" element={<InventoryMovementsPage portal="admin" />} />
+                          <Route path="/admin/inventory/low-stock" element={<InventoryLowStockPage portal="admin" />} />
+                          <Route path="/admin/warehouses" element={<Navigate to="/admin/inventory?locationType=WAREHOUSE" replace />} />
+                          <Route path="/admin/stock-movements" element={<Navigate to="/admin/inventory/movements" replace />} />
                           <Route path="/admin/attendance" element={<AdminModulePlaceholder />} />
                           <Route path="/admin/performance" element={<AdminModulePlaceholder />} />
                           <Route path="/admin/analytics/sales" element={<AdminModulePlaceholder />} />
@@ -233,14 +247,14 @@ export default function App() {
                           <Route path="/employee/orders" element={<EmployeeOrders />} />
                           <Route path="/employee/orders/assisted" element={<EmployeeAssistedOrder />} />
                           <Route path="/employee/offers" element={<EmployeeOffers />} />
-                          <Route path="/employee/inventory" element={<EmployeeDesk />} />
-                          <Route path="/employee/inventory/movements" element={<EmployeeDesk />} />
-                          <Route path="/employee/inventory/transfers" element={<EmployeeDesk />} />
-                          <Route path="/employee/inventory/low-stock" element={<EmployeeDesk />} />
-                          <Route path="/employee/inventory/out-of-stock" element={<EmployeeDesk />} />
-                          <Route path="/employee/inventory/receive" element={<EmployeeDesk />} />
-                          <Route path="/employee/inventory/adjust" element={<EmployeeDesk />} />
-                          <Route path="/employee/inventory/requests" element={<EmployeeDesk />} />
+                          <Route path="/employee/inventory" element={<InventoryDashboardPage portal="employee" />} />
+                          <Route path="/employee/inventory/movements" element={<InventoryMovementsPage portal="employee" />} />
+                          <Route path="/employee/inventory/transfers" element={<InventoryTransfersPage portal="employee" />} />
+                          <Route path="/employee/inventory/low-stock" element={<InventoryLowStockPage portal="employee" />} />
+                          <Route path="/employee/inventory/out-of-stock" element={<Navigate to="/employee/inventory/low-stock" replace />} />
+                          <Route path="/employee/inventory/receive" element={<InventoryOperationPage portal="employee" operation="receive" />} />
+                          <Route path="/employee/inventory/adjust" element={<InventoryOperationPage portal="employee" operation="adjust" />} />
+                          <Route path="/employee/inventory/requests" element={<Navigate to="/employee/inventory/transfers" replace />} />
                           <Route path="/employee/warehouse" element={<EmployeeDesk />} />
                           <Route path="/employee/warehouse/incoming" element={<EmployeeDesk />} />
                           <Route path="/employee/warehouse/outgoing" element={<EmployeeDesk />} />
@@ -342,10 +356,11 @@ export default function App() {
                     </Suspense>
                     </AdminAuthProvider>
                   </EmployeeManagementProvider>
-                </EmployeeAuthProvider>
-              </CheckoutProvider>
-            </OrderProvider>
-          </ShoppingProvider>
+                  </EmployeeAuthProvider>
+                </CheckoutProvider>
+              </OrderProvider>
+            </ShoppingProvider>
+          </InventoryProvider>
         </AccountProvider>
       </AuthProvider>
     </BrowserRouter>

@@ -17,7 +17,6 @@ import {
   BUSINESS_METRICS,
   DEMO_RECENT_ORDERS,
   DEPARTMENT_PERFORMANCE,
-  INVENTORY_ALERTS,
   METRIC_TRENDS,
   SALES_BY_CATEGORY,
   SALES_SERIES,
@@ -87,17 +86,6 @@ export const getDepartmentPerformance = () =>
   }));
 
 export const getTopDepartments = () => TOP_DEPARTMENTS;
-
-/* ------------------------------------------------------------------ */
-/* Inventory                                                           */
-/* ------------------------------------------------------------------ */
-
-export const getInventoryAlerts = () => INVENTORY_ALERTS;
-
-export const getInventoryAlertCounts = () => ({
-  low: INVENTORY_ALERTS.filter((alert) => alert.level === "LOW").length,
-  out: INVENTORY_ALERTS.filter((alert) => alert.level === "OUT").length,
-});
 
 /* ------------------------------------------------------------------ */
 /* Orders                                                              */
@@ -180,8 +168,6 @@ export default {
   getSalesSummary,
   getDepartmentPerformance,
   getTopDepartments,
-  getInventoryAlerts,
-  getInventoryAlertCounts,
   getRecentOrders,
   getEmployeeOverview,
   getEmployeesNeedingAttention,

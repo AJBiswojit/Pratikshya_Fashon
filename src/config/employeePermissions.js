@@ -27,6 +27,7 @@ export const PERMISSIONS = {
   INVENTORY_ADJUST: "inventory.adjust",
   INVENTORY_TRANSFER: "inventory.transfer",
   INVENTORY_MANAGE: "inventory.manage",
+  INVENTORY_AUDIT: "inventory.audit",
 
   WAREHOUSE_VIEW: "warehouse.view",
   WAREHOUSE_PICK: "warehouse.pick",
@@ -112,6 +113,7 @@ export const PERMISSION_CATALOGUE = [
       { key: PERMISSIONS.INVENTORY_ADJUST, label: "Adjust stock" },
       { key: PERMISSIONS.INVENTORY_TRANSFER, label: "Transfer stock" },
       { key: PERMISSIONS.INVENTORY_MANAGE, label: "Manage inventory settings" },
+      { key: PERMISSIONS.INVENTORY_AUDIT, label: "Audit stock movements" },
       { key: PERMISSIONS.WAREHOUSE_VIEW, label: "View warehouse" },
       { key: PERMISSIONS.WAREHOUSE_PICK, label: "Pick & pack" },
     ],

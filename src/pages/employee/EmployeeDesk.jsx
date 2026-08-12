@@ -239,7 +239,9 @@ const desks = {
         Warehouse <span className="italic text-accent">transfers.</span>
       </>
     ),
-    rows: getTransfers(),
+    rows: getTransfers().filter((item) =>
+      item.source?.type === "WAREHOUSE" || item.destination?.type === "WAREHOUSE"
+    ),
     columns: [
       { id: "id", label: "Ref" },
       { id: "piece", label: "Piece" },

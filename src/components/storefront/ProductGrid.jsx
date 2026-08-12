@@ -5,6 +5,7 @@ import { ProductCard, gap, useReveal } from "../../design-system";
 import { productHref } from "../../data/products";
 import { useProductCovers } from "../../hooks/useMedia";
 import { useWishlist } from "../../context/WishlistContext";
+import { useInventory } from "../../context/InventoryContext";
 import { cn } from "../../utils/cn";
 
 /**
@@ -24,6 +25,7 @@ import { cn } from "../../utils/cn";
  */
 export default function ProductGrid({ products, className = "" }) {
   const wishlist = useWishlist();
+  const inventory = useInventory();
   const reveal = useReveal();
   /* Cards show one plate: the published cover when the Admin Portal has set
      one, the authored catalogue image otherwise. Never video. */
@@ -31,25 +33,40 @@ export default function ProductGrid({ products, className = "" }) {
 
   return (
     <div className={cn("grid grid-cols-2 lg:grid-cols-3", gap.tile, className)}>
-      {rows.map((product, index) => (
-        <motion.div
-          key={product.id}
-          {...reveal}
-          transition={{ ...reveal.transition, delay: Math.min(index % 8, 4) * 0.04 }}
-        >
-          <ProductCard
-            product={product}
-            as={Link}
-            to={productHref(product)}
-            showCategory
-            showDiscount
-            showAvailability
-            onWishlist={wishlist.toggle}
-            isWishlisted={wishlist.isSaved(product)}
-            wishlistIcon={Heart}
-          />
-        </motion.div>
-      ))}
+      {rows.map((product, index) => {
+        const availability = inventory.getAvailability(product);
+        const customerProduct = availability.tracked
+          ? {
+              ...product,
+              inStock: availability.available > 0,
+              availabilityText:
+                availability.status === "LOW_STOCK"
+                  ? "Only a few left"
+                  : availability.available <= 0
+                    ? "Currently unavailable"
+                    : "",
+            }
+          : product;
+        return (
+          <motion.div
+            key={product.id}
+            {...reveal}
+            transition={{ ...reveal.transition, delay: Math.min(index % 8, 4) * 0.04 }}
+          >
+            <ProductCard
+              product={customerProduct}
+              as={Link}
+              to={productHref(product)}
+              showCategory
+              showDiscount
+              showAvailability
+              onWishlist={wishlist.toggle}
+              isWishlisted={wishlist.isSaved(product)}
+              wishlistIcon={Heart}
+            />
+          </motion.div>
+        );
+      })}
     </div>
   );
 }
