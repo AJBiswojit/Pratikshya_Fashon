@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { Link, useParams } from "react-router-dom";
+import { Link, useParams, useSearchParams } from "react-router-dom";
 import { useEffect, useMemo } from "react";
 import {
   AtelierButton,
@@ -15,9 +15,22 @@ import ProductDetailsAccordion from "../components/product/ProductDetailsAccordi
 import ProductGallery from "../components/product/ProductGallery";
 import ProductPurchasePanel from "../components/product/ProductPurchasePanel";
 import ProductRecommendations from "../components/product/ProductRecommendations";
-import { getProductByIdentifier } from "../data/products";
+import { getProductByIdentifier, toStorefrontProduct } from "../data/products";
 import { getProductRecommendations } from "../data/products/recommendations";
 import { imageRef } from "../data/pratikshyaImageManifest";
+import catalogRepository from "../services/catalogRepository";
+
+/**
+ * Admin/employee preview: `?preview=1` renders any workspace record —
+ * draft, pending or archived — through this same customer design. No
+ * second product-detail page exists.
+ */
+const resolvePreviewProduct = (identifier) => {
+  const record =
+    catalogRepository.find(identifier) ?? catalogRepository.findBySlug(identifier);
+  if (!record) return null;
+  return toStorefrontProduct(record, 0);
+};
 
 function ProductNotFound() {
   return (
@@ -57,7 +70,12 @@ function ProductNotFound() {
 
 export default function ProductDetail() {
   const { productId } = useParams();
-  const product = getProductByIdentifier(productId);
+  const [searchParams] = useSearchParams();
+  const isPreview = searchParams.get("preview") === "1";
+  const product = useMemo(
+    () => getProductByIdentifier(productId) ?? (isPreview ? resolvePreviewProduct(productId) : null),
+    [productId, isPreview]
+  );
   const reveal = useReveal();
   const recommendations = useMemo(
     () => (product ? getProductRecommendations(product) : null),
@@ -86,6 +104,14 @@ export default function ProductDetail() {
 
   return (
     <main className="pb-20 md:pb-0">
+      {isPreview ? (
+        <div
+          role="status"
+          className="fixed inset-x-0 top-0 z-50 bg-ink px-4 py-2 text-center font-ui text-[10px] uppercase tracking-[.22em] text-ivory"
+        >
+          Atelier preview — this piece is not yet visible to customers
+        </div>
+      ) : null}
       <AtelierSection rhythm="none" width="wide" className="pb-16 pt-28 sm:pt-32 md:pb-24">
         <Breadcrumb items={breadcrumbs} separator="/" className="mb-8 md:mb-10" />
 

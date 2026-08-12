@@ -16,6 +16,7 @@
  */
 
 import { MEDIA_TYPES, PRODUCT_MEDIA_ROLES } from "../../config/mediaTypes";
+import { imageRef } from "../../data/pratikshyaImageManifest";
 import { getProductMedia } from "./mediaRepository";
 
 /**
@@ -111,4 +112,23 @@ export const hasProductVideo = (product) =>
   Boolean(product) &&
   getProductMedia(product.id, { publicOnly: true, type: MEDIA_TYPES.VIDEO }).length > 0;
 
-export default { getProductSlides, getProductCoverImage, hasProductVideo };
+/**
+ * Always-shaped cover for operational surfaces (admin tables, the product
+ * record). Handles manifest ids, stored addresses and authored objects
+ * alike, so callers can simply render `cover.src`.
+ */
+export const resolveProductCover = (product) => {
+  const cover = getProductCoverImage(product);
+  if (!cover) return null;
+  if (typeof cover === "object") return cover.src ? cover : null;
+  if (typeof cover === "string") {
+    if (cover.startsWith("http") || cover.startsWith("/") || cover.startsWith("data:")) {
+      return { id: cover, src: cover, alt: product?.name ?? "" };
+    }
+    const referenced = imageRef(cover);
+    return referenced?.src ? referenced : null;
+  }
+  return null;
+};
+
+export default { getProductSlides, getProductCoverImage, hasProductVideo, resolveProductCover };

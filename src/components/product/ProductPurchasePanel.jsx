@@ -232,7 +232,11 @@ export default function ProductPurchasePanel({ product }) {
         {discount ? (
           <span className="font-ui text-[10px] uppercase tracking-[.16em] text-accent">{discount}% off</span>
         ) : null}
-        <span className="w-full font-ui text-[10px] text-taupe">Inclusive of all taxes</span>
+        <span className="w-full font-ui text-[10px] text-taupe">
+          {product.pricing?.taxMode === "EXCLUSIVE" && Number(product.pricing?.taxRate) > 0
+            ? `Exclusive of ${product.pricing.taxRate}% GST`
+            : "Inclusive of all taxes"}
+        </span>
       </div>
 
       <div className="mt-6 flex items-center gap-2 font-ui text-[11px] tracking-wide text-cocoa">

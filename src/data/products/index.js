@@ -6,6 +6,14 @@
  * is computed once, at module load, so no component ever transforms product
  * data while rendering.
  *
+ * Phase 13: the same layer hydrates records written by the Admin/Employee
+ * product workspace (the shared `pratikshya_products` register) so the
+ * storefront keeps reading ONE product repository. Rules honoured:
+ *   · only PUBLISHED products reach customers
+ *   · existing ids and slugs are preserved, never regenerated
+ *   · variants authored in the workspace supply colours and sizes
+ *   · search consumes SKU, tags, collections and product type as well
+ *
  * The normalised record is a superset of what the Phase 2 `ProductCard`
  * expects (`name`, `category`, `price`, `originalPrice`, `label`, `image`,
  * `hoverImage`, `inStock`), which is why the card needs no changes to
@@ -51,6 +59,26 @@ const percentOff = (price, originalPrice) =>
     ? Math.round(((originalPrice - price) / originalPrice) * 100)
     : null;
 
+/** True for addresses rather than manifest ids. */
+const isUrl = (value) =>
+  typeof value === "string" &&
+  (value.startsWith("http") || value.startsWith("/") || value.startsWith("data:"));
+
+/**
+ * Imagery authored as a manifest id resolves through the manifest; a stored
+ * address (an uploaded plate) is shaped into the same object so the gallery
+ * and cards render either without caring which. Early rows that persisted a
+ * whole plate object heal here too.
+ */
+const resolveImage = (value, name) => {
+  if (!value) return imageRef("hero-atelier");
+  if (typeof value === "object") {
+    return value.src ? value : imageRef(value.id ?? "hero-atelier");
+  }
+  if (isUrl(value)) return { id: value, src: value, alt: name, category: "default" };
+  return imageRef(value);
+};
+
 /**
  * The free-text haystack search matches against.
  *
@@ -60,15 +88,21 @@ const percentOff = (price, originalPrice) =>
 const buildTags = (product) =>
   [
     product.name,
+    product.sku,
     product.subcategory,
     categoryLabels[product.category] ?? product.category,
     product.gender,
     product.collection,
+    ...(product.collections ?? []),
     product.fabric,
     product.material,
     ...(product.occasion ?? []),
     ...(product.colors ?? []),
     ...(product.badges ?? []),
+    ...(product.tags ?? []),
+    ...(product.work ?? []),
+    ...(product.patterns ?? []),
+    product.productType,
   ].filter(Boolean);
 
 /**
@@ -82,12 +116,29 @@ const availabilityLabels = {
   unavailable: "Currently Unavailable",
 };
 
-const normalise = (product, index) => {
-  const slug = slugify(product.name);
-  const id = `pf-${String(index + 1).padStart(3, "0")}`;
+/**
+ * Normalises one record into the storefront shape.
+ *
+ * Authored catalogue records and workspace records both pass through here.
+ * Anything already present wins — ids, slugs and authored fields are never
+ * regenerated — so Phase 13 edits keep every existing reference intact.
+ */
+export const toStorefrontProduct = (product, index = 0) => {
+  const id = product.id ?? `pf-${String(index + 1).padStart(3, "0")}`;
+  const slug = product.slug || slugify(product.name ?? id);
   const sku = product.sku ?? `PF-${product.category.slice(0, 4).toUpperCase()}-${String(index + 1).padStart(3, "0")}`;
+
+  /* Variants authored in the workspace supply colours and sizes. Active
+     variants are selectable; inactive ones are excluded, never deleted. */
+  const variants = Array.isArray(product.variants) ? product.variants : [];
+  const activeVariants = variants.filter((variant) => variant?.status !== "INACTIVE");
+  const variantColors = [...new Set(activeVariants.map((variant) => variant.color).filter(Boolean))];
+  const variantSizes = [...new Set(activeVariants.map((variant) => variant.size).filter(Boolean))];
+
+  const colors = product.colors?.length ? product.colors : variantColors;
+  const sizes = product.sizes?.length ? product.sizes : variantSizes;
+
   const discount = percentOff(product.price, product.originalPrice);
-  const tags = buildTags(product);
   const badges = product.badges ?? [];
   const galleryIds = [
     product.image,
@@ -95,9 +146,13 @@ const normalise = (product, index) => {
     ...(product.additionalImages ?? []),
     ...getGalleryImageIds(product),
   ].filter(Boolean);
-  const images = [...new Set(galleryIds)].slice(0, 5).map(imageRef);
+  const images = [...new Set(galleryIds)].slice(0, 5).map((entry) => resolveImage(entry, product.name));
+
+  const collection = product.collection ?? product.collections?.[0] ?? "";
 
   return {
+    ...product,
+
     /* Identity */
     id,
     slug,
@@ -109,7 +164,7 @@ const normalise = (product, index) => {
     categoryLabel: categoryLabels[product.category] ?? product.category,
     subcategory: product.subcategory,
     gender: product.gender,
-    collection: product.collection,
+    collection,
 
     /* Price */
     price: product.price,
@@ -117,16 +172,17 @@ const normalise = (product, index) => {
     discount,
     currency: "INR",
 
-    /* Imagery — manifest refs, never raw URLs. */
-    image: imageRef(product.image),
-    hoverImage: product.hoverImage ? imageRef(product.hoverImage) : undefined,
+    /* Imagery — manifest refs or stored addresses, never raw strings. */
+    image: resolveImage(product.image, product.name),
+    hoverImage: product.hoverImage ? resolveImage(product.hoverImage, product.name) : undefined,
     images,
 
     /* Attributes and variants */
-    colors: product.colors ?? [],
+    colors,
     unavailableColors: product.unavailableColors ?? [],
-    sizes: product.sizes ?? [],
+    sizes,
     unavailableSizes: product.unavailableSizes ?? [],
+    variants,
     fabric: product.fabric,
     material: product.material,
     occasion: product.occasion ?? [],
@@ -176,17 +232,53 @@ const normalise = (product, index) => {
     addedOrder: index + (product.isNew ? 1000 : 0),
 
     /* Search */
-    tags,
-    searchText: normaliseSearchText(tags.join(" ")),
+    tags: buildTags(product),
   };
 };
 
-/** Every product in the catalogue, normalised. */
-const seededProducts = catalogue.map(normalise);
-/** Hydrate the authored catalogue from the shared admin repository when a
- * browser session has saved it. This keeps every storefront query on the same
- * product identity without making the data module depend on React. */
-const persistedProducts = (() => { try { const value = JSON.parse(window.localStorage.getItem("pratikshya_products")); return Array.isArray(value) && value.length ? value : null; } catch { return null; } })();
+const withSearchText = (product) => ({
+  ...product,
+  searchText: normaliseSearchText((product.tags ?? []).join(" ")),
+});
+
+/** Every product in the authored catalogue, normalised. */
+const seededProducts = catalogue.map((product, index) =>
+  withSearchText(toStorefrontProduct(product, index))
+);
+
+/**
+ * The shared admin register, when a browser session has saved one. Records
+ * may be authored catalogue rows, Phase 11 minimal rows or Phase 13 complete
+ * rows — hydration fills whatever is missing. Only PUBLISHED records reach
+ * the customer.
+ */
+const isCustomerVisible = (record) => {
+  if (!record) return false;
+  if (record.status) return record.status === "PUBLISHED";
+  return record.published !== false;
+};
+
+const persistedProducts = (() => {
+  try {
+    const value = JSON.parse(window.localStorage.getItem("pratikshya_products"));
+    if (!Array.isArray(value) || !value.length) return null;
+
+    /* Slugs stay unique across the shelf — a collision borrows the id. */
+    const seenSlugs = new Set();
+    return value
+      .filter(isCustomerVisible)
+      .map((record, index) => withSearchText(toStorefrontProduct(record, index)))
+      .map((product) => {
+        let slug = product.slug;
+        if (seenSlugs.has(slug)) slug = `${slug}-${String(product.id).slice(-4)}`;
+        seenSlugs.add(slug);
+        return slug === product.slug ? product : { ...product, slug };
+      });
+  } catch {
+    return null;
+  }
+})();
+
 export const products = persistedProducts || seededProducts;
 
 /* ------------------------------------------------------------------ */

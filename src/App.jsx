@@ -56,6 +56,7 @@ const EmployeeProfile = lazy(() => import("./pages/employee/EmployeeProfile"));
 const EmployeeAttendance = lazy(() => import("./pages/employee/EmployeeAttendance"));
 const EmployeePerformance = lazy(() => import("./pages/employee/EmployeePerformance"));
 const EmployeeProducts = lazy(() => import("./pages/employee/EmployeeProducts"));
+const EmployeeProductForm = lazy(() => import("./pages/employee/EmployeeProductForm"));
 const EmployeeCustomers = lazy(() => import("./pages/employee/EmployeeCustomers"));
 const EmployeeOrders = lazy(() => import("./pages/employee/EmployeeOrders"));
 const EmployeeAssistedOrder = lazy(() => import("./pages/employee/EmployeeAssistedOrder"));
@@ -86,6 +87,7 @@ const AdminModulePlaceholder = lazy(() => import("./pages/admin/AdminModulePlace
 const AdminProducts = lazy(() => import("./pages/admin/AdminProducts"));
 const ProductForm = lazy(() => import("./pages/admin/ProductForm"));
 const AdminProductDetail = lazy(() => import("./pages/admin/AdminProductDetail"));
+const AdminProductReview = lazy(() => import("./pages/admin/AdminProductReview"));
 const AdminMediaLibrary = lazy(() => import("./pages/admin/media/AdminMediaLibrary"));
 const AdminMediaUpload = lazy(() => import("./pages/admin/media/AdminMediaUpload"));
 const AdminMediaReview = lazy(() => import("./pages/admin/media/AdminMediaReview"));
@@ -172,6 +174,7 @@ export default function App() {
 
                           {/* Business modules — navigable placeholders until their phase lands */}
                           <Route path="/admin/products" element={<AdminProducts />} />
+                          <Route path="/admin/products/review" element={<AdminProductReview />} />
                           <Route path="/admin/products/new" element={<ProductForm />} />
                           <Route path="/admin/products/:productId/edit" element={<ProductForm />} />
                           <Route path="/admin/products/:productId" element={<AdminProductDetail />} />
@@ -224,6 +227,8 @@ export default function App() {
                           <Route path="/employee/media/upload" element={<EmployeeMediaUpload />} />
                           <Route path="/employee/media/:mediaId" element={<EmployeeMediaDetail />} />
                           <Route path="/employee/products" element={<EmployeeProducts />} />
+                          <Route path="/employee/products/new" element={<EmployeeProductForm />} />
+                          <Route path="/employee/products/:productId/edit" element={<EmployeeProductForm />} />
                           <Route path="/employee/customers" element={<EmployeeCustomers />} />
                           <Route path="/employee/orders" element={<EmployeeOrders />} />
                           <Route path="/employee/orders/assisted" element={<EmployeeAssistedOrder />} />

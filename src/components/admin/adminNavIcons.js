@@ -9,6 +9,7 @@ import {
   BadgeCheck,
   BarChart3,
   Boxes,
+  ClipboardCheck,
   ClipboardList,
   Clock3,
   Film,
@@ -33,6 +34,7 @@ import {
 
 export const ADMIN_NAV_ICONS = {
   layout: LayoutDashboard,
+  check: ClipboardCheck,
   sparkles: Sparkles,
   grid: LayoutGrid,
   layers: Layers,
