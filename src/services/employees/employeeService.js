@@ -10,7 +10,7 @@
  * onto the employee record and are never returned by list/get methods.
  */
 
-import { getDefaultPermissions, isKnownRole } from "../../config/employeeRoles";
+import { ROLES, getDefaultPermissions, isKnownRole } from "../../config/employeeRoles";
 import {
   EMPLOYEE_STATUS,
   canEmployeeLogin,
@@ -63,6 +63,19 @@ const stripUnknown = (record) => {
 export const toPublicEmployee = (record) => {
   const cleaned = stripUnknown(record);
   if (!cleaned || !cleaned.employeeId) return null;
+
+  const permissionMode = cleaned.permissionMode === "custom" ? "custom" : "role";
+  let permissions;
+  if (cleaned.role === ROLES.SUPER_ADMIN) {
+    permissions = getDefaultPermissions(ROLES.SUPER_ADMIN);
+  } else if (permissionMode === "role") {
+    permissions = getDefaultPermissions(cleaned.role);
+  } else {
+    permissions = Array.isArray(cleaned.permissions)
+      ? [...cleaned.permissions]
+      : getDefaultPermissions(cleaned.role);
+  }
+
   return {
     id: String(cleaned.id || cleaned.employeeId),
     employeeId: normaliseEmployeeId(cleaned.employeeId),
@@ -77,8 +90,8 @@ export const toPublicEmployee = (record) => {
     store: cleaned.store || "",
     joiningDate: cleaned.joiningDate || "",
     status: cleaned.status || EMPLOYEE_STATUS.PENDING,
-    permissions: Array.isArray(cleaned.permissions) ? [...cleaned.permissions] : [],
-    permissionMode: cleaned.permissionMode === "custom" ? "custom" : "role",
+    permissions,
+    permissionMode,
     mustChangePassword: Boolean(cleaned.mustChangePassword),
     lastLogin: cleaned.lastLogin || null,
     createdAt: cleaned.createdAt || new Date().toISOString(),
