@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from "framer-motion";
-import { Check, Heart, MapPin, RotateCcw, ShoppingBag, Star, Truck } from "lucide-react";
+import { Check, Heart, MapPin, RotateCcw, ShoppingBag, Sparkles, Star, Truck } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
@@ -17,6 +17,7 @@ import { useInventory } from "../../context/InventoryContext";
 import { getMaxQuantity } from "../../utils/shopping";
 import { cn } from "../../utils/cn";
 import QuantityStepper from "../cart/QuantityStepper";
+import { isVirtualTryOnEligibleProduct } from "../../services/aiMirror/aiMirrorEligibility";
 
 const isFreeSizeOnly = (sizes = []) => sizes.length === 0 || (sizes.length === 1 && sizes[0] === "Free Size");
 
@@ -139,6 +140,7 @@ export default function ProductPurchasePanel({ product }) {
     ? inventoryAvailability.available
     : getMaxQuantity(product);
   const discount = discountPercent(product.price, product.originalPrice);
+  const virtualTryOnEligible = isVirtualTryOnEligibleProduct(product);
 
   useEffect(() => {
     setColor(availableColors[0] ?? null);
@@ -216,6 +218,10 @@ export default function ProductPurchasePanel({ product }) {
       message: isSaved ? "Removed from your wishlist." : "Saved to your wishlist.",
       kind: "success",
     });
+  };
+
+  const openAiMirror = () => {
+    navigate(`/account/ai-mirror?product=${encodeURIComponent(product.id)}`);
   };
 
   return (
@@ -381,6 +387,16 @@ export default function ProductPurchasePanel({ product }) {
         >
           <ShoppingBag size={15} aria-hidden="true" /> Add to Cart
         </AtelierButton>
+        {virtualTryOnEligible ? (
+          <AtelierButton
+            onClick={openAiMirror}
+            variant="outline"
+            size="md"
+            className="col-span-2 justify-center border-accent/45 text-accent hover:border-ink"
+          >
+            <Sparkles size={15} aria-hidden="true" /> Try with AI Mirror
+          </AtelierButton>
+        ) : null}
         <AtelierButton
           onClick={buyNow}
           disabled={unavailable}

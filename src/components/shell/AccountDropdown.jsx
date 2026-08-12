@@ -6,6 +6,7 @@ import {
   Heart,
   MapPin,
   Sliders,
+  Camera,
   LogOut,
   LogIn,
   UserPlus,
@@ -74,6 +75,18 @@ export default function AccountDropdown({
             >
               <User size={14} strokeWidth={1.5} aria-hidden="true" />
               <span>My Account</span>
+            </Link>
+
+            <Link
+              to="/account/ai-mirror"
+              onClick={onClose}
+              className={cn(
+                "flex items-center gap-3 px-5 py-2 font-ui text-xs text-graphite hover:text-accent hover:bg-surface/50",
+                transition.colors
+              )}
+            >
+              <Camera size={14} strokeWidth={1.5} aria-hidden="true" />
+              <span>AI Mirror</span>
             </Link>
 
             <Link
