@@ -30,6 +30,7 @@ export const EMPLOYEE_ROUTE_RULES = [
   { path: "/employee/customers", permission: P.CUSTOMERS_VIEW, prefix: true },
   { path: "/employee/orders/assisted", permission: P.ORDERS_CREATE, prefix: true },
   { path: "/employee/orders", permission: P.ORDERS_VIEW, prefix: true },
+  { path: "/employee/offers/new", permission: P.OFFERS_CREATE, prefix: true },
   { path: "/employee/offers", permission: P.OFFERS_VIEW, prefix: true },
   /* Inventory child routes are checked before the broad view rule so a
      read-only employee cannot reach an operation by typing its URL. */
@@ -52,6 +53,7 @@ export const EMPLOYEE_ROUTE_RULES = [
 export const requiredPermissionForPath = (pathname) => {
   if (!pathname || typeof pathname !== "string") return P.DASHBOARD_VIEW;
   const cleaned = pathname.split("?")[0];
+  if (/^\/employee\/offers\/[^/]+\/edit$/.test(cleaned)) return P.OFFERS_EDIT;
   const match = EMPLOYEE_ROUTE_RULES.find((rule) =>
     rule.prefix ? cleaned === rule.path || cleaned.startsWith(`${rule.path}/`) : cleaned === rule.path
   );
@@ -105,6 +107,7 @@ export const ROLE_NAV_SEQUENCE = {
     "orders",
     "customers",
     "products",
+    "offers",
     "inventory",
     "returns",
     "support",
@@ -120,6 +123,7 @@ export const ROLE_NAV_SEQUENCE = {
     "orders",
     "customers",
     "products",
+    "offers",
     "inventory",
     "returns",
     "support",
@@ -182,6 +186,7 @@ export const ROLE_NAV_SEQUENCE = {
     "customers",
     "orders",
     "returns",
+    "offers",
     "support",
     "inventory",
     "performance",

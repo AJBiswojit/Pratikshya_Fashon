@@ -44,6 +44,11 @@ export const PERMISSIONS = {
   RETURNS_MANAGE: "returns.manage",
 
   OFFERS_VIEW: "offers.view",
+  OFFERS_CREATE: "offers.create",
+  OFFERS_EDIT: "offers.edit",
+  OFFERS_ACTIVATE: "offers.activate",
+  OFFERS_PAUSE: "offers.pause",
+  OFFERS_ARCHIVE: "offers.archive",
   OFFERS_MANAGE: "offers.manage",
 
   MEDIA_VIEW: "media.view",
@@ -107,6 +112,11 @@ export const PERMISSION_CATALOGUE = [
       { key: PERMISSIONS.CUSTOMERS_VIEW, label: "View customers" },
       { key: PERMISSIONS.CUSTOMERS_MANAGE, label: "Manage customers" },
       { key: PERMISSIONS.OFFERS_VIEW, label: "View offers" },
+      { key: PERMISSIONS.OFFERS_CREATE, label: "Create offers" },
+      { key: PERMISSIONS.OFFERS_EDIT, label: "Edit offers" },
+      { key: PERMISSIONS.OFFERS_ACTIVATE, label: "Activate offers" },
+      { key: PERMISSIONS.OFFERS_PAUSE, label: "Pause offers" },
+      { key: PERMISSIONS.OFFERS_ARCHIVE, label: "Archive offers" },
       { key: PERMISSIONS.OFFERS_MANAGE, label: "Manage offers" },
     ],
   },

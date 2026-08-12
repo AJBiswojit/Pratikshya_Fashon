@@ -319,6 +319,7 @@ export function CheckoutProvider({ children }) {
       if (!session || session.id !== current.sessionId) return;
 
       if (session.status === PAYMENT_STATUS.SUCCESS) {
+        if (current.paymentStatus === PAYMENT_STATUS.SUCCESS || current.completedOrder) return;
         const cartNow = cartRef.current;
         const now = new Date();
         const orderId = buildOrderId(now.getFullYear(), nextOrderSequence());

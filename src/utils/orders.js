@@ -261,6 +261,7 @@ export const normaliseOrder = (raw) => {
       productDiscount: asNumber(pricing.productDiscount, 0),
       couponDiscount: asNumber(pricing.couponDiscount, 0),
       couponCode: pricing.couponCode ?? null,
+      offerId: pricing.offerId ?? null,
       shipping: asNumber(pricing.shipping, 0),
       codFee: asNumber(pricing.codFee, 0),
       total: asNumber(pricing.total, 0),

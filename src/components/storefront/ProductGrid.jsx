@@ -6,6 +6,7 @@ import { productHref } from "../../data/products";
 import { useProductCovers } from "../../hooks/useMedia";
 import { useWishlist } from "../../context/WishlistContext";
 import { useInventory } from "../../context/InventoryContext";
+import offerRepository from "../../services/offers/offerRepository";
 import { cn } from "../../utils/cn";
 
 /**
@@ -35,6 +36,7 @@ export default function ProductGrid({ products, className = "" }) {
     <div className={cn("grid grid-cols-2 lg:grid-cols-3", gap.tile, className)}>
       {rows.map((product, index) => {
         const availability = inventory.getAvailability(product);
+        const offerBadge = offerRepository.getProductOfferBadge(product)?.label ?? null;
         const customerProduct = availability.tracked
           ? {
               ...product,
@@ -60,6 +62,7 @@ export default function ProductGrid({ products, className = "" }) {
               showCategory
               showDiscount
               showAvailability
+              offerBadge={offerBadge}
               onWishlist={wishlist.toggle}
               isWishlisted={wishlist.isSaved(product)}
               wishlistIcon={Heart}

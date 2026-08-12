@@ -17,7 +17,16 @@ export const hasPermission = (employee, permission) => {
   if (!canEmployeeLogin(employee.status)) return false;
   if (employee.role === ROLES.SUPER_ADMIN) return true;
   if (!Array.isArray(employee.permissions)) return false;
-  return employee.permissions.includes(permission);
+  if (employee.permissions.includes(permission)) return true;
+  /* offers.manage is the house-wide offer desk and implies every offer key. */
+  if (
+    String(permission).startsWith("offers.") &&
+    permission !== PERMISSIONS.OFFERS_MANAGE &&
+    employee.permissions.includes(PERMISSIONS.OFFERS_MANAGE)
+  ) {
+    return true;
+  }
+  return false;
 };
 
 export const hasAnyPermission = (employee, permissions = []) =>

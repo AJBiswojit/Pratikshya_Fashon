@@ -360,6 +360,7 @@ export const buildOrderSnapshot = ({
     productDiscount: totals.productDiscount,
     couponDiscount: totals.couponDiscount,
     couponCode: coupon?.code ?? null,
+    offerId: coupon?.id ?? coupon?.offerId ?? null,
     shipping: totals.shipping,
     codFee: totals.codFee ?? 0,
     total: totals.total,

@@ -68,6 +68,14 @@ export const ACTIVITY_ACTIONS = {
   RETURN_INSPECTED: "RETURN_INSPECTED",
   RETURN_REFUND_REQUESTED: "RETURN_REFUND_REQUESTED",
   RETURN_REFUNDED: "RETURN_REFUNDED",
+
+  /* Offers — Phase 17. Recorded in this same diary, never a second log. */
+  OFFER_CREATED: "OFFER_CREATED",
+  OFFER_UPDATED: "OFFER_UPDATED",
+  OFFER_ACTIVATED: "OFFER_ACTIVATED",
+  OFFER_PAUSED: "OFFER_PAUSED",
+  OFFER_ARCHIVED: "OFFER_ARCHIVED",
+  OFFER_REDEEMED: "OFFER_REDEEMED",
 };
 
 const ACTION_LABELS = {
@@ -117,6 +125,12 @@ const ACTION_LABELS = {
   [ACTIVITY_ACTIONS.RETURN_INSPECTED]: "Return inspected",
   [ACTIVITY_ACTIONS.RETURN_REFUND_REQUESTED]: "Refund requested",
   [ACTIVITY_ACTIONS.RETURN_REFUNDED]: "Refund completed",
+  [ACTIVITY_ACTIONS.OFFER_CREATED]: "Offer created",
+  [ACTIVITY_ACTIONS.OFFER_UPDATED]: "Offer updated",
+  [ACTIVITY_ACTIONS.OFFER_ACTIVATED]: "Offer activated",
+  [ACTIVITY_ACTIONS.OFFER_PAUSED]: "Offer paused",
+  [ACTIVITY_ACTIONS.OFFER_ARCHIVED]: "Offer archived",
+  [ACTIVITY_ACTIONS.OFFER_REDEEMED]: "Offer redeemed",
 };
 
 export const getActivityLabel = (action) => ACTION_LABELS[action] ?? "Activity";
@@ -134,6 +148,8 @@ const normaliseEntry = (entry) => {
     targetEmployeeId: entry.targetEmployeeId || null,
     /* Phase 13 — product events reference the product they acted on. */
     targetProductId: entry.targetProductId || null,
+    /* Phase 17 — offer events reference the offer they acted on. */
+    targetOfferId: entry.targetOfferId || null,
     action: entry.action || ACTIVITY_ACTIONS.EMPLOYEE_UPDATED,
     summary: String(entry.summary || getActivityLabel(entry.action)),
   };
@@ -181,6 +197,10 @@ export const activityForEmployee = (entries, employeeId) =>
 /** Phase 13 — the product-detail activity panel reads through this. */
 export const activityForProduct = (entries, productId) =>
   entries.filter((entry) => entry.targetProductId === productId);
+
+/** Phase 17 — the offer-detail activity panel reads through this. */
+export const activityForOffer = (entries, offerId) =>
+  entries.filter((entry) => entry.targetOfferId === offerId);
 
 /**
  * Signs an entry for whoever acted. Employees carry `employeeId`; the

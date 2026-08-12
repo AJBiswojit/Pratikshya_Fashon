@@ -144,11 +144,29 @@ export const calculateEligibleSubtotal = (items, coupon) =>
  * Coupon value. Applied once, after product discounts (which are already
  * folded into `price`), and only across the pieces the offer covers —
  * discounts never stack or repeat.
+ *
+ * Phase 17 extends the same function for fixed-amount offers and an
+ * optional maximum discount. It does not become a second pricing engine.
  */
 export const calculateCouponDiscount = (items, coupon) => {
   if (!coupon) return 0;
   const eligible = calculateEligibleSubtotal(items, coupon);
-  return Math.round((eligible * coupon.percent) / 100);
+  if (eligible <= 0) return 0;
+
+  const type = coupon.type || (coupon.percent ? "PERCENTAGE" : "FIXED_AMOUNT");
+  let discount = 0;
+  if (type === "FIXED_AMOUNT") {
+    discount = Math.round(Number(coupon.discountValue ?? coupon.fixedAmount) || 0);
+  } else {
+    const percent = Number(coupon.percent ?? coupon.discountValue) || 0;
+    discount = Math.round((eligible * percent) / 100);
+  }
+
+  const maximum = Number(coupon.maximumDiscount);
+  if (Number.isFinite(maximum) && maximum > 0) {
+    discount = Math.min(discount, maximum);
+  }
+  return Math.min(Math.max(0, discount), eligible);
 };
 
 /** Demo shipping: free at the threshold, a flat fee below it, nothing on an empty bag. */
