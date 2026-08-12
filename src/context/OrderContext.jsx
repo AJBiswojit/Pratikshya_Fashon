@@ -1,22 +1,17 @@
 /**
- * PRATIKSHYA FASHON — Order state.
+ * PRATIKSHYA FASHON — Order state (Phase 15)
  *
- * The single source of truth for placed demo orders: creation from a
- * successful checkout, history, ownership, status progression,
- * cancellation, returns and tracking. Every order page reads this context;
- * nothing in the UI touches localStorage, and there is exactly one order
- * implementation behind it.
+ * The single source of truth for placed demo orders + operational fulfillment.
+ * Every order page reads this context; nothing in UI touches localStorage directly.
  *
  *   OrderContext
- *     └── services/orders/orderService     (persistence + writes)
- *         ├── services/orders/trackingService (mock shipment timeline)
- *         └── services/orders/returnService   (return rules + records)
+ *     └── services/orders/orderService (persistence + fulfillment operations)
+ *         ├── services/orders/trackingService
+ *         ├── services/orders/fulfillmentService
+ *         ├── services/orders/orderTimelineService
+ *         └── services/orders/returnService
  *
- * Later, the service layer alone is swapped for an order API — the
- * context surface and the pages stay as they are.
- *
- * Storage holds mock order snapshots only: no card data, no credentials,
- * no real payment information of any kind.
+ * Phase 15 adds operational methods while keeping customer API compatible.
  */
 
 import {
@@ -53,7 +48,6 @@ export function OrderProvider({ children }) {
     orderService.loadCurrentOrderId()
   );
 
-  /* Latest orders, for callbacks that must read fresh state synchronously. */
   const ordersRef = useRef(orders);
   ordersRef.current = orders;
 
@@ -69,13 +63,11 @@ export function OrderProvider({ children }) {
   /* Reads                                                             */
   /* ---------------------------------------------------------------- */
 
-  /** Every order visible to the current identity, newest first. */
   const customerOrders = useMemo(
     () => orderService.ordersForCustomer(orders, customerId),
     [orders, customerId]
   );
 
-  /** Guest orders placed in this browser while signed in — claimable. */
   const guestOrderCount = useMemo(
     () => (customerId ? orders.filter((order) => !order.customerId).length : 0),
     [orders, customerId]
@@ -83,11 +75,18 @@ export function OrderProvider({ children }) {
 
   const getOrders = useCallback(() => ordersRef.current, []);
 
-  /** An order read through the ownership check — never another customer's. */
+  const getAllOrders = useCallback(() => ordersRef.current, []);
+
   const getOrderById = useCallback(
     (orderId) =>
       orderService.findOwnedOrder(ordersRef.current, orderId, customerId),
     [customerId]
+  );
+
+  /** Admin / employee view — no ownership filter */
+  const getOrderByIdAdmin = useCallback(
+    (orderId) => orderService.findOrder(ordersRef.current, orderId),
+    []
   );
 
   const getCustomerOrders = useCallback(
@@ -95,12 +94,6 @@ export function OrderProvider({ children }) {
     [customerId]
   );
 
-  /**
-   * The order behind the confirmation page. This pointer belongs to the
-   * browser session that just checked out, so it is not ownership-filtered
-   * — a guest who signs up immediately after paying must still see their
-   * own confirmation.
-   */
   const currentOrder = useMemo(
     () => (currentOrderId ? orderService.findOrder(orders, currentOrderId) : null),
     [orders, currentOrderId]
@@ -113,12 +106,16 @@ export function OrderProvider({ children }) {
         orderId,
         customerId
       );
-      return order ? buildTracking(order) : null;
+      return order ? buildTracking(order, { customerView: true }) : null;
     },
     [customerId]
   );
 
-  /** The most recent return on an order, or a specific one by return id. */
+  const getTrackingAdmin = useCallback((orderId) => {
+    const order = orderService.findOrder(ordersRef.current, orderId);
+    return order ? buildTracking(order, { customerView: false }) : null;
+  }, []);
+
   const getReturn = useCallback(
     (orderId, returnId = null) => {
       const order = orderService.findOwnedOrder(
@@ -136,14 +133,20 @@ export function OrderProvider({ children }) {
   );
 
   /* ---------------------------------------------------------------- */
-  /* Writes                                                            */
+  /* Internal helper to apply a service result to state                */
   /* ---------------------------------------------------------------- */
 
-  /**
-   * Records an order from a successful checkout and marks it as current.
-   * The order that appears on the confirmation page is the very same
-   * record the account order history reads.
-   */
+  const applyResult = useCallback((result) => {
+    if (!result?.ok) return result;
+    ordersRef.current = result.orders;
+    setOrders(result.orders);
+    return result;
+  }, []);
+
+  /* ---------------------------------------------------------------- */
+  /* Writes — customer facing                                          */
+  /* ---------------------------------------------------------------- */
+
   const createOrder = useCallback((snapshot) => {
     const result = orderService.addOrder(ordersRef.current, snapshot);
     if (!result.ok || !result.order) return { ok: false, order: null, message: "" };
@@ -153,14 +156,8 @@ export function OrderProvider({ children }) {
     return { ok: true, order: result.order, message: result.message };
   }, []);
 
-  /** Clears the confirmation pointer — never the history. */
   const clearCurrentOrder = useCallback(() => setCurrentOrderId(null), []);
 
-  /**
-   * Moves an order along the demo fulfilment journey. Only transitions the
-   * centralised state machine allows are applied; the customer-facing demo
-   * control simply asks for the next step.
-   */
   const updateMockOrderStatus = useCallback(
     (orderId, nextStatus = null) => {
       const order = orderService.findOwnedOrder(
@@ -177,16 +174,13 @@ export function OrderProvider({ children }) {
 
       const result = orderService.applyStatus(ordersRef.current, orderId, target);
       if (!result.ok) return { ok: false, message: result.message };
-      ordersRef.current = result.orders;
-      setOrders(result.orders);
-      return { ok: true, order: result.order, message: result.message };
+      return applyResult(result);
     },
-    [customerId]
+    [customerId, applyResult]
   );
 
-  /** Cancels an eligible order. Mock resolution only — no money moves. */
   const cancelOrder = useCallback(
-    (orderId) => {
+    (orderId, options = {}) => {
       const order = orderService.findOwnedOrder(
         ordersRef.current,
         orderId,
@@ -194,7 +188,11 @@ export function OrderProvider({ children }) {
       );
       if (!order) return { ok: false, message: "Order not found." };
 
-      const result = orderService.cancelOrder(ordersRef.current, orderId);
+      const result = orderService.cancelOrder(ordersRef.current, orderId, {
+        reason: options.reason || "customer_request",
+        note: options.note || "Cancelled by the customer.",
+        actor: options.actor || { name: order.customer?.fullName || "Customer" },
+      });
       if (!result.ok) {
         return {
           ok: false,
@@ -204,10 +202,6 @@ export function OrderProvider({ children }) {
         };
       }
 
-      /* A successful checkout has already converted its reservation to a
-         sale. Cancellation restores those exact allocations before the
-         order transition is persisted; legacy orders without a reservation
-         link keep their existing Phase 9 behaviour. */
       if (result.order.inventoryReservationId) {
         const restock = inventoryRepository.restockCancelledOrder(result.order, {
           label: result.order.customer?.fullName || "Customer",
@@ -220,17 +214,11 @@ export function OrderProvider({ children }) {
         }
       }
 
-      ordersRef.current = result.orders;
-      setOrders(result.orders);
-      return { ok: true, order: result.order, message: result.message };
+      return applyResult(result);
     },
-    [customerId]
+    [customerId, applyResult]
   );
 
-  /**
-   * Creates a return request against an owned, eligible order. Duplicate
-   * requests for the same pieces are refused by the return service.
-   */
   const createReturn = useCallback(
     ({ orderId, lineIds, reason, resolution, note }) => {
       const order = orderService.findOwnedOrder(
@@ -260,14 +248,12 @@ export function OrderProvider({ children }) {
       if (!attached.ok) {
         return { ok: false, errors: {}, message: "Return could not be created." };
       }
-      ordersRef.current = attached.orders;
-      setOrders(attached.orders);
+      applyResult(attached);
       return { ok: true, record: built.record, errors: {}, message: built.message };
     },
-    [customerId]
+    [customerId, applyResult]
   );
 
-  /** Advances a return along its demo journey (client demo control). */
   const updateMockReturnStatus = useCallback(
     (orderId, returnId, nextStatus) => {
       const order = orderService.findOwnedOrder(
@@ -287,24 +273,15 @@ export function OrderProvider({ children }) {
         advanced.record
       );
       if (!updated.ok) return { ok: false, message: "Return could not be updated." };
-      ordersRef.current = updated.orders;
-      setOrders(updated.orders);
-      /* Received customer returns enter inventory quarantine exactly once.
-         Inspection into sellable/damaged stock remains an authorised
-         inventory operation, never an automatic customer-side decision. */
-      if (nextStatus === RETURN_STATUS.RECEIVED) {
+      applyResult(updated);
+      if (nextStatus === RETURN_STATUS.RECEIVED || nextStatus === "RECEIVED") {
         inventoryRepository.recordOrderReturn(advanced.record);
       }
       return { ok: true, record: advanced.record, message: "" };
     },
-    [customerId]
+    [customerId, applyResult]
   );
 
-  /**
-   * Associates the guest orders placed in this browser with a customer —
-   * used once, after a guest creates an account. Orders that already
-   * belong to someone are never reassigned.
-   */
   const claimGuestOrders = useCallback(
     (id = customerId) => {
       if (!id) return { ok: false, claimed: 0 };
@@ -318,22 +295,155 @@ export function OrderProvider({ children }) {
   );
 
   /* ---------------------------------------------------------------- */
+  /* Writes — operational (admin / employee)                           */
+  /* ---------------------------------------------------------------- */
+
+  const allocateOrder = useCallback(
+    (orderId, { locationId, employeeId, employeeName, actor } = {}) => {
+      const result = orderService.allocateOrder(ordersRef.current, orderId, {
+        locationId,
+        employeeId,
+        employeeName,
+        actor: actor || { name: employeeName || "System" },
+      });
+      return applyResult(result);
+    },
+    [applyResult]
+  );
+
+  const assignFulfillment = useCallback(
+    (orderId, payload) => {
+      const result = orderService.assignFulfillment(ordersRef.current, orderId, payload);
+      return applyResult(result);
+    },
+    [applyResult]
+  );
+
+  const startPicking = useCallback(
+    (orderId, { actor } = {}) => {
+      const result = orderService.startPicking(ordersRef.current, orderId, { actor });
+      return applyResult(result);
+    },
+    [applyResult]
+  );
+
+  const markItemPicked = useCallback(
+    (orderId, lineId, opts = {}) => {
+      const result = orderService.markItemPicked(ordersRef.current, orderId, lineId, opts);
+      return applyResult(result);
+    },
+    [applyResult]
+  );
+
+  const markPacked = useCallback(
+    (orderId, opts = {}) => {
+      const result = orderService.markPacked(ordersRef.current, orderId, opts);
+      return applyResult(result);
+    },
+    [applyResult]
+  );
+
+  const markReadyToDispatch = useCallback(
+    (orderId, opts = {}) => {
+      const result = orderService.markReadyToDispatch(ordersRef.current, orderId, opts);
+      return applyResult(result);
+    },
+    [applyResult]
+  );
+
+  const dispatchOrder = useCallback(
+    (orderId, payload) => {
+      const result = orderService.dispatchOrder(ordersRef.current, orderId, payload);
+      return applyResult(result);
+    },
+    [applyResult]
+  );
+
+  const markOutForDelivery = useCallback(
+    (orderId, opts = {}) => {
+      const result = orderService.markOutForDelivery(ordersRef.current, orderId, opts);
+      return applyResult(result);
+    },
+    [applyResult]
+  );
+
+  const markDelivered = useCallback(
+    (orderId, opts = {}) => {
+      const result = orderService.markDelivered(ordersRef.current, orderId, opts);
+      return applyResult(result);
+    },
+    [applyResult]
+  );
+
+  const addInternalNote = useCallback(
+    (orderId, payload) => {
+      const result = orderService.addInternalNote(ordersRef.current, orderId, payload);
+      return applyResult(result);
+    },
+    [applyResult]
+  );
+
+  const cancelOrderAdmin = useCallback(
+    (orderId, { reason, note, actor } = {}) => {
+      const order = orderService.findOrder(ordersRef.current, orderId);
+      if (!order) return { ok: false, message: "Order not found." };
+      const result = orderService.cancelOrder(ordersRef.current, orderId, {
+        reason: reason || "operational_issue",
+        note: note || "Cancelled by admin.",
+        actor: actor || { name: "Admin" },
+      });
+      if (!result.ok) return result;
+      if (result.order.inventoryReservationId) {
+        const restock = inventoryRepository.restockCancelledOrder(result.order, {
+          label: actor?.name || "Admin",
+        });
+        // Even if restock fails (already restocked), we still succeed to avoid blocking admin
+        if (!restock.ok && !restock.alreadySettled) {
+          // Log but don't block
+          console.warn("Restock failed during admin cancel", restock.error);
+        }
+      }
+      return applyResult(result);
+    },
+    [applyResult]
+  );
+
+  const forceTransition = useCallback(
+    (orderId, nextStatus, opts = {}) => {
+      const result = orderService.forceTransition(ordersRef.current, orderId, nextStatus, opts);
+      return applyResult(result);
+    },
+    [applyResult]
+  );
+
+  const applyStatusAdmin = useCallback(
+    (orderId, nextStatus, opts = {}) => {
+      const result = orderService.applyStatus(ordersRef.current, orderId, nextStatus, opts.at, opts.actor);
+      return applyResult(result);
+    },
+    [applyResult]
+  );
+
+  /* ---------------------------------------------------------------- */
 
   const value = useMemo(
     () => ({
       /* State */
       orders: customerOrders,
+      allOrders: orders,
       currentOrder,
       guestOrderCount,
       /* Reads */
       getOrders,
+      getAllOrders,
       getOrderById,
+      getOrderByIdAdmin,
       getCustomerOrders,
       getTracking,
+      getTrackingAdmin,
       getReturn,
-      /* Writes */
+      /* Customer Writes */
       createOrder,
-      /** Phase 8 checkout entry point — the same call as `createOrder`. */
       placeOrder: createOrder,
       clearCurrentOrder,
       updateMockOrderStatus,
@@ -341,17 +451,34 @@ export function OrderProvider({ children }) {
       cancelOrder,
       createReturn,
       claimGuestOrders,
-      /* Legacy accessor kept for the account surfaces built in Phase 7. */
       ordersForCustomer: getCustomerOrders,
+      /* Operational Writes */
+      allocateOrder,
+      assignFulfillment,
+      startPicking,
+      markItemPicked,
+      markPacked,
+      markReadyToDispatch,
+      dispatchOrder,
+      markOutForDelivery,
+      markDelivered,
+      addInternalNote,
+      cancelOrderAdmin,
+      forceTransition,
+      applyStatusAdmin,
     }),
     [
       customerOrders,
+      orders,
       currentOrder,
       guestOrderCount,
       getOrders,
+      getAllOrders,
       getOrderById,
+      getOrderByIdAdmin,
       getCustomerOrders,
       getTracking,
+      getTrackingAdmin,
       getReturn,
       createOrder,
       clearCurrentOrder,
@@ -360,21 +487,38 @@ export function OrderProvider({ children }) {
       cancelOrder,
       createReturn,
       claimGuestOrders,
+      getCustomerOrders,
+      allocateOrder,
+      assignFulfillment,
+      startPicking,
+      markItemPicked,
+      markPacked,
+      markReadyToDispatch,
+      dispatchOrder,
+      markOutForDelivery,
+      markDelivered,
+      addInternalNote,
+      cancelOrderAdmin,
+      forceTransition,
+      applyStatusAdmin,
     ]
   );
 
   return <OrderContext.Provider value={value}>{children}</OrderContext.Provider>;
 }
 
-/** Inert order state, so a component can render without a provider. */
 const inertOrders = {
   orders: [],
+  allOrders: [],
   currentOrder: null,
   guestOrderCount: 0,
   getOrders: () => [],
+  getAllOrders: () => [],
   getOrderById: () => null,
+  getOrderByIdAdmin: () => null,
   getCustomerOrders: () => [],
   getTracking: () => null,
+  getTrackingAdmin: () => null,
   getReturn: () => null,
   createOrder: () => ({ ok: false, order: null, message: "" }),
   placeOrder: () => ({ ok: false, order: null, message: "" }),
@@ -385,9 +529,21 @@ const inertOrders = {
   createReturn: () => ({ ok: false, errors: {}, message: "" }),
   claimGuestOrders: () => ({ ok: false, claimed: 0 }),
   ordersForCustomer: () => [],
+  allocateOrder: () => ({ ok: false, message: "" }),
+  assignFulfillment: () => ({ ok: false, message: "" }),
+  startPicking: () => ({ ok: false, message: "" }),
+  markItemPicked: () => ({ ok: false, message: "" }),
+  markPacked: () => ({ ok: false, message: "" }),
+  markReadyToDispatch: () => ({ ok: false, message: "" }),
+  dispatchOrder: () => ({ ok: false, message: "" }),
+  markOutForDelivery: () => ({ ok: false, message: "" }),
+  markDelivered: () => ({ ok: false, message: "" }),
+  addInternalNote: () => ({ ok: false, message: "" }),
+  cancelOrderAdmin: () => ({ ok: false, message: "" }),
+  forceTransition: () => ({ ok: false, message: "" }),
+  applyStatusAdmin: () => ({ ok: false, message: "" }),
 };
 
-/** Accessor for order state. */
 export function useOrder() {
   return useContext(OrderContext) ?? inertOrders;
 }

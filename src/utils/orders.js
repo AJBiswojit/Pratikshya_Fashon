@@ -1,15 +1,9 @@
 /**
- * PRATIKSHYA FASHON — Order utilities.
+ * PRATIKSHYA FASHON — Order utilities (Phase 15 extended)
  *
- * The pure-logic layer of the customer order experience: order
- * normalisation, ownership, eligibility rules, identity generation
- * (tracking ids, invoice numbers, return ids) and the small formatting
- * helpers the order pages share.
- *
- * Nothing here touches storage, React or the network — the order service
- * owns persistence, the contexts own state and these functions stay
- * testable in isolation. Every rule lives here exactly once so no
- * component ever decides for itself whether an order can be cancelled.
+ * Pure-logic layer: normalisation, ownership, eligibility, formatting,
+ * identity generation. Now preserves fulfillment, shipment, timeline,
+ * internal notes, cancellation with reason, etc.
  */
 
 import {
@@ -31,7 +25,6 @@ import { getMaxQuantity } from "./shopping";
 /* Identity                                                            */
 /* ------------------------------------------------------------------ */
 
-/** A small stable hash of a string — deterministic mock id generation. */
 const hash = (value) => {
   let total = 0;
   const text = String(value ?? "");
@@ -43,13 +36,6 @@ const hash = (value) => {
 
 const pad = (value, length = 2) => String(value).padStart(length, "0");
 
-/**
- * A realistic mock tracking id: `PFX2408188472`.
- *
- * Deterministic for an order, so the same demo order always shows the same
- * id. This is demonstration data — it is never a real courier consignment
- * number, and the UI always labels it as a Tracking ID.
- */
 export const buildTrackingId = (orderId, createdAt) => {
   const date = new Date(createdAt);
   const stamp = Number.isNaN(date.getTime())
@@ -58,14 +44,11 @@ export const buildTrackingId = (orderId, createdAt) => {
   return `PFX${stamp}${pad(hash(orderId) % 10000, 4)}`;
 };
 
-/** A stable mock carrier for an order — demo names only. */
 export const pickCarrier = (orderId) =>
   MOCK_CARRIERS[hash(orderId) % MOCK_CARRIERS.length];
 
-/** `PF-2026-000184` → `INV-PF-2026-000184`. */
 export const buildInvoiceNumber = (orderId) => `INV-${orderId}`;
 
-/** `PF-2026-000184` → `RET-PF-2026-000184`, suffixed for later returns. */
 export const buildReturnId = (orderId, sequence = 1) =>
   sequence <= 1 ? `RET-${orderId}` : `RET-${orderId}-${sequence}`;
 
@@ -73,7 +56,6 @@ export const buildReturnId = (orderId, sequence = 1) =>
 /* Formatting                                                          */
 /* ------------------------------------------------------------------ */
 
-/** `18 August 2026` — the order date voice used across the experience. */
 export const formatOrderDate = (value) => {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "—";
@@ -84,7 +66,6 @@ export const formatOrderDate = (value) => {
   });
 };
 
-/** `18 Aug · 10:45 AM` — the timeline event voice. */
 export const formatEventTime = (value) => {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "";
@@ -97,7 +78,6 @@ export const formatEventTime = (value) => {
   return `${day} · ${time}`;
 };
 
-/** Total pieces across the order lines. */
 export const orderItemCount = (order) =>
   (order?.items ?? []).reduce((total, item) => total + (Number(item.quantity) || 0), 0);
 
@@ -118,7 +98,6 @@ const normaliseItem = (item, index) => {
   return {
     lineId: String(item.lineId ?? `line-${index}`),
     productId: item.productId ?? null,
-    /* The slug is snapshotted, but the live catalogue wins when it moves. */
     productSlug: product?.slug ?? item.productSlug ?? null,
     name: String(item.name ?? product?.name ?? "Atelier piece"),
     image: item.image ?? product?.image ?? null,
@@ -140,7 +119,6 @@ const normaliseReturnItem = (item, index) => {
   return { ...line, quantity: Math.max(1, Math.floor(asNumber(item.quantity, 1))) };
 };
 
-/** Restores a single return record, discarding anything unusable. */
 const normaliseReturn = (record, index) => {
   if (!record || typeof record !== "object" || !record.id) return null;
   const items = (Array.isArray(record.items) ? record.items : [])
@@ -179,13 +157,69 @@ const normaliseReturn = (record, index) => {
   };
 };
 
-/**
- * Rebuilds a safe order record from anything storage held.
- *
- * Invalid records, empty orders and unknown statuses are repaired or
- * dropped rather than trusted — corrupt storage must never reach a page.
- * Legacy Phase 8 snapshots (no tracking, no returns) upgrade cleanly.
- */
+const normaliseFulfillment = (raw, orderId) => {
+  if (!raw || typeof raw !== "object") return null;
+  return {
+    orderId: raw.orderId || orderId,
+    sourceLocationId: raw.sourceLocationId || null,
+    fulfillmentType: raw.fulfillmentType || null,
+    assignedEmployeeId: raw.assignedEmployeeId || null,
+    assignedEmployeeName: raw.assignedEmployeeName || null,
+    status: raw.status || "PENDING",
+    allocatedAt: raw.allocatedAt || null,
+    pickingStartedAt: raw.pickingStartedAt || null,
+    packedAt: raw.packedAt || null,
+    readyToDispatchAt: raw.readyToDispatchAt || null,
+    dispatchedAt: raw.dispatchedAt || null,
+    deliveredAt: raw.deliveredAt || null,
+    packedBy: raw.packedBy || null,
+    packageCount: Math.max(1, Number(raw.packageCount) || 1),
+    packagingNotes: raw.packagingNotes || "",
+    picking: raw.picking && typeof raw.picking === "object" ? raw.picking : {},
+    history: Array.isArray(raw.history) ? raw.history : [],
+    createdAt: raw.createdAt || null,
+    updatedAt: raw.updatedAt || null,
+  };
+};
+
+const normaliseShipment = (raw) => {
+  if (!raw || typeof raw !== "object") return null;
+  return {
+    carrier: raw.carrier || "",
+    trackingNumber: raw.trackingNumber || raw.trackingId || "",
+    shippingMethod: raw.shippingMethod || "",
+    dispatchedAt: raw.dispatchedAt || null,
+    estimatedDelivery: raw.estimatedDelivery || "",
+    dispatchedBy: raw.dispatchedBy || null,
+  };
+};
+
+const normaliseTimeline = (raw) => {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .filter((e) => e && e.at)
+    .map((e) => ({
+      id: e.id || String(Math.random()).slice(2),
+      type: e.type || "STATUS_CHANGED",
+      status: e.status || null,
+      at: e.at,
+      actor: e.actor || null,
+      actorName: e.actorName || "System",
+      note: e.note || "",
+      meta: e.meta || {},
+    }))
+    .sort((a, b) => new Date(a.at).getTime() - new Date(b.at).getTime());
+};
+
+const normaliseNotes = (raw) => {
+  if (!raw) return { customer: "", internal: [] };
+  if (typeof raw === "string") return { customer: raw, internal: [] };
+  return {
+    customer: raw.customer || "",
+    internal: Array.isArray(raw.internal) ? raw.internal : [],
+  };
+};
+
 export const normaliseOrder = (raw) => {
   if (!raw || typeof raw !== "object" || !raw.id) return null;
 
@@ -195,7 +229,7 @@ export const normaliseOrder = (raw) => {
   if (items.length === 0) return null;
 
   const createdAt = raw.createdAt ?? new Date().toISOString();
-  const status = ORDER_STATUSES[raw.status] ? raw.status : ORDER_STATUS.CONFIRMED;
+  const status = ORDER_STATUSES[raw.status] ? raw.status : ORDER_STATUS.ORDER_CONFIRMED;
   const paymentMethodId = raw.paymentMethod?.id ?? "upi";
   const paymentStatus =
     raw.paymentStatus && ORDER_PAYMENT_STATUS[raw.paymentStatus]
@@ -232,7 +266,6 @@ export const normaliseOrder = (raw) => {
       total: asNumber(pricing.total, 0),
       saved: asNumber(pricing.saved, 0),
     },
-    /** The delivery address exactly as it was at purchase — never re-read. */
     address: raw.address ?? null,
     deliveryMethod: {
       id: raw.deliveryMethod?.id ?? "standard",
@@ -271,16 +304,22 @@ export const normaliseOrder = (raw) => {
     },
     cancellation:
       raw.cancellation && typeof raw.cancellation === "object"
-        ? { at: raw.cancellation.at ?? createdAt, note: raw.cancellation.note ?? "" }
+        ? {
+            at: raw.cancellation.at ?? createdAt,
+            reason: raw.cancellation.reason ?? "customer_request",
+            note: raw.cancellation.note ?? "",
+            actor: raw.cancellation.actor ?? null,
+          }
         : null,
+    fulfillment: normaliseFulfillment(raw.fulfillment, raw.id),
+    shipment: normaliseShipment(raw.shipment),
+    timeline: normaliseTimeline(raw.timeline),
+    notes: normaliseNotes(raw.notes),
     createdAt,
+    updatedAt: raw.updatedAt ?? createdAt,
   };
 };
 
-/**
- * Restores a whole order list: repaired records, newest first, with
- * duplicate order ids collapsed to the first (newest) occurrence.
- */
 export const normaliseOrders = (raw) => {
   if (!Array.isArray(raw)) return [];
   const byId = new Map();
@@ -298,13 +337,6 @@ export const normaliseOrders = (raw) => {
 /* Ownership                                                           */
 /* ------------------------------------------------------------------ */
 
-/**
- * Order ownership.
- *
- * A signed-in customer owns the orders carrying their id. A visitor with
- * no session owns only the guest orders placed in this browser. One
- * customer can never read another customer's order by editing the URL.
- */
 export const isOrderOwnedBy = (order, customerId = null) => {
   if (!order) return false;
   if (customerId) return order.customerId === customerId;
@@ -312,10 +344,9 @@ export const isOrderOwnedBy = (order, customerId = null) => {
 };
 
 /* ------------------------------------------------------------------ */
-/* Eligibility rules                                                   */
+/* Eligibility                                                         */
 /* ------------------------------------------------------------------ */
 
-/** Lines already covered by an active or completed return request. */
 export const returnedLineIds = (order) => {
   const ids = new Set();
   (order?.returns ?? []).forEach((record) => {
@@ -325,7 +356,6 @@ export const returnedLineIds = (order) => {
   return ids;
 };
 
-/** The most recent return request on an order, or null. */
 export const latestReturn = (order) => {
   const records = order?.returns ?? [];
   if (records.length === 0) return null;
@@ -334,14 +364,9 @@ export const latestReturn = (order) => {
   )[0];
 };
 
-/** Can this order still be cancelled? Centralised demo business rule. */
 export const canCancelOrder = (order) =>
   Boolean(order) && CANCELLABLE_STATUSES.includes(order.status);
 
-/**
- * Can a return be raised against this order? Delivered orders only, and
- * only while at least one line has not already been returned.
- */
 export const canReturnOrder = (order) => {
   if (!order) return false;
   if (!RETURNABLE_STATUSES.includes(order.status)) return false;
@@ -349,7 +374,6 @@ export const canReturnOrder = (order) => {
   return order.items.some((item) => !covered.has(item.lineId));
 };
 
-/** Why a return is unavailable, in customer language. */
 export const returnBlockedReason = (order) => {
   if (!order) return "That order could not be found in your account.";
   if (order.status === ORDER_STATUS.CANCELLED) {
@@ -370,21 +394,9 @@ export const returnBlockedReason = (order) => {
   return "";
 };
 
-/** Tracking is meaningful for every order that was not cancelled. */
 export const canTrackOrder = (order) =>
   Boolean(order) && order.status !== ORDER_STATUS.CANCELLED;
 
-/* ------------------------------------------------------------------ */
-/* Refund presentation (mock)                                          */
-/* ------------------------------------------------------------------ */
-
-/**
- * How a refund would be returned, in customer language. Cash-on-delivery
- * orders have nothing captured, so they resolve differently.
- *
- * Presentation only — no payment gateway is contacted anywhere in this
- * application.
- */
 export const refundMethodLabel = (order) => {
   if (!order) return "Original payment method";
   if (order.paymentMethod.id === "cod") {
@@ -393,23 +405,12 @@ export const refundMethodLabel = (order) => {
   return `Refund to original ${order.paymentMethod.label}`;
 };
 
-/** The refundable value of a set of order lines. */
 export const refundAmountFor = (items = []) =>
   items.reduce(
     (total, item) => total + (Number(item.price) || 0) * (Number(item.quantity) || 0),
     0
   );
 
-/* ------------------------------------------------------------------ */
-/* Buy again                                                           */
-/* ------------------------------------------------------------------ */
-
-/**
- * What Buy Again can do with an order line, resolved against the live
- * catalogue: `available` goes straight into the bag, `variant` needs a
- * deliberate choice on the product page, `unavailable` is handled
- * gracefully rather than blindly added.
- */
 export const buyAgainAvailability = (item) => {
   const product = item?.productId ? getProductById(item.productId) : null;
   if (!product) return { state: "unavailable", product: null, href: null };
@@ -425,10 +426,32 @@ export const buyAgainAvailability = (item) => {
   return { state: "available", product, href: productHref(product) };
 };
 
-/** The product detail link for an order line, or null when it has retired. */
 export const orderItemHref = (item) => {
   const product = item?.productId ? getProductById(item.productId) : null;
   return product ? productHref(product) : null;
+};
+
+/* ------------------------------------------------------------------ */
+/* Search helpers for admin                                            */
+/* ------------------------------------------------------------------ */
+
+export const matchesOrderSearch = (order, term) => {
+  if (!term) return true;
+  const q = term.toLowerCase();
+  const haystack = [
+    order.id,
+    order.customer?.fullName,
+    order.customer?.email,
+    order.customer?.phone,
+    order.address?.city,
+    order.tracking?.trackingId,
+    order.shipment?.trackingNumber,
+    ...(order.items?.map((i) => i.name) || []),
+    ...(order.items?.map((i) => i.productId) || []),
+  ]
+    .join(" ")
+    .toLowerCase();
+  return haystack.includes(q);
 };
 
 export default {
@@ -452,4 +475,5 @@ export default {
   refundAmountFor,
   buyAgainAvailability,
   orderItemHref,
+  matchesOrderSearch,
 };

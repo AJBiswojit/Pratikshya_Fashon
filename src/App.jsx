@@ -31,13 +31,11 @@ const Wishlist = lazy(() => import("./pages/Wishlist"));
 const Checkout = lazy(() => import("./pages/Checkout"));
 const OrderSuccess = lazy(() => import("./pages/OrderSuccess"));
 
-/* Authentication Pages */
 const SignIn = lazy(() => import("./pages/auth/SignIn"));
 const SignUp = lazy(() => import("./pages/auth/SignUp"));
 const ForgotPassword = lazy(() => import("./pages/auth/ForgotPassword"));
 const ResetPassword = lazy(() => import("./pages/auth/ResetPassword"));
 
-/* Customer Account Pages */
 const AccountDashboard = lazy(() => import("./pages/account/AccountDashboard"));
 const AccountProfile = lazy(() => import("./pages/account/AccountProfile"));
 const AccountAddresses = lazy(() => import("./pages/account/AccountAddresses"));
@@ -48,7 +46,6 @@ const OrderReturn = lazy(() => import("./pages/account/OrderReturn"));
 const AccountSettings = lazy(() => import("./pages/account/AccountSettings"));
 const AccountSecurity = lazy(() => import("./pages/account/AccountSecurity"));
 
-/* Employee Portal */
 const EmployeeLogin = lazy(() => import("./pages/employee/EmployeeLogin"));
 const EmployeeForgotPassword = lazy(() => import("./pages/employee/EmployeeForgotPassword"));
 const EmployeeChangePassword = lazy(() => import("./pages/employee/EmployeeChangePassword"));
@@ -60,6 +57,7 @@ const EmployeeProducts = lazy(() => import("./pages/employee/EmployeeProducts"))
 const EmployeeProductForm = lazy(() => import("./pages/employee/EmployeeProductForm"));
 const EmployeeCustomers = lazy(() => import("./pages/employee/EmployeeCustomers"));
 const EmployeeOrders = lazy(() => import("./pages/employee/EmployeeOrders"));
+const EmployeeOrderDetail = lazy(() => import("./pages/employee/EmployeeOrderDetail"));
 const EmployeeAssistedOrder = lazy(() => import("./pages/employee/EmployeeAssistedOrder"));
 const EmployeeOffers = lazy(() => import("./pages/employee/EmployeeOffers"));
 const EmployeeAccessDenied = lazy(() => import("./pages/employee/EmployeeAccessDenied"));
@@ -73,7 +71,6 @@ const EmployeeDetail = lazy(() => import("./pages/employee/management/EmployeeDe
 const EmployeeEdit = lazy(() => import("./pages/employee/management/EmployeeEdit"));
 const ActivityLog = lazy(() => import("./pages/employee/management/ActivityLog"));
 
-/* Admin Portal */
 const AdminLogin = lazy(() => import("./pages/admin/AdminLogin"));
 const AdminDashboard = lazy(() => import("./pages/admin/AdminDashboard"));
 const AdminEmployeeList = lazy(() => import("./pages/admin/employees/AdminEmployeeList"));
@@ -100,9 +97,11 @@ const InventoryOperationPage = lazy(() => import("./components/inventory/Invento
 const InventoryTransfersPage = lazy(() => import("./components/inventory/InventoryTransfersPage"));
 const InventoryMovementsPage = lazy(() => import("./components/inventory/InventoryMovementsPage"));
 const InventoryLowStockPage = lazy(() => import("./components/inventory/InventoryLowStockPage"));
+const AdminOrders = lazy(() => import("./pages/admin/orders/AdminOrders"));
+const AdminOrderDetail = lazy(() => import("./pages/admin/orders/AdminOrderDetail"));
+const AdminOrderInvoice = lazy(() => import("./pages/admin/orders/AdminOrderInvoice"));
 const AdminNotFound = lazy(() => import("./pages/admin/AdminNotFound"));
 
-/** Paths owned by dedicated pages rather than the generic interior shell. */
 const dedicatedPaths = new Set([
   "/search",
   "/cart",
@@ -122,28 +121,6 @@ const dedicatedPaths = new Set([
   "/reset-password",
 ]);
 
-/**
- * Routing.
- *
- * Customer storefront stays inside `CustomerLayout`.
- * Employee portal is a sibling tree — its own shell, its own auth.
- *
- * Providers:
- * AuthProvider (customer)
- * └── AccountProvider
- *     └── InventoryProvider
- *         └── ShoppingProvider
- *             └── OrderProvider
- *                 └── CheckoutProvider
- *                     └── EmployeeAuthProvider
- *                     └── EmployeeManagementProvider
- *                         └── AdminAuthProvider
- *
- * The three authentication boundaries are siblings, never nested in
- * meaning: customer, employee and admin each own their own storage key and
- * their own guard. EmployeeManagementProvider sits above AdminAuthProvider
- * only so both portals administer one shared employee register.
- */
 export default function App() {
   return (
     <BrowserRouter>
@@ -158,11 +135,6 @@ export default function App() {
                     <AdminAuthProvider>
                     <Suspense fallback={<LoadingState label="Opening PRATIKSHYA FASHON" />}>
                     <Routes>
-                      {/*
-                        Admin Portal — its own door, its own session, its own shell.
-                        It consumes EmployeeManagementContext for people administration
-                        so both portals write to one employee register.
-                      */}
                       <Route path="/admin/login" element={<AdminLogin />} />
 
                       <Route element={<AdminProtectedRoute />}>
@@ -170,7 +142,6 @@ export default function App() {
                           <Route path="/admin" element={<AdminDashboard />} />
                           <Route path="/admin/dashboard" element={<Navigate to="/admin" replace />} />
 
-                          {/* People — live in this phase */}
                           <Route path="/admin/employees" element={<AdminEmployeeList />} />
                           <Route path="/admin/employees/new" element={<AdminEmployeeCreate />} />
                           <Route path="/admin/employees/:employeeId" element={<AdminEmployeeDetail />} />
@@ -180,7 +151,6 @@ export default function App() {
                           <Route path="/admin/activity" element={<AdminActivity />} />
                           <Route path="/admin/profile" element={<AdminProfile />} />
 
-                          {/* Business modules — navigable placeholders until their phase lands */}
                           <Route path="/admin/products" element={<AdminProducts />} />
                           <Route path="/admin/products/review" element={<AdminProductReview />} />
                           <Route path="/admin/products/new" element={<ProductForm />} />
@@ -188,9 +158,6 @@ export default function App() {
                           <Route path="/admin/products/:productId" element={<AdminProductDetail />} />
                           <Route path="/admin/products/:productId/media" element={<AdminProductMedia />} />
 
-                          {/* Media. The marketing, upload, and review boards are declared
-                              before the record route so /admin/media/* is never
-                              read as a media identifier. */}
                           <Route path="/admin/media" element={<AdminMediaLibrary />} />
                           <Route path="/admin/media/upload" element={<AdminMediaUpload />} />
                           <Route path="/admin/media/review" element={<AdminMediaReview />} />
@@ -199,10 +166,12 @@ export default function App() {
                           <Route path="/admin/categories" element={<AdminModulePlaceholder />} />
                           <Route path="/admin/collections" element={<AdminModulePlaceholder />} />
                           <Route path="/admin/offers" element={<AdminModulePlaceholder />} />
-                          <Route path="/admin/orders" element={<AdminModulePlaceholder />} />
+                          {/* Phase 15 — Orders become operational */}
+                          <Route path="/admin/orders" element={<AdminOrders />} />
+                          <Route path="/admin/orders/:orderId" element={<AdminOrderDetail />} />
+                          <Route path="/admin/orders/:orderId/invoice" element={<AdminOrderInvoice />} />
                           <Route path="/admin/customers" element={<AdminModulePlaceholder />} />
                           <Route path="/admin/returns" element={<AdminModulePlaceholder />} />
-                          {/* Phase 14 — one catalogue-connected inventory ledger. */}
                           <Route path="/admin/inventory" element={<InventoryDashboardPage portal="admin" />} />
                           <Route path="/admin/inventory/receive" element={<InventoryOperationPage portal="admin" operation="receive" />} />
                           <Route path="/admin/inventory/adjust" element={<InventoryOperationPage portal="admin" operation="adjust" />} />
@@ -223,9 +192,6 @@ export default function App() {
                         </Route>
                       </Route>
 
-                      {/*
-                        Employee portal — never rendered through customer auth or shell.
-                      */}
                       <Route path="/employee/login" element={<EmployeeLogin />} />
                       <Route path="/employee/forgot-password" element={<EmployeeForgotPassword />} />
 
@@ -245,6 +211,7 @@ export default function App() {
                           <Route path="/employee/products/:productId/edit" element={<EmployeeProductForm />} />
                           <Route path="/employee/customers" element={<EmployeeCustomers />} />
                           <Route path="/employee/orders" element={<EmployeeOrders />} />
+                          <Route path="/employee/orders/:orderId" element={<EmployeeOrderDetail />} />
                           <Route path="/employee/orders/assisted" element={<EmployeeAssistedOrder />} />
                           <Route path="/employee/offers" element={<EmployeeOffers />} />
                           <Route path="/employee/inventory" element={<InventoryDashboardPage portal="employee" />} />
@@ -286,44 +253,27 @@ export default function App() {
                       <Route element={<CustomerLayout />}>
                         <Route index element={<AtelierDesign />} />
 
-                        {/* Storefront */}
                         <Route path="/shop" element={<Shop />} />
                         <Route path="/category/:slug" element={<CatalogueListing variant="category" />} />
                         <Route path="/collection/:slug" element={<CatalogueListing variant="collection" />} />
                         <Route path="/search" element={<SearchResults />} />
                         <Route path="/product/:productId" element={<ProductDetail />} />
 
-                        {/* Shopping */}
                         <Route path="/cart" element={<Cart />} />
                         <Route path="/checkout" element={<Checkout />} />
                         <Route path="/order-success" element={<OrderSuccess />} />
                         <Route path="/account/wishlist" element={<Wishlist />} />
                         <Route path="/wishlist" element={<Navigate to="/account/wishlist" replace />} />
 
-                        {/* Authentication */}
                         <Route path="/signin" element={<SignIn />} />
                         <Route path="/signup" element={<SignUp />} />
                         <Route path="/forgot-password" element={<ForgotPassword />} />
                         <Route path="/reset-password" element={<ResetPassword />} />
 
-                        {/*
-                          Single-order routes. Not wrapped in ProtectedRoute: a guest
-                          who has just checked out must still reach the order they
-                          placed in this browser. Access is enforced on the order
-                          itself — the context only resolves orders the current
-                          identity owns, so another customer's order is never exposed.
-                        */}
                         <Route path="/account/orders/:orderId" element={<OrderDetail />} />
-                        <Route
-                          path="/account/orders/:orderId/track"
-                          element={<OrderTracking />}
-                        />
-                        <Route
-                          path="/account/orders/:orderId/return"
-                          element={<OrderReturn />}
-                        />
+                        <Route path="/account/orders/:orderId/track" element={<OrderTracking />} />
+                        <Route path="/account/orders/:orderId/return" element={<OrderReturn />} />
 
-                        {/* Protected Customer Account */}
                         <Route element={<ProtectedRoute />}>
                           <Route path="/account" element={<AccountDashboard />} />
                           <Route path="/account/profile" element={<AccountProfile />} />
@@ -333,7 +283,6 @@ export default function App() {
                           <Route path="/account/security" element={<AccountSecurity />} />
                         </Route>
 
-                        {/* Navigation manifest interior routes */}
                         {routeManifest
                           .filter((route) => !dedicatedPaths.has(route.path))
                           .map((route) => (

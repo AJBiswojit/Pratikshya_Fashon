@@ -8,6 +8,7 @@ import OrderItemList from "../../components/orders/OrderItemList";
 import OrderNotFound from "../../components/orders/OrderNotFound";
 import OrderStatusBadge from "../../components/orders/OrderStatusBadge";
 import OrderSummaryPanel from "../../components/orders/OrderSummaryPanel";
+import OrderTimeline from "../../components/orders/OrderTimeline";
 import ReturnSummaryCard from "../../components/orders/ReturnSummaryCard";
 import { useCart } from "../../context/CartContext";
 import { useOrder } from "../../context/OrderContext";
@@ -64,7 +65,7 @@ export default function OrderDetail() {
   const { orderId } = useParams();
   const navigate = useNavigate();
   const cart = useCart();
-  const { orders, getOrderById, cancelOrder, updateMockOrderStatus } = useOrder();
+  const { orders, getOrderById, getTracking, cancelOrder, updateMockOrderStatus } = useOrder();
 
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [invoiceOpen, setInvoiceOpen] = useState(false);
@@ -75,6 +76,12 @@ export default function OrderDetail() {
     () => getOrderById(orderId),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [orderId, getOrderById, orders]
+  );
+
+  const tracking = useMemo(
+    () => (order ? getTracking(order.id) : null),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [order, getTracking, orders]
   );
 
   useEffect(() => {
@@ -282,6 +289,19 @@ export default function OrderDetail() {
           Continue Shopping
         </Link>
       </div>
+
+      {/* --------------------------- Timeline --------------------------- */}
+      {tracking?.events?.length ? (
+        <section aria-label="Order journey" className="mt-10 border border-mist/80 bg-surface/30 p-6 md:p-7">
+          <h3 className="font-ui text-[10px] uppercase tracking-[.2em] text-accent mb-6">
+            Journey — Confirmed to Delivered
+          </h3>
+          <OrderTimeline events={tracking.events} showLocation={false} ariaLabel={`Journey for order ${order.id}`} />
+          <p className="mt-6 font-ui text-[10px] text-taupe">
+            Customer-safe view only — internal warehouse racks, employee names and stock counts are never shown here.
+          </p>
+        </section>
+      ) : null}
 
       {/* ------------------------------ Body ------------------------------ */}
       <div className="mt-10 grid gap-10 lg:grid-cols-[1.6fr_1fr] lg:gap-12">

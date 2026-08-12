@@ -364,9 +364,9 @@ export default function AdminDashboard() {
             Media library <ArrowRight size={12} aria-hidden="true" />
           </AtelierButton>
           {[
-            { label: "View orders", to: "/admin/orders" },
-            { label: "View inventory", to: "/admin/inventory" },
-            { label: "Add product", to: "/admin/products" },
+            { label: "View orders", to: "/admin/orders", ready: true },
+            { label: "View inventory", to: "/admin/inventory", ready: true },
+            { label: "Add product", to: "/admin/products", ready: true },
           ].map((action) => (
             <Link
               key={action.label}
@@ -374,9 +374,11 @@ export default function AdminDashboard() {
               className="inline-flex items-center gap-2 border border-mist bg-canvas/60 px-3 py-1.5 font-ui text-[10px] uppercase tracking-[.1em] text-taupe transition-colors hover:border-ink hover:text-ink"
             >
               {action.label}
-              <span className="font-ui text-[8px] uppercase tracking-[.16em] text-brass">
-                Coming soon
-              </span>
+              {!action.ready && (
+                <span className="font-ui text-[8px] uppercase tracking-[.16em] text-brass">
+                  Coming soon
+                </span>
+              )}
             </Link>
           ))}
         </div>
