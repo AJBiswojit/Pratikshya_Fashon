@@ -428,6 +428,316 @@ export const selectSareeEditProducts = (
   return selected;
 };
 
+/* ------------------------------------------------------------------ */
+/* Homepage Bride & Groom                                              */
+/* ------------------------------------------------------------------ */
+
+/** A short editorial rotation — not a catalogue dump. */
+export const BRIDE_GROOM_LOOK_COUNT = 4;
+
+/** Women's wedding taxonomy the Bride plate may draw from. */
+export const BRIDE_CATEGORY_IDS = ["bridal-couture", "lehengas", "sarees"];
+
+/** Men's wedding / ceremonial taxonomy the Groom plate may draw from. */
+export const GROOM_CATEGORY_IDS = ["menswear"];
+
+const BRIDE_WEDDING_OCCASIONS = ["Bridal", "Wedding", "Reception", "Sangeet"];
+const GROOM_WEDDING_OCCASIONS = ["Wedding", "Reception", "Sangeet"];
+const GROOM_CEREMONIAL_SUBCATEGORIES = ["Sherwani", "Kurta Pajama", "Kurta", "Nehru Jacket"];
+
+const BRIDE_GROOM_ROLES = [
+  USAGE_ROLES.EDITORIAL,
+  USAGE_ROLES.LOOKBOOK,
+  USAGE_ROLES.HERO,
+  USAGE_ROLES.CATEGORY_COVER,
+];
+
+const asIdSet = (value) => {
+  if (value instanceof Set) return value;
+  return new Set(value || []);
+};
+
+const occasionList = (product) =>
+  Array.isArray(product?.occasion) ? product.occasion : [];
+
+const hasOccasion = (product, allowed) =>
+  occasionList(product).some((entry) => allowed.includes(entry));
+
+const activeCategory = (id) => {
+  const category = taxonomyRepository.findCategory(id);
+  return category && category.status === "ACTIVE" ? category : null;
+};
+
+const isPublishedProduct = (product) =>
+  Boolean(product && product.status === "PUBLISHED" && product.slug);
+
+/** Bride products: women's wedding silhouettes only — never menswear or kids. */
+export const isBrideWeddingProduct = (product) => {
+  if (!isPublishedProduct(product)) return false;
+  if (!BRIDE_CATEGORY_IDS.includes(product.category)) return false;
+  if (product.gender && product.gender !== "Women") return false;
+  if (product.category === "bridal-couture") return true;
+  return hasOccasion(product, BRIDE_WEDDING_OCCASIONS);
+};
+
+/** Groom products: men's ceremonial wear only — never women's or kids imagery. */
+export const isGroomWeddingProduct = (product) => {
+  if (!isPublishedProduct(product)) return false;
+  if (!GROOM_CATEGORY_IDS.includes(product.category)) return false;
+  if (product.gender && product.gender !== "Men") return false;
+  if (GROOM_CEREMONIAL_SUBCATEGORIES.includes(product.subcategory)) return true;
+  return hasOccasion(product, GROOM_WEDDING_OCCASIONS);
+};
+
+const brideGroomMediaSource = (primary, registered, ownership) => {
+  if (ownership === "taxonomy") {
+    return isIngestedPhotographyUrl(sourcePath(primary))
+      ? "TAXONOMY_LIBRARY"
+      : "TAXONOMY_OWNED";
+  }
+  return sareeEditMediaSource(primary, registered);
+};
+
+const productLookFromSet = (product, side, usedIds) => {
+  const mediaSet = getProductMediaSet(product);
+  const image = mediaSet.primary;
+  const registered = image?.id ? getById(image.id) : null;
+  const imageOwner = image?.productId == null ? null : String(image.productId);
+  const registeredOwner = registered?.productId == null ? null : String(registered.productId);
+  const ownsImage = imageOwner === String(product.id);
+  const registeredOwnershipIsValid = !registered || registeredOwner === String(product.id);
+  const path = sourcePath(image);
+  const dedicatedLibrary = isIngestedPhotographyUrl(path);
+  const sourceLabel = String(registered?.source || "").toLowerCase();
+  const isGenericEditorial =
+    !dedicatedLibrary &&
+    (Boolean(image?.purpose) ||
+      sourceLabel.includes("house") ||
+      (registered?.tags || []).includes("house"));
+
+  if (
+    !image ||
+    !path ||
+    !ownsImage ||
+    !registeredOwnershipIsValid ||
+    isGenericEditorial ||
+    mediaSet.status === PRODUCT_MEDIA_STATUS.CROSS_PRODUCT_REFERENCE
+  ) {
+    return null;
+  }
+
+  if (image.id && usedIds.has(image.id)) return null;
+  if (registered?.categoryId && registered.categoryId !== product.category) return null;
+
+  const categoryRank =
+    side === "bride"
+      ? { "bridal-couture": 0, lehengas: 1, sarees: 2 }[product.category] ?? 3
+      : { Sherwani: 0, "Kurta Pajama": 1, Kurta: 2, "Nehru Jacket": 3 }[product.subcategory] ?? 4;
+
+  const rankingTier =
+    categoryRank * 10 + (product.isFeatured ? 0 : dedicatedLibrary ? 1 : product.isNew ? 2 : 3);
+
+  return {
+    side,
+    product,
+    image: {
+      ...image,
+      alt: image.alt || product.name,
+      category: product.category,
+      productId: product.id,
+    },
+    mediaSet,
+    mediaId: image.id || null,
+    filename: sourceFilename(image),
+    fallbackSource: brideGroomMediaSource(image, registered, "product"),
+    categoryId: product.category,
+    productId: product.id,
+    groupKey: mediaSet.groupKey || String(product.id),
+    rankingTier,
+    ownership: "product",
+  };
+};
+
+const taxonomyLookFromMedia = (media, side, categoryId) => {
+  const source = asSource(media, categoryId);
+  if (!source) return null;
+  return {
+    side,
+    product: null,
+    image: {
+      ...source,
+      productId: media.productId || null,
+      fileName: media.currentFilename || media.fileName || sourceFilename(source),
+    },
+    mediaSet: null,
+    mediaId: media.id || null,
+    filename: sourceFilename(source) || media.currentFilename || media.fileName || null,
+    fallbackSource: brideGroomMediaSource(source, media, "taxonomy"),
+    categoryId,
+    productId: media.productId || null,
+    groupKey: media.groupKey || media.id,
+    rankingTier: 40,
+    ownership: "taxonomy",
+  };
+};
+
+const collectProductLooks = (products, side, predicate, usedIds) =>
+  (products || [])
+    .filter(predicate)
+    .map((product) => productLookFromSet(product, side, usedIds))
+    .filter(Boolean)
+    .sort(
+      (a, b) =>
+        a.rankingTier - b.rankingTier || String(a.product.id).localeCompare(String(b.product.id))
+    );
+
+const collectTaxonomyLooks = (categoryIds, side, productsById, usedIds) => {
+  const looks = [];
+  categoryIds.forEach((categoryId) => {
+    if (!activeCategory(categoryId)) return;
+    const selected = selectMedia({
+      categoryId,
+      roles: BRIDE_GROOM_ROLES,
+      preferPortrait: true,
+      usedIds,
+      limit: 4,
+      excludeHouse: true,
+    });
+    selected.forEach((media) => {
+      if (media.productId) {
+        const owner = productsById.get(String(media.productId));
+        const eligible =
+          side === "bride" ? isBrideWeddingProduct(owner) : isGroomWeddingProduct(owner);
+        if (!eligible) return;
+      } else if (side === "bride" && categoryId === "sarees") {
+        /* A saree plate with no product owner cannot be proved to be wedding wear. */
+        return;
+      }
+      const look = taxonomyLookFromMedia(media, side, categoryId);
+      if (look) looks.push(look);
+    });
+  });
+  return looks;
+};
+
+const admitLook = (candidate, selected, seenProducts, seenImages, seenGroups, usedIds) => {
+  const imageKey = sourcePath(candidate.image).split("?")[0];
+  const productKey = candidate.productId ? String(candidate.productId) : null;
+  const groupKey = candidate.groupKey ? String(candidate.groupKey) : null;
+  if (!imageKey || seenImages.has(imageKey)) return false;
+  if (productKey && seenProducts.has(productKey)) return false;
+  if (groupKey && seenGroups.has(groupKey)) return false;
+  if (candidate.mediaId && usedIds.has(candidate.mediaId) && candidate.ownership !== "product") {
+    return false;
+  }
+  seenImages.add(imageKey);
+  if (productKey) seenProducts.add(productKey);
+  if (groupKey) seenGroups.add(groupKey);
+  if (candidate.mediaId) usedIds.add(candidate.mediaId);
+  selected.push(candidate);
+  return true;
+};
+
+/**
+ * Prefer one look from each represented taxonomy before repeating a category,
+ * so the Bride plate can show couture, lehenga and saree wedding silhouettes
+ * rather than four plates from a single folder.
+ */
+const takeLooks = (candidates, limit, usedIds, diversifyByCategory = false) => {
+  const selected = [];
+  const seenProducts = new Set();
+  const seenImages = new Set();
+  const seenGroups = new Set();
+  const admit = (candidate) =>
+    admitLook(candidate, selected, seenProducts, seenImages, seenGroups, usedIds);
+
+  if (diversifyByCategory) {
+    const firstOfCategory = [];
+    const remainder = [];
+    const seenCategories = new Set();
+    candidates.forEach((candidate) => {
+      if (!seenCategories.has(candidate.categoryId)) {
+        seenCategories.add(candidate.categoryId);
+        firstOfCategory.push(candidate);
+      } else {
+        remainder.push(candidate);
+      }
+    });
+    [...firstOfCategory, ...remainder].forEach((candidate) => {
+      if (selected.length < limit) admit(candidate);
+    });
+    return selected;
+  }
+
+  for (const candidate of candidates) {
+    if (selected.length >= limit) break;
+    admit(candidate);
+  }
+
+  return selected;
+};
+
+/**
+ * Deterministic Bride & Groom editorial looks.
+ *
+ *   ACTIVE women's wedding taxonomy (bridal couture, lehengas, sarees)
+ *     → PUBLISHED wedding products → exact product media set
+ *     → taxonomy-owned editorial plates for the same categories
+ *
+ *   ACTIVE menswear taxonomy
+ *     → PUBLISHED ceremonial products → exact product media set
+ *     → taxonomy-owned menswear editorial plates
+ *
+ * Ownership is checked before a plate is admitted. A bride look can never
+ * carry menswear / kids imagery; a groom look can never carry women's
+ * imagery. Another product's gallery can never stand in. Selection is
+ * stable — a refresh never reshuffles the wedding story.
+ */
+export const selectBrideGroomLooks = (
+  products = getLiveStorefrontProducts(),
+  { count = BRIDE_GROOM_LOOK_COUNT, excludeIds = null } = {}
+) => {
+  const limit = Math.max(0, Number(count) || 0);
+  const usedIds = asIdSet(excludeIds);
+  const list = products || [];
+  const productsById = new Map(list.map((product) => [String(product.id), product]));
+
+  const brideActive = BRIDE_CATEGORY_IDS.some((id) => activeCategory(id));
+  const groomActive = GROOM_CATEGORY_IDS.some((id) => activeCategory(id));
+
+  const brideProducts = brideActive
+    ? collectProductLooks(list, "bride", isBrideWeddingProduct, usedIds)
+    : [];
+  const groomProducts = groomActive
+    ? collectProductLooks(list, "groom", isGroomWeddingProduct, usedIds)
+    : [];
+
+  const bride = takeLooks(brideProducts, limit, usedIds, true);
+  const groom = takeLooks(groomProducts, limit, usedIds, true);
+
+  if (bride.length < limit && brideActive) {
+    bride.push(
+      ...takeLooks(
+        collectTaxonomyLooks(BRIDE_CATEGORY_IDS, "bride", productsById, usedIds),
+        limit - bride.length,
+        usedIds
+      )
+    );
+  }
+
+  if (groom.length < limit && groomActive) {
+    groom.push(
+      ...takeLooks(
+        collectTaxonomyLooks(GROOM_CATEGORY_IDS, "groom", productsById, usedIds),
+        limit - groom.length,
+        usedIds
+      )
+    );
+  }
+
+  return { bride, groom };
+};
+
 /**
  * Category card / listing hero.
  *

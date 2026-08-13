@@ -37,6 +37,7 @@ import {
   resolveProductCover,
   resolveProductGallery,
   resolveSaleBackdrop,
+  selectBrideGroomLooks,
   selectNewArrivalProducts,
 } from "./mediaResolver";
 
@@ -388,7 +389,25 @@ export const auditHomepageSections = () => {
 
   const sale = describeResolved(resolveSaleBackdrop(null, new Set(heroUsed)));
 
-  return { hero, editorial, shopByCategory, collections, newArrivals, sale };
+  const brideGroomLooks = selectBrideGroomLooks(undefined, { excludeIds: new Set(heroUsed) });
+  const brideGroom = {
+    bride: (brideGroomLooks.bride || []).map((look) => ({
+      side: "bride",
+      name: look.product?.name || "Bride",
+      categoryId: look.categoryId,
+      productId: look.productId,
+      ...describeResolved(look.image),
+    })),
+    groom: (brideGroomLooks.groom || []).map((look) => ({
+      side: "groom",
+      name: look.product?.name || "Groom",
+      categoryId: look.categoryId,
+      productId: look.productId,
+      ...describeResolved(look.image),
+    })),
+  };
+
+  return { hero, editorial, shopByCategory, collections, newArrivals, sale, brideGroom };
 };
 
 export default auditMediaExposure;

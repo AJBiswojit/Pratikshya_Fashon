@@ -26,6 +26,7 @@ import {
   resolveCategoryCover,
   resolveCollectionCover,
   resolveProductCover,
+  selectBrideGroomLooks,
   selectSareeEditProducts,
 } from "../src/services/media/mediaResolver.js";
 import mediaRepository from "../src/services/media/mediaRepository.js";
@@ -216,12 +217,100 @@ if (
 }
 
 /* ------------------------------------------------------------------ */
+/* BRIDE & GROOM — wedding media ownership                             */
+/* ------------------------------------------------------------------ */
+
+const brideGroom = selectBrideGroomLooks();
+const brideLooks = brideGroom.bride || [];
+const groomLooks = brideGroom.groom || [];
+const brideRoute = resolveCategoryRoute("bridal-couture");
+const groomRoute = resolveCategoryRoute("menswear");
+const brideGroomComponent = readFileSync(
+  join(process.cwd(), "src/components/storefront/BrideGroomEdit.jsx"),
+  "utf8"
+);
+const brideGroomHardcoded = brideGroomComponent.match(hardcodedImagePattern)?.length ?? 0;
+const brideCategories = new Set(["sarees", "lehengas", "bridal-couture"]);
+const groomCategories = new Set(["menswear"]);
+const brideCross = [];
+const groomCross = [];
+const brideBroken = [];
+const groomBroken = [];
+const brideUnrelated = [];
+const groomUnrelated = [];
+
+brideLooks.forEach((look) => {
+  if (!brideCategories.has(look.categoryId)) brideUnrelated.push(look.mediaId || look.filename);
+  if (!localFileExists(look.image)) brideBroken.push(look.filename);
+  if (look.productId && look.image?.productId && String(look.image.productId) !== String(look.productId)) {
+    brideCross.push(`${look.productId}:${look.image.productId}`);
+  }
+});
+groomLooks.forEach((look) => {
+  if (!groomCategories.has(look.categoryId)) groomUnrelated.push(look.mediaId || look.filename);
+  if (!localFileExists(look.image)) groomBroken.push(look.filename);
+  if (look.productId && look.image?.productId && String(look.image.productId) !== String(look.productId)) {
+    groomCross.push(`${look.productId}:${look.image.productId}`);
+  }
+});
+
+line("## BRIDE & GROOM");
+line(
+  pad("Side", 8) +
+    pad("Product ID", 12) +
+    pad("Category", 18) +
+    pad("Image filename", 43) +
+    pad("Media ID", 24) +
+    "Source"
+);
+[...brideLooks, ...groomLooks].forEach((look) => {
+  line(
+    pad(look.side, 8) +
+      pad(look.productId || "—", 12) +
+      pad(look.categoryId, 18) +
+      pad(look.filename, 43) +
+      pad(look.mediaId, 24) +
+      look.fallbackSource
+  );
+});
+line();
+line(`Bride looks: ${brideLooks.length}`);
+line(`Groom looks: ${groomLooks.length}`);
+line(`Bride route: ${brideRoute?.href || "UNROUTABLE"}`);
+line(`Groom route: ${groomRoute?.href || "UNROUTABLE"}`);
+line(`Bride cross-product: ${brideCross.length}`);
+line(`Groom cross-product: ${groomCross.length}`);
+line(`Broken images: ${brideBroken.length + groomBroken.length}`);
+line(`Hardcoded images: ${brideGroomHardcoded}`);
+line(`Unrelated bride media: ${brideUnrelated.length}`);
+line(`Unrelated groom media: ${groomUnrelated.length}`);
+line();
+
+if (
+  !brideLooks.length ||
+  !groomLooks.length ||
+  !brideRoute ||
+  !groomRoute ||
+  brideCross.length ||
+  groomCross.length ||
+  brideBroken.length ||
+  groomBroken.length ||
+  brideGroomHardcoded ||
+  brideUnrelated.length ||
+  groomUnrelated.length
+) {
+  process.exitCode = 1;
+}
+
+/* ------------------------------------------------------------------ */
 /* HOMEPAGE REDIRECTION MATRIX                                         */
 /* ------------------------------------------------------------------ */
 
 const matrix = [
   ["Sarees", resolveCategoryRoute("sarees")],
   ["Lehengas", resolveCategoryRoute("lehengas")],
+  ["Explore Bride", resolveCategoryRoute("bridal-couture")],
+  ["Explore Groom", resolveCategoryRoute("menswear")],
   ["Men's Wear", resolveCategoryRoute("menswear")],
   ["Kids Wear", resolveCategoryRoute("kidswear")],
   ["Jewellery", resolveCategoryRoute("jewellery")],

@@ -1,10 +1,10 @@
 import { useMemo } from "react";
 import { MARKETING_PLACEMENTS } from "../config/mediaTypes";
 import { useActivePlacementMedia } from "../hooks/useMedia";
-import { resolvePlacementImage } from "../services/media/marketingMediaSource";
 import { resolveHeroImageIds } from "../services/media/mediaResolver";
 import HeroCarousel from "../components/storefront/HeroCarousel";
 import SareeEditCarousel from "../components/storefront/SareeEditCarousel";
+import BrideGroomEdit from "../components/storefront/BrideGroomEdit";
 import ShopByCategory from "../components/storefront/ShopByCategory";
 import NewArrivals from "../components/storefront/NewArrivals";
 import SaleBanner from "../components/storefront/SaleBanner";
@@ -13,12 +13,8 @@ import {
   Accent,
   AtelierSection,
   EditorialHeading,
-  MediaFrame,
   body,
   eyebrow,
-  gap,
-  grid,
-  heading,
 } from "../design-system";
 
 export default function AtelierDesign() {
@@ -29,8 +25,6 @@ export default function AtelierDesign() {
      honours an ACTIVE HOME_HERO record by letting it stand in for the
      lead editorial plate. */
   const heroMedia = useActivePlacementMedia(MARKETING_PLACEMENTS.HOME_HERO);
-  const sareeMedia = useActivePlacementMedia(MARKETING_PLACEMENTS.SAREE_SECTION);
-  const lehengaMedia = useActivePlacementMedia(MARKETING_PLACEMENTS.LEHENGA_SECTION);
 
   /* The hero reserves its five plates first; the editorial, category and sale
      seams below seed their exclusion set from this list so the homepage never
@@ -43,30 +37,7 @@ export default function AtelierDesign() {
 
       <SareeEditCarousel />
 
-      <AtelierSection id="collections" tone="ink">
-        <EditorialHeading
-          size="editorial"
-          description="Pato, cotton, silk, Banarasi, designer and wedding sarees alongside bridal, festive and party lehengas."
-          descriptionClassName={`${body.base} text-ash`}
-          spacing={{ title: "mb-4", description: "mb-14" }}
-        >
-          Saree & <Accent tone="gold">Lehenga</Accent>
-        </EditorialHeading>
-        <div className={`${grid.pair} ${gap.tile}`}>
-          <MediaFrame as="a" href="#women" image={resolvePlacementImage(sareeMedia, "saree-banarasi")} alt="Pato, Banarasi and silk saree collection" aspect="panorama" zoom="soft" overlay="inkLeft" className="group">
-            <div className="absolute bottom-6 left-6 md:bottom-10 md:left-10">
-              <h3 className={`${heading.xl} mb-2`}>Saree Collection</h3>
-              <p className={`${body.captionDisplay} text-ash`}>Pato · cotton · silk · Banarasi · festive.</p>
-            </div>
-          </MediaFrame>
-          <MediaFrame as="a" href="#bridal" image={resolvePlacementImage(lehengaMedia, "lehenga-bridal")} alt="Bridal and wedding lehenga collection" aspect="panorama" zoom="soft" overlay="inkRight" className="group">
-            <div className="absolute bottom-6 right-6 md:bottom-10 md:right-10 text-right">
-              <h3 className={`${heading.xl} mb-2`}>Lehenga Collection</h3>
-              <p className={`${body.captionDisplay} text-ash`}>Bridal · wedding · designer · party.</p>
-            </div>
-          </MediaFrame>
-        </div>
-      </AtelierSection>
+      <BrideGroomEdit excludeIds={heroImageIds} />
 
       <CelebrationEdit excludeIds={heroImageIds} />
 

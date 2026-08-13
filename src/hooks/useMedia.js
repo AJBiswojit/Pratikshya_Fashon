@@ -12,7 +12,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import mediaRepository, { MEDIA_CHANGED_EVENT } from "../services/media/mediaRepository";
-import { selectSareeEditProducts } from "../services/media/mediaResolver";
+import { selectBrideGroomLooks, selectSareeEditProducts } from "../services/media/mediaResolver";
 import { getProductSlides } from "../services/media/productMediaSource";
 import { applyProductMediaSet } from "../services/media/productMediaSet";
 
@@ -140,6 +140,29 @@ export const useSareeEditProducts = (products = null) => {
   return useMediaSelector(
     () => selectSareeEditProducts(products ?? undefined),
     [key] // eslint-disable-line react-hooks/exhaustive-deps
+  );
+};
+
+/**
+ * Homepage Bride & Groom looks from the canonical deterministic selector.
+ * Re-reads after a media-store write so a remapped or unpublished plate
+ * leaves the section immediately.
+ */
+export const useBrideGroomLooks = (options = {}) => {
+  const excludeKey = [...(options.excludeIds || [])].join("|");
+  const productKey = options.products ? options.products.map((product) => product.id).join("|") : "live-catalogue";
+  return useMediaSelector(
+    () => {
+      try {
+        return selectBrideGroomLooks(options.products ?? undefined, {
+          count: options.count,
+          excludeIds: options.excludeIds,
+        });
+      } catch {
+        return { bride: [], groom: [] };
+      }
+    },
+    [excludeKey, productKey, options.count] // eslint-disable-line react-hooks/exhaustive-deps
   );
 };
 
