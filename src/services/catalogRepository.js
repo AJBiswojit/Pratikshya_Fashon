@@ -32,6 +32,7 @@ import {
 import { DISCOUNT_TYPES, computePricing } from "../utils/pricing";
 import { formatINR } from "../utils/shopping";
 import { syncProductDraftRecords } from "./productDraftMigration";
+import { syncCatalogueReconciliation } from "./catalogueReconciliation";
 import {
   REVIEW_FLAG_LABELS,
   blockingReviewFlags,
@@ -239,8 +240,11 @@ const read = () => {
     const synced = raw ? syncKidswearRegister(healed) : healed;
     /* Phase 22 — additive, idempotent Kids draft migration. */
     const migrated = syncProductDraftRecords(synced);
-    readCache = { raw: raw ?? null, parsed: migrated };
-    return migrated;
+    /* Phase 23 — additive, idempotent catalogue reconciliation: every
+       uncatalogued product-media group becomes one reviewable DRAFT. */
+    const reconciled = syncCatalogueReconciliation(migrated);
+    readCache = { raw: raw ?? null, parsed: reconciled };
+    return reconciled;
   } catch {
     return healRead(null);
   }

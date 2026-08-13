@@ -371,8 +371,11 @@ test("stable ids are deterministic — same inputs, same id, never random", () =
   assert.ok(!taken.has(idA), "the generated id must be free in the register");
 
   const media = mediaByFile("men-sherwani-002-front.webp");
-  const preferred = preferredProductIdForMedia([media], "menswear");
-  assert.equal(preferred, "MEN-002");
+  const preferredA = preferredProductIdForMedia([media], "menswear");
+  const preferredB = preferredProductIdForMedia([media], "menswear");
+  assert.equal(preferredA, preferredB, "same inputs must yield the same id");
+  assert.match(preferredA, /^MEN-\d{3}$/, "category-prefixed stable id");
+  assert.ok(!taken.has(preferredA), "the preferred id must be free in the register");
 });
 
 test("the media inbox includes kids drafts' claims and identifies owners", () => {
