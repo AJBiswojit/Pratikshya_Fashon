@@ -69,7 +69,7 @@ test("a product with library media resolves its own PRIMARY cover", () => {
 });
 
 test("a product without library media keeps its own authored plate", () => {
-  const product = getProductById("pf-080");
+  const product = getProductById("pf-002");
   const cover = resolveProductCover(product);
   assert.ok(cover);
   assert.equal(cover.reason, FALLBACK_REASONS.NO_SOURCE_MEDIA);
