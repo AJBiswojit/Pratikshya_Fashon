@@ -22,7 +22,7 @@ import PratikshyaImage from "../PratikshyaImage";
 import { imageRef } from "../../data/pratikshyaImageManifest";
 import { resolveHeroSlideImage } from "../../services/media/mediaResolver";
 import { resolveCategoryRoute, resolveCollectionRoute } from "../../services/taxonomyRouting";
-import { AtelierButton } from "../../design-system";
+import { AtelierButton, header as headerSpacing } from "../../design-system";
 import { cn } from "../../utils/cn";
 
 /** Calm, premium cadence — fashion sites should never feel hurried. */
@@ -435,7 +435,15 @@ export default function HeroCarousel({ heroMedia }) {
   );
 }
 
-const headerOffsetCls = "pt-20";
+/**
+ * Margin-top that clears the fixed navigation (h-16 md:h-20). Drawn from
+ * the shared `header.offset` token so it stays in sync with the header's
+ * real height. It is a *margin*, not padding, because the slide plates are
+ * absolutely positioned (`absolute inset-0`): padding would still let the
+ * image run up behind the fixed header, margin pushes the whole hero —
+ * including those plates — to start exactly at the header's bottom edge.
+ */
+const headerOffsetCls = headerSpacing.offset;
 
 function CarouselControl({ label, onClick, children, ...rest }) {
   return (
