@@ -1,10 +1,120 @@
 {
-  "generatedAt": "2026-08-13T06:34:42.030Z",
+  "generatedAt": "2026-08-13T10:21:26.000Z",
   "totalOld": 169,
-  "totalMigrated": 75,
+  "totalMigrated": 85,
   "alreadyCurrent": 69,
   "missing": 25,
   "entries": [
+    {
+      "oldPath": "images/atelier-fabric.jpg",
+      "newPath": "library/house-atelier-fabric.jpg",
+      "status": "MIGRATED",
+      "assetId": "pm-ing-9843818f9b5c",
+      "productId": null,
+      "note": "Phase 21.11 house plate folded into canonical library",
+      "usage": "hero/editorial",
+      "taxonomyId": null,
+      "collectionId": null
+    },
+    {
+      "oldPath": "images/bridal-editorial.jpg",
+      "newPath": "library/house-bridal-editorial.jpg",
+      "status": "MIGRATED",
+      "assetId": "pm-ing-075f33ec47cf",
+      "productId": null,
+      "note": "Phase 21.11 house plate folded into canonical library",
+      "usage": "hero/editorial",
+      "taxonomyId": "lehengas",
+      "collectionId": "bridal-trousseau"
+    },
+    {
+      "oldPath": "images/commerce-hero.jpg",
+      "newPath": "library/house-commerce-hero.jpg",
+      "status": "MIGRATED",
+      "assetId": "pm-ing-ef18ac022573",
+      "productId": null,
+      "note": "Phase 21.11 house plate folded into canonical library",
+      "usage": "hero/editorial",
+      "taxonomyId": null,
+      "collectionId": null
+    },
+    {
+      "oldPath": "images/editorial-hero.jpg",
+      "newPath": "library/house-editorial-hero.jpg",
+      "status": "MIGRATED",
+      "assetId": "pm-ing-6229b9ced7d4",
+      "productId": null,
+      "note": "Phase 21.11 house plate folded into canonical library",
+      "usage": "hero/editorial",
+      "taxonomyId": "sarees",
+      "collectionId": null
+    },
+    {
+      "oldPath": "images/future-hero.jpg",
+      "newPath": "library/house-future-hero.jpg",
+      "status": "MIGRATED",
+      "assetId": "pm-ing-7f2cd530db3d",
+      "productId": null,
+      "note": "Phase 21.11 house plate folded into canonical library",
+      "usage": "hero/editorial",
+      "taxonomyId": "lehengas",
+      "collectionId": null
+    },
+    {
+      "oldPath": "images/heritage-textile.jpg",
+      "newPath": "library/house-heritage-textile.jpg",
+      "status": "MIGRATED",
+      "assetId": "pm-ing-5582d5813c12",
+      "productId": null,
+      "note": "Phase 21.11 house plate folded into canonical library",
+      "usage": "editorial",
+      "taxonomyId": "sarees",
+      "collectionId": "heritage-weaves"
+    },
+    {
+      "oldPath": "images/minimal-hero.jpg",
+      "newPath": "library/house-minimal-hero.jpg",
+      "status": "MIGRATED",
+      "assetId": "pm-ing-62c7ad21a728",
+      "productId": null,
+      "note": "Phase 21.11 house plate folded into canonical library",
+      "usage": "editorial",
+      "taxonomyId": "kurtis-and-suits",
+      "collectionId": "everyday-atelier"
+    },
+    {
+      "oldPath": "images/pratikshya/groom/groom-sherwani.jpg",
+      "newPath": "library/house-groom-sherwani.jpg",
+      "status": "MIGRATED",
+      "assetId": "pm-ing-063b2212fd9a",
+      "productId": null,
+      "note": "Phase 21.11 house plate folded into canonical library",
+      "usage": "category/editorial",
+      "taxonomyId": "menswear",
+      "collectionId": "groom-atelier"
+    },
+    {
+      "oldPath": "images/pratikshya/jewellery/bangles-gold.jpg",
+      "newPath": "library/house-bridal-bangles.jpg",
+      "status": "MIGRATED",
+      "assetId": "pm-ing-bd139c1e51cd",
+      "productId": null,
+      "note": "Phase 21.11 house plate folded into canonical library",
+      "usage": "category",
+      "taxonomyId": "bangles",
+      "collectionId": "bridal-trousseau"
+    },
+    {
+      "oldPath": "images/pratikshya/kids/kids-festive.jpg",
+      "newPath": "library/house-kids-festive.jpg",
+      "status": "MIGRATED",
+      "assetId": "pm-ing-dc3acc6caf72",
+      "productId": null,
+      "note": "Phase 21.11 house plate folded into canonical library",
+      "usage": "category",
+      "taxonomyId": "kidswear",
+      "collectionId": "little-heirlooms"
+    },
     {
       "oldPath": "library/jewellery-anklet-001.webp",
       "newPath": "library/jewellery-anklet-001.webp",
@@ -1363,5 +1473,6 @@
       "assetId": "pm-ing-c62eb0caaa57",
       "productId": null
     }
-  ]
+  ],
+  "housePlatesMigrated": 10
 }

@@ -6,8 +6,8 @@
  *   npm run media:optimize    write optimized assets + update the manifest
  *
  * Deterministic and idempotent. A second run does not mint new filenames
- * for the same originals. Source files under public/media and public/images
- * are never deleted or overwritten.
+ * for the same originals. Source files under public/media are never deleted.
+ * Phase 21.11 folds remaining public/images house plates into public/library.
  */
 
 import { spawnSync } from "node:child_process";

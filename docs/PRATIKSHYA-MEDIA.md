@@ -294,9 +294,9 @@ MEDIA METADATA    (src/data/media/ingestedManifest.json)
 
 | Tree | Role |
 | --- | --- |
-| `public/media/` | Source originals. Never deleted, never renamed. |
-| `public/images/` | Existing house plates. Left at their original URLs. |
-| `public/library/` | Application-ready WebP, deterministic names (`women-saree-silk-001.webp`). |
+| `public/media/` | Source originals (when present). Never deleted, never renamed. |
+| `public/library/` | **Canonical media root.** Ingested WebP plus migrated house plates. |
+| `public/images/` | Retired in Phase 21.11. Legacy `/images/…` addresses rewrite through `resolveLegacyMediaUrl`. |
 
 Running `npm run media:optimize` twice produces the same filenames. A dry run
 is `npm run media:analyze`.

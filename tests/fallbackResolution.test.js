@@ -27,6 +27,7 @@ import taxonomyRepository from "../src/services/taxonomyRepository.js";
 import { categoryHref } from "../src/services/taxonomyRouting.js";
 import { getLiveStorefrontProducts, getProductById } from "../src/data/products/index.js";
 import { imageRef } from "../src/data/pratikshyaImageManifest.js";
+import { isIngestedPhotographyUrl } from "../src/services/media/mediaPaths.js";
 import { USAGE_ROLES } from "../src/config/mediaTypes.js";
 
 /* ------------------------------------------------------------------ */
@@ -73,7 +74,7 @@ test("a product without library media keeps its own authored plate", () => {
   assert.ok(cover);
   assert.equal(cover.reason, FALLBACK_REASONS.NO_SOURCE_MEDIA);
   assert.equal(cover.id, product.image.id, "must keep its own authored plate, not another image");
-  assert.ok(!cover.src.includes("/library/"));
+  assert.equal(isIngestedPhotographyUrl(cover.src), false, "must not borrow ingested product photography");
 });
 
 /* ------------------------------------------------------------------ */
@@ -116,7 +117,7 @@ test("kurtis fallback stays safe — no borrowed saree/lehenga photography", () 
   const kurtis = taxonomyRepository.findCategory("kurtis-and-suits");
   const cover = resolveCategoryCover(kurtis);
   assert.equal(cover.reason, FALLBACK_REASONS.NO_SOURCE_MEDIA);
-  assert.ok(!cover.src.includes("/library/"), "kurtis must not use library photography it does not own");
+  assert.equal(isIngestedPhotographyUrl(cover.src), false, "kurtis must not use library photography it does not own");
   assert.equal(cover.src, imageRef(kurtis.image).src, "kurtis should keep its own authored artwork");
 });
 
@@ -124,7 +125,7 @@ test("dupatta fallback stays safe — no borrowed saree photography", () => {
   const dupattas = taxonomyRepository.findCategory("dupattas");
   const cover = resolveCategoryCover(dupattas);
   assert.equal(cover.reason, FALLBACK_REASONS.NO_SOURCE_MEDIA);
-  assert.ok(!cover.src.includes("/library/"), "dupattas must not use library saree photography");
+  assert.equal(isIngestedPhotographyUrl(cover.src), false, "dupattas must not use library saree photography");
   assert.equal(cover.src, imageRef(dupattas.image).src);
 });
 
@@ -132,7 +133,7 @@ test("no category cover uses an unrelated product's image", () => {
   taxonomyRepository.activeCategories().forEach((category) => {
     const cover = resolveCategoryCover(category);
     assert.ok(cover, `${category.id} should resolve a cover`);
-    if (!cover.src?.includes("/library/")) return;
+    if (!isIngestedPhotographyUrl(cover.src)) return;
     const media = mediaRepository.getById(cover.id);
     assert.ok(media, `cover ${cover.src} should have a media record`);
     if (media.productId) {

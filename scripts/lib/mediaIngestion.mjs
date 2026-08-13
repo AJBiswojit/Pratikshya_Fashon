@@ -11,7 +11,7 @@ import { createHash } from "node:crypto";
 
 export const IMAGE_EXTENSIONS = new Set([".jpg", ".jpeg", ".png", ".webp", ".avif"]);
 
-/** House artwork already referenced by the image manifest — never renamed. */
+/** Legacy house-artwork source root. Phase 21.11 copies these into `library/`. */
 export const HOUSE_IMAGE_ROOT = "images";
 
 /** Source fashion library that this phase ingests. */
@@ -767,12 +767,15 @@ export const assignDeterministicNames = (items) => {
     .sort((a, b) => String(a.originalPath).localeCompare(String(b.originalPath)))
     .map((item) => {
       if (item.house) {
+        const ext = extensionOf(item.originalPath) || ".jpg";
+        const stem =
+          item.namePrefix ||
+          `house-${slugifyName(basenameOf(item.originalPath).replace(/\.[a-z0-9]+$/i, "")) || "artwork"}`;
+        const currentFilename = `${stem}${ext}`;
         return {
           ...item,
-          currentFilename: basenameOf(item.originalPath),
-          optimizedPath: item.originalPath.startsWith("images/")
-            ? item.originalPath
-            : posixRel(item.originalPath),
+          currentFilename,
+          optimizedPath: `${OPTIMIZED_ROOT}/${currentFilename}`,
           skipOptimize: true,
         };
       }

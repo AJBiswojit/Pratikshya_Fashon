@@ -14,6 +14,8 @@ import {
   getProductStatusLabel,
 } from "../../config/productCatalogConfig";
 import { useProductMedia } from "../../hooks/useMedia";
+import { imageRef } from "../../data/pratikshyaImageManifest";
+import { resolveLegacyMediaUrl } from "../../services/media/mediaPaths";
 import {
   Field,
   KeyValueEditor,
@@ -242,13 +244,17 @@ export function SectionMedia({ draft, patch, portal }) {
           <p className="mb-2 font-ui text-[10px] uppercase tracking-[.18em] text-ink">Cover Preview</p>
           {cover?.url || cover?.thumbnail ? (
             <img
-              src={cover.url || cover.thumbnail}
+              src={resolveLegacyMediaUrl(cover.url || cover.thumbnail)}
               alt={cover.alt || `${draft.name} cover`}
               className="h-44 w-full max-w-xs object-cover border border-mist"
             />
           ) : draft.image ? (
             <img
-              src={draft.image.startsWith("http") || draft.image.startsWith("/") || draft.image.startsWith("data:") ? draft.image : `/images/${draft.image}.jpg`}
+              src={
+                draft.image.startsWith("http") || draft.image.startsWith("/") || draft.image.startsWith("data:")
+                  ? resolveLegacyMediaUrl(draft.image)
+                  : imageRef(draft.image)?.src
+              }
               alt={`${draft.name} catalogue plate`}
               className="h-44 w-full max-w-xs object-cover border border-mist"
               onError={(e) => {

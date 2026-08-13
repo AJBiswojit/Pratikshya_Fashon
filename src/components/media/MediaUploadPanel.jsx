@@ -375,7 +375,7 @@ export default function MediaUploadPanel({
             <input
               value={address.url}
               onChange={(event) => setAddress({ ...address, url: event.target.value })}
-              placeholder="/images/heritage-textile.jpg"
+              placeholder="Paste a media URL"
               className={field}
             />
           </label>
@@ -385,7 +385,7 @@ export default function MediaUploadPanel({
               <input
                 value={address.poster}
                 onChange={(event) => setAddress({ ...address, poster: event.target.value })}
-                placeholder="/images/bridal-editorial.jpg"
+                placeholder="Poster URL"
                 className={field}
               />
             </label>

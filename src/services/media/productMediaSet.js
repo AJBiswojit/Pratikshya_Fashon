@@ -34,6 +34,7 @@ import {
 import { imageRef } from "../../data/pratikshyaImageManifest";
 import { getAll } from "./mediaRepository";
 import { getViewOrderScore, parseMediaFilename } from "./mediaNaming";
+import { isIngestedPhotographyUrl, resolveLegacyMediaUrl } from "./mediaPaths";
 
 export const PRODUCT_MEDIA_STATUS = {
   OK: "OK",
@@ -177,19 +178,21 @@ const asImageSource = (media, product) => {
   if (!media) return null;
   if (typeof media === "string") {
     if (isUrl(media)) {
+      const src = resolveLegacyMediaUrl(media);
       return {
         id: media,
-        src: media,
+        src,
         alt: product?.name || "",
         category: product?.category || "default",
         productId: product?.id || null,
-        fileName: media.split("/").pop() || media,
+        fileName: src.split("/").pop() || media,
       };
     }
     const referenced = imageRef(media);
     return referenced
       ? {
           ...referenced,
+          src: resolveLegacyMediaUrl(referenced.src) || referenced.src,
           productId: product?.id || null,
           fileName: referenced.src ? referenced.src.split("/").pop() : referenced.id,
         }
@@ -198,11 +201,12 @@ const asImageSource = (media, product) => {
   if (media.src) {
     return {
       ...media,
+      src: resolveLegacyMediaUrl(media.src) || media.src,
       productId: media.productId || product?.id || null,
       fileName: media.fileName || fileNameOf(media),
     };
   }
-  const src = media.url || media.thumbnail;
+  const src = resolveLegacyMediaUrl(media.url || media.thumbnail);
   if (!src) return null;
   return {
     id: media.id,
@@ -292,8 +296,8 @@ const pickHover = (owned, primary) => {
 };
 
 const describeSource = (owned) => {
-  const fromLibrary = owned.some((item) => item.fromRepository || (item.src || "").includes("/library/"));
-  const fromLegacy = owned.some((item) => !item.fromRepository && !(item.src || "").includes("/library/"));
+  const fromLibrary = owned.some((item) => item.fromRepository || isIngestedPhotographyUrl(item.src));
+  const fromLegacy = owned.some((item) => !item.fromRepository && !isIngestedPhotographyUrl(item.src));
   if (fromLibrary && fromLegacy) return "mixed";
   if (fromLibrary) return "library";
   if (fromLegacy) return "legacy";

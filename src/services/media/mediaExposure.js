@@ -24,6 +24,7 @@ import {
 } from "../../config/mediaTypes";
 import { getLiveStorefrontProducts } from "../../data/products";
 import taxonomyRepository from "../taxonomyRepository";
+import { isIngestedPhotographyUrl } from "./mediaPaths";
 import mediaRepository from "./mediaRepository";
 import {
   resolveAiMirrorImage,
@@ -171,7 +172,7 @@ export const auditMediaExposure = () => {
   /* Category coverage — for every active customer-facing category. */
   const categoryCoverage = taxonomyRepository.activeCategories().map((category) => {
     const cover = resolveCategoryCover(category);
-    const hasLibrary = cover?.src?.includes("/library/");
+    const hasLibrary = isIngestedPhotographyUrl(cover?.src);
     const media = mediaRepository.getMediaByCategory(category.id, { publicOnly: true });
     return {
       id: category.id,

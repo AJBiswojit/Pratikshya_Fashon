@@ -21,6 +21,7 @@
  */
 
 import { imageRef } from "../pratikshyaImageManifest";
+import { resolveLegacyMediaUrl } from "../../services/media/mediaPaths";
 import catalogue from "./catalogue";
 import catalogRepository, { productsRegisterRaw, slugify } from "../../services/catalogRepository";
 import {
@@ -70,7 +71,10 @@ const resolveImage = (value, name) => {
   if (typeof value === "object") {
     return value.src ? value : imageRef(value.id ?? "hero-atelier");
   }
-  if (isUrl(value)) return { id: value, src: value, alt: name, category: "default" };
+  if (isUrl(value)) {
+    const src = resolveLegacyMediaUrl(value) || value;
+    return { id: value, src, alt: name, category: "default" };
+  }
   return imageRef(value);
 };
 
