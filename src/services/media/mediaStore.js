@@ -236,10 +236,57 @@ const seeded = () =>
   dedupeMedia([...SEED_MEDIA, ...getIngestedRecords()].map(normaliseMedia).filter(Boolean));
 
 /**
+ * Reconcile a persisted register with the canonical seed.
+ *
+ * The seeded register (Phase 12 seed + Phase 21.4 ingested library) is the
+ * single source of truth for baseline media. A browser that holds an OLDER
+ * persisted copy in localStorage — snapshotted before a library asset was
+ * added or corrected in the manifest — must not silently shadow the new
+ * records. Otherwise the resolver (and therefore the homepage hero) keeps
+ * serving stale data even though the manifest on disk is correct.
+ *
+ * We merge the persisted register UNDER the canonical seed:
+ *   · canonical seed records that are missing from the persisted copy are
+ *     added back (this is what restores hero001–hero005 after a library
+ *     update), and
+ *   · any record the operator created or edited — one that is not part of
+ *     the canonical seed — is preserved as-is.
+ *
+ * `dedupeMedia` keeps the first occurrence by id, so the persisted copy wins
+ * on id collision. That deliberately protects operator edits to existing
+ * records; the only records we ever re-introduce are ones the persisted
+ * register is missing entirely. Returns a fresh, de-duplicated array and
+ * never mutates the inputs.
+ */
+const reconcileWithCanonical = (persisted) => {
+  const canonical = seeded();
+  return dedupeMedia([...persisted, ...canonical]);
+};
+
+/**
+ * Persist the register, tolerating storage that is unavailable (private
+ * mode / quota). The in-memory mirror still holds, so the session continues.
+ */
+const persistMedia = (items) => {
+  try {
+    window.localStorage.setItem(MEDIA_STORAGE_KEY, JSON.stringify(items));
+  } catch {
+    /* Non-fatal — the register stays in memory for this session. */
+  }
+};
+
+/**
  * Every media record, normalised and de-duplicated.
  *
  * An empty or unreadable register seeds itself from the house media so the
  * admin surfaces are never a blank page on a fresh browser.
+ *
+ * A persisted register that is out of date relative to the canonical seed
+ * (e.g. it predates a library addition such as the hero001–hero005
+ * replacement) is reconciled on read so stale storage can never shadow the
+ * current manifest. The reconciled register is persisted once, which means a
+ * browser carrying an older snapshot self-heals on the next load — no
+ * manual cache clear required.
  */
 export const readMedia = () => {
   if (typeof window === "undefined") {
@@ -248,9 +295,30 @@ export const readMedia = () => {
   }
   try {
     const stored = JSON.parse(window.localStorage.getItem(MEDIA_STORAGE_KEY));
-    if (!Array.isArray(stored)) return memoryMedia || seeded();
-    const clean = dedupeMedia(stored.map(normaliseMedia).filter(Boolean));
-    return clean.length ? clean : memoryMedia || seeded();
+    if (!Array.isArray(stored)) {
+      const seededOnce = seeded();
+      memoryMedia = seededOnce;
+      persistMedia(seededOnce);
+      return memoryMedia;
+    }
+    const persisted = dedupeMedia(stored.map(normaliseMedia).filter(Boolean));
+    if (!persisted.length) {
+      const seededOnce = seeded();
+      memoryMedia = seededOnce;
+      persistMedia(seededOnce);
+      return memoryMedia;
+    }
+    const reconciled = reconcileWithCanonical(persisted);
+    /* Only write back when something was actually added (a stale snapshot
+       has been repaired). Once reconciled, the persisted copy matches the
+       canonical baseline and no further writes are needed. */
+    if (reconciled.length !== persisted.length) {
+      memoryMedia = reconciled;
+      persistMedia(reconciled);
+    } else {
+      memoryMedia = reconciled;
+    }
+    return memoryMedia;
   } catch {
     return memoryMedia || seeded();
   }
