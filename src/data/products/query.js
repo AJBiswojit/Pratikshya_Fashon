@@ -32,8 +32,47 @@ export const matchesSearch = (product, term) => {
   return words.every((word) => product.searchText.includes(word));
 };
 
+/** Friendly Explore / share URLs (`kids`, `price-low`) map onto taxonomy ids. */
+export const CATEGORY_FILTER_ALIASES = {
+  kids: "kidswear",
+  kid: "kidswear",
+  kidswear: "kidswear",
+  men: "menswear",
+  mens: "menswear",
+  "mens-wear": "menswear",
+  menswear: "menswear",
+  jewellery: "jewellery",
+  jewelry: "jewellery",
+  bridal: "bridal-couture",
+  "bridal-couture": "bridal-couture",
+  saree: "sarees",
+  sarees: "sarees",
+  lehenga: "lehengas",
+  lehengas: "lehengas",
+  bangle: "bangles",
+  bangles: "bangles",
+  kurti: "kurtis-and-suits",
+  kurtis: "kurtis-and-suits",
+  "kurtis-and-suits": "kurtis-and-suits",
+  innerwear: "innerwear",
+  dupatta: "dupattas",
+  dupattas: "dupattas",
+};
+
+export const resolveCategoryFilter = (value) => {
+  if (value == null || value === "") return value;
+  const key = String(value).toLowerCase();
+  return CATEGORY_FILTER_ALIASES[key] || value;
+};
+
+export const isProductOnSale = (product) => {
+  if (!product) return false;
+  if (typeof product.discount === "number" && product.discount > 0) return true;
+  return typeof product.originalPrice === "number" && product.originalPrice > Number(product.price);
+};
+
 const matchers = {
-  category: (product, value) => product.category === value,
+  category: (product, value) => product.category === resolveCategoryFilter(value),
   subcategory: (product, value) => product.subcategory === value,
   gender: (product, value) => product.gender === value,
   fabric: (product, value) => product.fabric === value,
@@ -55,6 +94,12 @@ const matchers = {
   },
   /** Merchandising flags, used by collection scopes (`isNew`, `isFeatured`). */
   flag: (product, value) => Boolean(product[value]),
+  /** New arrivals / on-sale highlights — only real catalogue signals. */
+  merch: (product, value) => {
+    if (value === "new") return Boolean(product.isNew);
+    if (value === "sale") return isProductOnSale(product);
+    return true;
+  },
 };
 
 /** True when a product satisfies every active filter. */
@@ -80,13 +125,32 @@ const comparators = {
   "price-desc": (a, b) => b.price - a.price,
   popularity: (a, b) => b.reviewCount - a.reviewCount,
   rating: (a, b) => b.rating - a.rating || b.reviewCount - a.reviewCount,
+  discount: (a, b) => (Number(b.discount) || 0) - (Number(a.discount) || 0),
+  "name-asc": (a, b) => String(a.name || "").localeCompare(String(b.name || ""), undefined, {
+    sensitivity: "base",
+  }),
 };
 
 export const sortIds = sortOptions.map((option) => option.id);
 
+/** Shareable sort aliases used by Explore (`price-low` → `price-asc`). */
+export const SORT_ALIASES = {
+  "price-low": "price-asc",
+  "price-high": "price-desc",
+  name: "name-asc",
+  "name-az": "name-asc",
+  az: "name-asc",
+};
+
+export const resolveSort = (value, fallback = defaultSort) => {
+  const canonical = SORT_ALIASES[value] || value;
+  return sortIds.includes(canonical) ? canonical : fallback;
+};
+
 /** Sorts a copy; ties break on id so the order is always deterministic. */
 export const sortProducts = (list, sort = defaultSort) => {
-  const compare = comparators[sort] ?? comparators[defaultSort];
+  const resolved = resolveSort(sort, defaultSort);
+  const compare = comparators[resolved] ?? comparators[defaultSort];
   return [...list].sort((a, b) => compare(a, b) || a.id.localeCompare(b.id));
 };
 

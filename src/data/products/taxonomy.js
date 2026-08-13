@@ -106,6 +106,8 @@ export const sortOptions = [
   { id: "newest", label: "Newest" },
   { id: "price-asc", label: "Price: Low to High" },
   { id: "price-desc", label: "Price: High to Low" },
+  { id: "discount", label: "Discount" },
+  { id: "name-asc", label: "Name: A–Z" },
   { id: "popularity", label: "Popularity" },
   { id: "rating", label: "Rating" },
 ];

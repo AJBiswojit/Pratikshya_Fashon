@@ -51,6 +51,15 @@ export function buildFacets(scoped, filters = {}, locked = {}) {
         options = ratingOptions
           .map((option) => ({ ...option, count: counts[option.id] }))
           .filter((option) => option.count > 0);
+      } else if (facet.id === "merch") {
+        const merchOptions = [
+          { id: "new", label: "New Arrival" },
+          { id: "sale", label: "On Sale" },
+        ];
+        const counts = countBand(scoped, filters, "merch", merchOptions.map((entry) => entry.id));
+        options = merchOptions
+          .map((option) => ({ ...option, count: counts[option.id] ?? 0 }))
+          .filter((option) => option.count > 0);
       } else {
         const counts = countFacet(scoped, filters, facet.id);
 
@@ -109,6 +118,10 @@ export const chipLabel = (facetId, value) => {
   if (facetId === "category") return categoryLabels[value] ?? value;
   if (facetId === "availability") {
     return availabilityOptions.find((option) => option.id === value)?.label ?? value;
+  }
+  if (facetId === "merch") {
+    if (value === "new") return "New Arrival";
+    if (value === "sale") return "On Sale";
   }
   return value;
 };

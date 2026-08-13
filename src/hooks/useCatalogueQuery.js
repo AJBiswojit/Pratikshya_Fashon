@@ -13,7 +13,7 @@
 import { useCallback, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
 import { filterFacets, defaultSort, sortOptions } from "../data/products/taxonomy";
-import { queryCatalogue } from "../data/products/query";
+import { queryCatalogue, resolveCategoryFilter, resolveSort, SORT_ALIASES } from "../data/products/query";
 
 const multiFacets = new Set(
   filterFacets.filter((facet) => facet.multiple).map((facet) => facet.id)
@@ -21,6 +21,8 @@ const multiFacets = new Set(
 
 const facetIds = filterFacets.map((facet) => facet.id);
 const sortIds = new Set(sortOptions.map((option) => option.id));
+
+export { SORT_ALIASES };
 
 /** The number of products revealed by one press of "Load More". */
 export const PAGE_SIZE = 12;
@@ -33,6 +35,7 @@ const readFilters = (params) => {
     if (!raw) return;
     filters[id] = multiFacets.has(id) ? raw.split(",").filter(Boolean) : raw;
   });
+  if (filters.category) filters.category = resolveCategoryFilter(filters.category);
   return filters;
 };
 
@@ -52,27 +55,33 @@ const writeFilters = (params, filters) => {
  * @param {object} options.scopeFilters filters locked by the route
  * @param {boolean} options.searchFromUrl read the search term from `?q=`
  */
-export default function useCatalogueQuery({ scopeFilters = {}, searchFromUrl = false } = {}) {
+export default function useCatalogueQuery({
+  scopeFilters = {},
+  searchFromUrl = false,
+  source = null,
+  pageSize = PAGE_SIZE,
+} = {}) {
   const [params, setParams] = useSearchParams();
 
   const filters = useMemo(() => readFilters(params), [params]);
   const search = searchFromUrl ? params.get("q") ?? "" : "";
-  const sort = sortIds.has(params.get("sort")) ? params.get("sort") : defaultSort;
+  const sort = resolveSort(params.get("sort"), defaultSort);
   const pages = Math.max(1, Number(params.get("page")) || 1);
+  const size = Math.max(1, Number(pageSize) || PAGE_SIZE);
 
   /**
    * Query results. Memoised on the URL, so typing in an unrelated field or
    * re-rendering the shell never re-filters the catalogue.
    */
   const query = useMemo(
-    () => queryCatalogue({ scopeFilters, filters, search, sort }),
+    () => queryCatalogue({ source, scopeFilters, filters, search, sort }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [JSON.stringify(scopeFilters), JSON.stringify(filters), search, sort]
+    [source, JSON.stringify(scopeFilters), JSON.stringify(filters), search, sort]
   );
 
   const visible = useMemo(
-    () => query.results.slice(0, pages * PAGE_SIZE),
-    [query.results, pages]
+    () => query.results.slice(0, pages * size),
+    [query.results, pages, size]
   );
 
   /* --- mutations ------------------------------------------------- */
@@ -134,8 +143,26 @@ export default function useCatalogueQuery({ scopeFilters = {}, searchFromUrl = f
       setParams(
         (current) => {
           const updated = new URLSearchParams(current);
-          if (value && value !== defaultSort) updated.set("sort", value);
+          const canonical = SORT_ALIASES[value] || value;
+          if (canonical && canonical !== defaultSort) updated.set("sort", canonical);
           else updated.delete("sort");
+          updated.delete("page");
+          return updated;
+        },
+        { replace: true }
+      );
+    },
+    [setParams]
+  );
+
+  const setSearch = useCallback(
+    (value) => {
+      setParams(
+        (current) => {
+          const updated = new URLSearchParams(current);
+          const term = String(value || "").trim();
+          if (term) updated.set("q", term);
+          else updated.delete("q");
           updated.delete("page");
           return updated;
         },
@@ -198,6 +225,7 @@ export default function useCatalogueQuery({ scopeFilters = {}, searchFromUrl = f
     removeFilter,
     clearFilters,
     setSort,
+    setSearch,
     loadMore,
   };
 }

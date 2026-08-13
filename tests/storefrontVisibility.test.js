@@ -192,6 +192,9 @@ test("category pages derive from the canonical catalogue — no hardcoded produc
     "src/components/storefront/ShopByCategory.jsx",
     "src/components/storefront/SaleBanner.jsx",
     "src/pages/AtelierDesign.jsx",
+    "src/pages/Explore.jsx",
+    "src/components/explore/ExploreBrowser.jsx",
+    "src/components/explore/ExploreProductGrid.jsx",
   ];
   files.forEach((rel) => {
     const path = join(__dirname, "..", rel);
