@@ -150,6 +150,44 @@ const makeCollection = (draft, index = 0) => {
   };
 };
 
+/**
+ * Phase 21.7 — canonical taxonomy projection.
+ *
+ * One shape for every taxonomy record, whatever surface reads it. A category,
+ * subcategory or collection all project to the same keys, so a homepage card,
+ * a breadcrumb and a filter share one vocabulary instead of each inventing its
+ * own `{ title | label | name }` object. It is a pure projection of the
+ * records `makeCategory` / `makeSubcategory` / `makeCollection` already store
+ * — nothing is re-keyed or duplicated.
+ */
+export const normalizeTaxonomyRecord = (record, type = null) => {
+  if (!record || typeof record !== "object") return null;
+  const resolvedType =
+    type ||
+    (record.categoryId
+      ? "subcategory"
+      : Array.isArray(record.productIds) || record.rule || record.displayStatus
+        ? "collection"
+        : "category");
+  const name = cleanName(record.name || record.label || record.title || "");
+  return {
+    id: String(record.id ?? ""),
+    slug: String(record.slug ?? ""),
+    name,
+    type: resolvedType,
+    parentId: record.categoryId ?? record.parentId ?? null,
+    status: record.status ?? record.displayStatus ?? null,
+    featured: Boolean(record.featured),
+    sortOrder: Number(record.sortOrder ?? 0) || 0,
+    image: record.image ?? null,
+    bannerMediaId: record.bannerMediaId ?? null,
+    seo: {
+      title: record.seoTitle ?? name,
+      description: record.seoDescription ?? record.description ?? "",
+    },
+  };
+};
+
 const buildSeed = () => {
   const categories = CATEGORY_SEEDS.map(makeCategory);
   const categoryIds = new Set(categories.map((category) => category.id));
@@ -316,6 +354,8 @@ const productCollectionValues = (product) => [product?.collection, ...(Array.isA
 
 export const taxonomyRepository = {
   all: () => read(),
+
+  normalizeTaxonomyRecord,
 
   categories: () => read().categories.slice().sort(byOrder),
   activeCategories: () => taxonomyRepository.categories().filter(active),

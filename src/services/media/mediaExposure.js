@@ -16,7 +16,12 @@
  * so the numbers always reflect what a customer would actually see.
  */
 
-import { MEDIA_SCOPES, MEDIA_STATUS, USAGE_ROLES } from "../../config/mediaTypes";
+import {
+  MEDIA_SCOPES,
+  MEDIA_STATUS,
+  PRODUCT_MEDIA_ROLES,
+  USAGE_ROLES,
+} from "../../config/mediaTypes";
 import { getLiveStorefrontProducts } from "../../data/products";
 import taxonomyRepository from "../taxonomyRepository";
 import mediaRepository from "./mediaRepository";
@@ -31,6 +36,7 @@ import {
   resolveProductCover,
   resolveProductGallery,
   resolveSaleBackdrop,
+  selectNewArrivalProducts,
 } from "./mediaResolver";
 
 const HERO_THEMES = ["festive", "bridal", "heritage", "celebration", "arrivals"];
@@ -244,6 +250,144 @@ export const auditMediaExposure = () => {
     productCoverage,
     reuse,
   };
+};
+
+/* ------------------------------------------------------------------ */
+/* Homepage media distribution report (Phase 21.7)                     */
+/* ------------------------------------------------------------------ */
+
+/* Mirrors `ShopByCategory`'s presentation grouping so the per-section report
+   reports the cards in the same order the customer sees them. */
+const HOMEPAGE_GROUPS = [
+  { id: "women", label: "Women", categories: ["sarees", "lehengas", "bridal-couture", "kurtis-and-suits", "dupattas"] },
+  { id: "men", label: "Men", categories: ["menswear"] },
+  { id: "kids", label: "Kids", categories: ["kidswear"] },
+  { id: "accessories", label: "Accessories", categories: ["bangles", "jewellery"] },
+  { id: "innerwear", label: "Innerwear", categories: ["innerwear"] },
+];
+
+/** Resolver fallback reason → customer-facing source classification. */
+const SOURCE_CLASSIFICATION = {
+  DIRECT: "REAL_LIBRARY",
+  PRODUCT_GALLERY: "PRODUCT_GALLERY",
+  TAXONOMY_PRODUCT: "TAXONOMY_DERIVED",
+  RELATED_TAXONOMY: "TAXONOMY_DERIVED",
+  HOUSE_FALLBACK: "HOUSE_FALLBACK",
+  NO_SOURCE_MEDIA: "NO_SOURCE_MEDIA",
+};
+
+/** One resolved plate → the report row, proving the actual file it points at. */
+const describeResolved = (source) => {
+  if (!source || !source.id) {
+    return {
+      mediaId: null,
+      filename: null,
+      usage: null,
+      reason: source?.reason ?? null,
+      source: source?.reason ? SOURCE_CLASSIFICATION[source.reason] ?? null : null,
+      mapped: false,
+      library: false,
+      fallback: true,
+      scope: null,
+      status: null,
+      broken: false,
+    };
+  }
+  const media = mediaRepository.getById(source.id) ?? null;
+  const library = Boolean(source.src?.includes("/library/"));
+  const filename =
+    media?.currentFilename ||
+    media?.fileName ||
+    media?.originalFilename ||
+    (source.src ? source.src.split("/").pop() : null) ||
+    source.id;
+  const usage = media
+    ? media.scope === MEDIA_SCOPES.PRODUCT
+      ? media.role === PRODUCT_MEDIA_ROLES.COVER
+        ? "PRODUCT_PRIMARY"
+        : media.role === PRODUCT_MEDIA_ROLES.GALLERY
+          ? "PRODUCT_GALLERY"
+          : media.role
+      : (media.usageRoles || []).join(",") || null
+    : null;
+  const reason = source.reason ?? (library ? "DIRECT" : null);
+  return {
+    mediaId: source.id,
+    filename,
+    usage,
+    reason,
+    source: SOURCE_CLASSIFICATION[reason] ?? (library ? "REAL_LIBRARY" : "NO_SOURCE_MEDIA"),
+    mapped: media ? media.mappingStatus === "MAPPED" : false,
+    library,
+    fallback: !library,
+    scope: media
+      ? media.productId
+        ? "PRODUCT"
+        : media.collectionId
+          ? "COLLECTION"
+          : media.categoryId
+            ? "CATEGORY"
+            : "—"
+      : "FALLBACK",
+    status: media?.status ?? null,
+    broken: Boolean(media?.broken),
+  };
+};
+
+/**
+ * The exact resolutions the homepage components perform, reported per
+ * section. Mirrors HeroCarousel, CelebrationEdit, ShopByCategory,
+ * NewArrivals and SaleBanner (including their hero-exclusion sets) so the
+ * report proves which *files* a customer actually sees — not merely that a
+ * resolver function was called.
+ */
+export const auditHomepageSections = () => {
+  const heroUsed = new Set();
+  const hero = HERO_THEMES.map((theme, index) =>
+    describeResolved(
+      resolveHeroSlideImage(theme, { heroMedia: null, lead: index === 0, usedIds: heroUsed })
+    )
+  );
+
+  const editorialUsed = new Set(heroUsed);
+  const editorial = EDITORIAL_THEMES.map((theme) =>
+    describeResolved(resolveEditorialFrame(theme, editorialUsed))
+  );
+
+  const categoryUsed = new Set(heroUsed);
+  const activeById = new Map(taxonomyRepository.activeCategories().map((category) => [category.id, category]));
+  const shopByCategory = [];
+  HOMEPAGE_GROUPS.forEach((group) => {
+    (group.categories || []).forEach((id) => {
+      const category = activeById.get(id);
+      if (!category) return;
+      shopByCategory.push({
+        group: group.label,
+        name: category.name,
+        slug: category.slug,
+        ...describeResolved(resolveCategoryCover(category, categoryUsed)),
+      });
+    });
+  });
+
+  const collections = taxonomyRepository.activeCollections().map((collection) => ({
+    name: collection.name,
+    slug: collection.slug,
+    productCount: getLiveStorefrontProducts().filter((product) =>
+      taxonomyRepository.isProductInCollection(product, collection.id)
+    ).length,
+    ...describeResolved(resolveCollectionCover(collection)),
+  }));
+
+  const newArrivals = selectNewArrivalProducts(getLiveStorefrontProducts(), 5).map((product) => ({
+    id: product.id,
+    name: product.name,
+    ...describeResolved(resolveProductCover(product)),
+  }));
+
+  const sale = describeResolved(resolveSaleBackdrop(null, new Set(heroUsed)));
+
+  return { hero, editorial, shopByCategory, collections, newArrivals, sale };
 };
 
 export default auditMediaExposure;

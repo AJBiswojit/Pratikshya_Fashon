@@ -8,6 +8,7 @@
     "build": "vite build",
     "preview": "vite preview",
     "test": "node --import ./scripts/node-loader/register.mjs --test \"tests/*.test.js\"",
+    "audit:homepage": "node --import ./scripts/node-loader/register.mjs scripts/audit-homepage.mjs",
     "media:analyze": "node scripts/optimize-media.mjs --dry-run",
     "media:optimize": "node scripts/optimize-media.mjs"
   },

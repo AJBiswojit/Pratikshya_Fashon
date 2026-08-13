@@ -6,9 +6,18 @@ import { MARKETING_PLACEMENTS } from "../../config/mediaTypes";
 import { useActivePlacementMedia } from "../../hooks/useMedia";
 import { resolvePlacementImage } from "../../services/media/marketingMediaSource";
 import { resolveEditorialFrame } from "../../services/media/mediaResolver";
+import { resolveCategoryRoute } from "../../services/taxonomyRouting";
 import { AtelierButton, AtelierSection, MediaFrame, body, eyebrow, heading } from "../../design-system";
 import { cn } from "../../utils/cn";
 
+/**
+ * A compact editorial seam within the home page, not a category grid.
+ *
+ * Only the editorial copy (numbers, labels, titles) lives here. Each edit's
+ * destination resolves from its managed category via `resolveCategoryRoute`,
+ * and each plate resolves through the central media resolver with an
+ * EDITORIAL usage — never a hand-written route or a hardcoded image path.
+ */
 const edits = [
   {
     id: "bridal",
@@ -16,8 +25,8 @@ const edits = [
     label: "Bridal Edit",
     title: "Pieces created for moments you'll remember forever.",
     shortTitle: "The bridal edit",
+    categoryId: "bridal-couture",
     image: "women-bridal-wear",
-    to: "/category/bridal",
   },
   {
     id: "groom",
@@ -25,8 +34,8 @@ const edits = [
     label: "Groom Edit",
     title: "Considered ceremonial dressing, tailored for the occasion.",
     shortTitle: "The ceremony edit",
+    categoryId: "menswear",
     image: "groom-sherwani",
-    to: "/category/men",
   },
   {
     id: "festive",
@@ -34,8 +43,8 @@ const edits = [
     label: "Festive Edit",
     title: "Festive silhouettes with a contemporary soul.",
     shortTitle: "Made to celebrate",
+    categoryId: "sarees",
     image: "saree-printed",
-    to: "/category/sarees",
   },
   {
     id: "heritage",
@@ -43,18 +52,20 @@ const edits = [
     label: "Heritage Edit",
     title: "Craft, colour and stories woven into every piece.",
     shortTitle: "Woven for generations",
+    categoryId: "sarees",
     image: "saree-banarasi",
-    to: "/category/sarees",
   },
 ];
 
-/** A compact editorial seam within the home page, not a category grid. */
 export default function CelebrationEdit({ excludeIds = null }) {
   const [activeId, setActiveId] = useState("bridal");
   const festiveMedia = useActivePlacementMedia(MARKETING_PLACEMENTS.FESTIVE_SECTION);
   const activeEdit = edits.find((edit) => edit.id === activeId) ?? edits[0];
   const usedIds = new Set(excludeIds ?? []);
-  const themeFor = (id) => ({ bridal: "bridal", groom: "celebration", festive: "festive", heritage: "heritage" }[id] || "festive");
+
+  const themeFor = (id) =>
+    ({ bridal: "bridal", groom: "groom", festive: "festive", heritage: "heritage" }[id] || "festive");
+
   const images = Object.fromEntries(
     edits.map((edit) => {
       const resolved =
@@ -65,6 +76,8 @@ export default function CelebrationEdit({ excludeIds = null }) {
     })
   );
   const resolveImage = (edit) => images[edit.id] || imageRef(edit.image);
+
+  const editRoute = (edit) => resolveCategoryRoute(edit.categoryId)?.href ?? "/shop";
 
   return (
     <AtelierSection id="bridal" rhythm="none" width="wide" className="py-20 md:py-28">
@@ -102,7 +115,7 @@ export default function CelebrationEdit({ excludeIds = null }) {
               <p className={cn(eyebrow.editorial, "text-accent mb-2")}>{activeEdit.label}</p>
               <h3 className={cn(heading.lg, "max-w-xl leading-[1.05]")}>{activeEdit.title}</h3>
             </div>
-            <AtelierButton as={Link} to={activeEdit.to} variant="outline" size="md" className="mt-5 shrink-0 md:mt-0">
+            <AtelierButton as={Link} to={editRoute(activeEdit)} variant="outline" size="md" className="mt-5 shrink-0 md:mt-0">
               Explore {activeEdit.label.replace(" Edit", "")} <ArrowUpRight size={15} aria-hidden="true" />
             </AtelierButton>
           </div>

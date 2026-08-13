@@ -13,6 +13,7 @@ import CatalogueBrowser from "../components/storefront/CatalogueBrowser";
 import CategoryShortcuts from "../components/storefront/CategoryShortcuts";
 import { collectionRoutes } from "../data/products/taxonomy";
 import taxonomyRepository from "../services/taxonomyRepository";
+import { categoryHref, collectionHref } from "../services/taxonomyRouting";
 import { categoryCounts, products } from "../data/products";
 import { resolveCategoryCover, resolveCollectionCover } from "../services/media/mediaResolver";
 import { cn } from "../utils/cn";
@@ -30,23 +31,16 @@ import { cn } from "../utils/cn";
 /** The six categories offered as shortcuts, in merchandising order. */
 const SHORTCUT_ORDER = ["sarees", "lehengas", "bridal-couture", "bangles", "menswear", "kidswear"];
 
-const shortcutRoutes = {
-  sarees: "/category/sarees",
-  lehengas: "/category/lehengas",
-  "bridal-couture": "/category/bridal",
-  bangles: "/category/bangles",
-  jewellery: "/category/jewellery",
-  menswear: "/category/men",
-  kidswear: "/category/kids",
-};
-
 export default function Shop() {
   const activeCategories = taxonomyRepository.activeCategories();
   const shortcuts = SHORTCUT_ORDER.map((id) => {
     const category = activeCategories.find((entry) => entry.id === id);
     if (!category) return null;
+    /* The destination is the category's managed slug, never a copied route. */
+    const to = categoryHref(category);
+    if (!to) return null;
     return {
-      to: shortcutRoutes[id] || `/category/${category.slug}`,
+      to,
       label: category.name,
       eyebrow: category.eyebrow,
       image: resolveCategoryCover(category),
@@ -56,6 +50,7 @@ export default function Shop() {
 
   const featured = collectionRoutes.featured;
   const featuredImage = resolveCollectionCover(featured);
+  const featuredHref = collectionHref(taxonomyRepository.findCollection("featured")) ?? "/collection/featured";
   const featuredCount = products.filter((product) => product.isFeatured).length;
 
   return (
@@ -76,7 +71,7 @@ export default function Shop() {
 
       {/* Featured edit */}
       <AtelierSection rhythm="none" width="wide" className="pb-20 md:pb-28">
-        <Link to="/collection/featured" className="group grid gap-8 md:grid-cols-12 md:items-center">
+        <Link to={featuredHref} className="group grid gap-8 md:grid-cols-12 md:items-center">
           <MediaFrame
             image={featuredImage}
             alt={featured.title}
