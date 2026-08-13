@@ -25,6 +25,7 @@ import StatusBadge from "../../components/employee/StatusBadge";
 import MediaInboxCard from "../../components/admin/MediaInboxCard";
 import ProductDraftReviewPanel from "../../components/admin/ProductDraftReviewPanel";
 import ProductGroupReviewPanel from "../../components/admin/ProductGroupReviewPanel";
+import AdminKidsReviewPanel from "../../components/admin/AdminKidsReviewPanel";
 import { AtelierButton } from "../../design-system";
 import catalogRepository, { getPublishIssues } from "../../services/catalogRepository";
 import inventoryRepository from "../../services/inventory/inventoryRepository";
@@ -72,9 +73,14 @@ export default function AdminProductReview() {
     .filter((product) => product.status === PRODUCT_STATUSES.DRAFT)
     .sort((a, b) => String(a.id).localeCompare(String(b.id)));
 
+  /* Phase 22.1 — Kids reconciliation gets its own desk; other categories
+     keep the generic draft desk. */
+  const kidsDrafts = drafts.filter((product) => /^KID-\d{3}$/.test(String(product.id)));
+  const otherDrafts = drafts.filter((product) => !/^KID-\d{3}$/.test(String(product.id)));
+
   const focusedDraftId = searchParams.get("draft");
   const focusedDraft =
-    drafts.find((product) => product.id === focusedDraftId) ?? drafts[0] ?? null;
+    otherDrafts.find((product) => product.id === focusedDraftId) ?? otherDrafts[0] ?? null;
 
   const recentlyReviewed = items
     .filter((product) => ["APPROVED", "REJECTED"].includes(product.review.state))
@@ -166,44 +172,54 @@ export default function AdminProductReview() {
       </AdminPanel>
 
       {/* ------------------------------------------------------------ */}
-      {/* PRODUCT DRAFTS                                                */}
+      {/* KIDS RECONCILIATION (Phase 22.1)                              */}
       {/* ------------------------------------------------------------ */}
       <div className="mt-8">
-        <AdminPanel eyebrow={`Draft products · ${drafts.length}`} title="Product drafts">
-          {!drafts.length ? (
-            <p className="py-10 text-center font-ui text-sm text-taupe">
-              No drafts waiting. Create one from a media asset in the inbox above.
-            </p>
-          ) : (
-            <>
-              <div className="mb-4 flex flex-wrap gap-1.5 border-b border-mist pb-4">
-                {drafts.map((draft) => (
-                  <button
-                    key={draft.id}
-                    type="button"
-                    onClick={() => setSearchParams({ draft: draft.id })}
-                    className={`px-3 py-1.5 font-ui text-[10px] uppercase tracking-[.14em] transition-colors ${
-                      focusedDraft?.id === draft.id
-                        ? "bg-ink text-ivory"
-                        : "text-taupe hover:bg-mist/60 hover:text-ink"
-                    }`}
-                    aria-pressed={focusedDraft?.id === draft.id}
-                  >
-                    {draft.id}
-                  </button>
-                ))}
-              </div>
-              {focusedDraft ? (
-                <ProductDraftReviewPanel
-                  product={focusedDraft}
-                  actor={actor}
-                  onNotice={setNotice}
-                />
-              ) : null}
-            </>
-          )}
+        <AdminPanel
+          eyebrow={`Kids reconciliation · ${kidsDrafts.length} drafts`}
+          title="Kids products"
+        >
+          <AdminKidsReviewPanel
+            actor={actor}
+            onNotice={setNotice}
+            focusId={focusedDraftId && /^KID-\d{3}$/.test(focusedDraftId) ? focusedDraftId : null}
+          />
         </AdminPanel>
       </div>
+
+      {/* ------------------------------------------------------------ */}
+      {/* OTHER PRODUCT DRAFTS                                          */}
+      {/* ------------------------------------------------------------ */}
+      {otherDrafts.length ? (
+        <div className="mt-8">
+          <AdminPanel eyebrow={`Draft products · ${otherDrafts.length}`} title="Other product drafts">
+            <div className="mb-4 flex flex-wrap gap-1.5 border-b border-mist pb-4">
+              {otherDrafts.map((draft) => (
+                <button
+                  key={draft.id}
+                  type="button"
+                  onClick={() => setSearchParams({ draft: draft.id })}
+                  className={`px-3 py-1.5 font-ui text-[10px] uppercase tracking-[.14em] transition-colors ${
+                    focusedDraft?.id === draft.id
+                      ? "bg-ink text-ivory"
+                      : "text-taupe hover:bg-mist/60 hover:text-ink"
+                  }`}
+                  aria-pressed={focusedDraft?.id === draft.id}
+                >
+                  {draft.id}
+                </button>
+              ))}
+            </div>
+            {focusedDraft ? (
+              <ProductDraftReviewPanel
+                product={focusedDraft}
+                actor={actor}
+                onNotice={setNotice}
+              />
+            ) : null}
+          </AdminPanel>
+        </div>
+      ) : null}
 
       {/* ------------------------------------------------------------ */}
       {/* REVIEW QUEUE (kept from Phase 13)                             */}

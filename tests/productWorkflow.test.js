@@ -553,14 +553,37 @@ test("existing published products remain unaffected by the workflow", () => {
 /* ------------------------------------------------------------------ */
 
 test("incomplete drafts cannot publish — clear validation errors", () => {
+  /* A hydrated KID draft is still blocked: contested ownership, a review
+     flag and the missing description must all be reported. */
   const draft = catalogRepository.find(KIDS_PRODUCT_IDS[4]);
   const issues = getPublishIssues(draft);
-  assert.ok(issues.some((issue) => /name/i.test(issue)), "placeholder name must block publishing");
-  assert.ok(issues.some((issue) => /price/i.test(issue)), "missing price must block publishing");
   assert.ok(issues.some((issue) => /ownership|media/i.test(issue)), "contested media must block publishing");
+  assert.ok(issues.some((issue) => /description/i.test(issue)), "missing description must block publishing");
+  assert.ok(issues.some((issue) => /flag/i.test(issue)), "unresolved review flags must block publishing");
   const result = publishProduct(draft.id, ADMIN);
   assert.equal(result.ok, false);
   assert.ok(result.errors.length > 0);
+
+  /* Placeholder names are still caught by validation. */
+  const placeholder = catalogRepository.createDraftProduct(
+    {
+      id: "KID-901",
+      name: "Kids Piece · KID-901",
+      category: "kidswear",
+      price: 100,
+      pricing: { sellingPrice: 100, mrp: 150 },
+      description: "Scratch placeholder-name check.",
+      sku: "KID-901-SKU",
+    },
+    ADMIN
+  );
+  assert.ok(placeholder.ok);
+  const placeholderIssues = getPublishIssues(placeholder.product);
+  assert.ok(
+    placeholderIssues.some((issue) => /name/i.test(issue)),
+    "placeholder draft names must block publishing"
+  );
+  catalogRepository.archiveProduct("KID-901", ADMIN);
 });
 
 test("history captures who changed what, when — price, name, media, status", () => {

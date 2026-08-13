@@ -32,9 +32,14 @@ import {
 import { DISCOUNT_TYPES, computePricing } from "../utils/pricing";
 import { formatINR } from "../utils/shopping";
 import { syncProductDraftRecords } from "./productDraftMigration";
+import {
+  REVIEW_FLAG_LABELS,
+  blockingReviewFlags,
+  isPlaceholderProductName,
+} from "./productReviewFlags";
+import { unresolvedGroupConflictsFor } from "./media/productMediaGroups";
 
-/** Phase 22 — names that do not count as real product information. */
-const PLACEHOLDER_PRODUCT_NAMES = new Set(["untitled", "not yet defined", "undefined"]);
+
 
 export const slugify = (value) =>
   String(value)
@@ -595,11 +600,8 @@ export const getPublishIssues = (product) => {
   if (!product.id && !product.productId) issues.push("Product ID is required.");
   if (!product.name?.trim()) {
     issues.push("Product name is required.");
-  } else {
-    const firstWord = product.name.trim().toLowerCase().split(/\s+/)[0];
-    if (PLACEHOLDER_PRODUCT_NAMES.has(firstWord) || firstWord === "untitled") {
-      issues.push("Product name must be real product information, not a placeholder.");
-    }
+  } else if (isPlaceholderProductName(product.name)) {
+    issues.push("Product name must be real product information, not a placeholder.");
   }
   if (!product.sku?.trim()) issues.push("SKU is required.");
   if (!product.category) issues.push("Category is required.");
@@ -629,6 +631,29 @@ export const getPublishIssues = (product) => {
   if (!mediaSet.primary && !hasCataloguePlate) {
     issues.push("A primary image owned by this product is required before publishing.");
   }
+
+  /* Phase 22.1 — no required review flag may stand, and no group identity
+     decision may be open, when a product publishes. */
+  const blockers = blockingReviewFlags(product.reviewFlags);
+  if (blockers.length) {
+    issues.push(
+      `Review flags must be resolved before publishing: ${blockers
+        .map((flag) => REVIEW_FLAG_LABELS[flag] ?? flag)
+        .join(", ")}.`
+    );
+  }
+
+  const claimedIds = (Array.isArray(product.mediaIds) ? product.mediaIds : []).map(String);
+  const galleryIds = (mediaSet.gallery ?? []).map((item) => String(item.id ?? "")).filter(Boolean);
+  const groupConflicts = unresolvedGroupConflictsFor([...claimedIds, ...galleryIds]);
+  if (groupConflicts.length) {
+    issues.push(
+      `Grouping review must be resolved before publishing (${groupConflicts
+        .map((group) => group.id)
+        .join(", ")}).`
+    );
+  }
+
   issues.push(...computed.errors);
   return [...new Set(issues)];
 };

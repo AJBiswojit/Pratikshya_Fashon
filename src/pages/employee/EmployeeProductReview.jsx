@@ -135,6 +135,20 @@ export default function EmployeeProductReview() {
   const view = selected ? getProductWorkflowView(selected) : null;
   const issues = selected ? getPublishIssues(selected) : [];
 
+  const discountPercent = (() => {
+    if (!selected) return null;
+    const selling = Number(selected.price) || 0;
+    const compare = Number(selected.compareAtPrice ?? selected.originalPrice) || 0;
+    if (selling <= 0 || compare <= selling) return null;
+    return Math.round(((compare - selling) / compare) * 100);
+  })();
+
+  const viewChips = view
+    ? ["front", "side", "back", "detail"]
+        .filter((viewId) => view.mediaSet[viewId])
+        .map((viewId) => viewId.charAt(0).toUpperCase() + viewId.slice(1))
+    : [];
+
   return (
     <EmployeePage
       eyebrow="Catalogue / Products"
@@ -229,6 +243,12 @@ export default function EmployeeProductReview() {
                       tone={statusTone[selected.status] ?? "quiet"}
                     />
                     <StatusBadge label={formatINR(selected.price)} tone="ink" />
+                    {discountPercent != null ? (
+                      <StatusBadge label={`−${discountPercent}%`} tone="alert" />
+                    ) : null}
+                    {viewChips.length ? (
+                      <StatusBadge label={viewChips.join(" · ")} tone="quiet" />
+                    ) : null}
                   </div>
                 </div>
 

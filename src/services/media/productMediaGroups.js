@@ -217,6 +217,22 @@ export const setVariantReviewRequired = (groupId, required, actorLabel = null) =
 export const archiveGroup = (groupId, actorLabel = null) =>
   updateGroup(groupId, { status: GROUP_STATUS.ARCHIVED }, actorLabel);
 
+/**
+ * Phase 22.1 — groups whose identity decision is still open for the given
+ * media. A group blocks publication until a human decides SAME_PRODUCT or
+ * SEPARATE_PRODUCTS; REVIEW_LATER keeps it open on purpose.
+ */
+export const unresolvedGroupConflictsFor = (mediaIds = []) => {
+  const set = new Set((Array.isArray(mediaIds) ? mediaIds : []).map(String).filter(Boolean));
+  if (!set.size) return [];
+  return read().filter((group) => {
+    if (group.status === GROUP_STATUS.ARCHIVED) return false;
+    if (group.decision === GROUP_DECISIONS.SAME_PRODUCT) return false;
+    if (group.decision === GROUP_DECISIONS.SEPARATE_PRODUCTS) return false;
+    return group.mediaIds.some((id) => set.has(String(id)));
+  });
+};
+
 export const removeGroup = (groupId) => {
   const groups = read();
   if (!groups.some((entry) => entry.id === groupId)) return null;

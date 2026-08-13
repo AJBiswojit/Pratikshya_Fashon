@@ -48,6 +48,11 @@ import {
   recordActivity,
 } from "./employees/activityService";
 import { employeeFullName } from "../utils/employee";
+import {
+  REVIEW_FLAGS,
+  blockingReviewFlags,
+  isPlaceholderProductName,
+} from "./productReviewFlags";
 
 /* ------------------------------------------------------------------ */
 /* Helpers                                                             */
@@ -755,6 +760,298 @@ export const markVariantReviewRequired = (groupId, required = true, actor = null
   );
 
 /* ------------------------------------------------------------------ */
+/* Phase 22.1 — Kids reconciliation                                    */
+/* ------------------------------------------------------------------ */
+
+/** The five human decisions for a Kids ownership conflict. */
+export const KIDS_CONFLICT_ACTIONS = {
+  KEEP_EXISTING: "KEEP_EXISTING",
+  TRANSFER: "TRANSFER",
+  MERGE: "MERGE",
+  SEPARATE: "SEPARATE",
+  REVIEW_LATER: "REVIEW_LATER",
+};
+
+export const KIDS_CONFLICT_ACTION_LABELS = {
+  [KIDS_CONFLICT_ACTIONS.KEEP_EXISTING]: "Keep Existing Product",
+  [KIDS_CONFLICT_ACTIONS.TRANSFER]: "Transfer to KID Product",
+  [KIDS_CONFLICT_ACTIONS.MERGE]: "Merge into Existing Product",
+  [KIDS_CONFLICT_ACTIONS.SEPARATE]: "Create Separate Product",
+  [KIDS_CONFLICT_ACTIONS.REVIEW_LATER]: "Review Later",
+};
+
+/** A draft is ready when nothing — flags, conflicts or validation — stands between it and the storefront. */
+export const isReadyToPublish = (product) => {
+  if (!product || product.status !== PRODUCT_STATUS.DRAFT) return false;
+  const view = getProductWorkflowView(product);
+  if (!view.mediaSet.primary) return false;
+  if (view.conflicts.length) return false;
+  if (blockingReviewFlags(product.reviewFlags).length) return false;
+  return getPublishIssues(product).length === 0;
+};
+
+/** KID-001 … KID-021 with their full workflow view, for the admin desk. */
+export const getKidsReconciliationRows = () => {
+  const products = catalogRepository
+    .all()
+    .filter((product) => /^KID-\d{3}$/.test(String(product.id)))
+    .filter((product) => product.status !== PRODUCT_STATUS.ARCHIVED);
+
+  return products
+    .map((product) => {
+      const view = getProductWorkflowView(product);
+      return {
+        product,
+        mediaSet: view.mediaSet,
+        conflicts: view.conflicts,
+        issues: view.issues,
+        blockers: blockingReviewFlags(product.reviewFlags),
+        ready: isReadyToPublish(product),
+      };
+    })
+    .sort((a, b) => a.product.id.localeCompare(b.product.id));
+};
+
+/**
+ * The five reconciliation actions for a KID draft whose media is owned by
+ * an existing published product. Every ownership-changing action is logged
+ * through the shared activity diary.
+ */
+export const reconcileKidsConflict = (productId, action, actor = null) => {
+  const product = catalogRepository.find(productId);
+  if (!product) return { ok: false, error: "Product not found." };
+  if (!Object.values(KIDS_CONFLICT_ACTIONS).includes(action)) {
+    return { ok: false, error: "Unknown reconciliation action." };
+  }
+
+  const { conflicts } = resolveProductMediaClaims(product, product.id);
+  const owners = [...new Set(conflicts.map((conflict) => conflict.ownerProductId).filter(Boolean))];
+
+  const clearClaims = () =>
+    catalogRepository.updateDraft(
+      productId,
+      { mediaIds: [], primaryMediaId: null, galleryMediaIds: [] },
+      actor
+    );
+
+  const removeConflictFlags = () => {
+    const flags = (product.reviewFlags ?? []).filter(
+      (flag) =>
+        flag !== REVIEW_FLAGS.CONFLICT_UNRESOLVED &&
+        flag !== REVIEW_FLAGS.MEDIA_OWNERSHIP_REVIEW
+    );
+    return catalogRepository.updateDraft(productId, { reviewFlags: flags }, actor);
+  };
+
+  const resolvedNote = (summary, targetId = productId) =>
+    note(ACTIVITY_ACTIONS.PRODUCT_CONFLICT_RESOLVED, summary, actor, targetId);
+
+  switch (action) {
+    case KIDS_CONFLICT_ACTIONS.REVIEW_LATER: {
+      if (!conflicts.length) return { ok: false, error: "No ownership conflict to defer." };
+      const flags = [
+        ...new Set([...(product.reviewFlags ?? []), REVIEW_FLAGS.CONFLICT_REVIEW_LATER]),
+      ];
+      catalogRepository.updateDraft(productId, { reviewFlags: flags }, actor);
+      resolvedNote(
+        `${productId}: REVIEW_LATER — conflict with ${owners.join(", ")} deferred for a future session`
+      );
+      return { ok: true, action, owners };
+    }
+
+    case KIDS_CONFLICT_ACTIONS.KEEP_EXISTING: {
+      if (!owners.length) return { ok: false, error: "No ownership conflict to resolve." };
+      clearClaims();
+      catalogRepository.archiveProduct(productId, actor);
+      resolvedNote(
+        `${productId}: KEEP_EXISTING — media stays with ${owners.join(", ")}; draft archived`
+      );
+      return { ok: true, action, owners, archivedDraft: productId };
+    }
+
+    case KIDS_CONFLICT_ACTIONS.TRANSFER: {
+      if (!conflicts.length) return { ok: false, error: "No conflicting media to transfer." };
+      const archivedOwners = [];
+      for (const conflict of conflicts) {
+        const moved = transferMediaOwnership(conflict.mediaId, productId, actor, {
+          confirm: true,
+        });
+        if (!moved.ok) {
+          return { ok: false, error: `Could not transfer ${conflict.file}: ${moved.error}` };
+        }
+        const previousId = moved.previousOwnerId;
+        if (previousId) {
+          const owner = catalogRepository.find(previousId);
+          /* The existing Kids product lost its only plate — retire it so the
+             storefront never shows a published product without media. */
+          if (
+            owner &&
+            owner.category === "kidswear" &&
+            owner.status === PRODUCT_STATUS.PUBLISHED
+          ) {
+            const ownerSet = getProductMediaSet(owner);
+            if (!ownerSet.primary && !owner.image) {
+              catalogRepository.archiveProduct(previousId, actor);
+              archivedOwners.push(previousId);
+            }
+          }
+        }
+      }
+      removeConflictFlags();
+      resolvedNote(
+        `${productId}: TRANSFER — media moved to the KID product${
+          archivedOwners.length ? `; retired ${archivedOwners.join(", ")}` : ""
+        }`
+      );
+      return { ok: true, action, owners, archivedOwners };
+    }
+
+    case KIDS_CONFLICT_ACTIONS.MERGE: {
+      if (owners.length !== 1) {
+        return {
+          ok: false,
+          error: "Merge needs exactly one owning product — resolve one conflict at a time.",
+        };
+      }
+      const owner = catalogRepository.find(owners[0]);
+      if (!owner) return { ok: false, error: "Owning product not found." };
+
+      const patch = {};
+      if (product.name && !isPlaceholderProductName(product.name)) patch.name = product.name;
+      if (Number(product.price) > 0) {
+        patch.price = Number(product.price);
+        patch.pricing = {
+          ...(owner.pricing ?? {}),
+          sellingPrice: Number(product.price),
+          mrp: Math.max(Number(product.price), Number(product.compareAtPrice) || 0),
+        };
+      }
+      if (Number(product.compareAtPrice) > 0) patch.compareAtPrice = Number(product.compareAtPrice);
+      if (product.subcategory) patch.subcategory = product.subcategory;
+      if (product.description) patch.description = product.description;
+      if (product.shortDescription) patch.shortDescription = product.shortDescription;
+      catalogRepository.updateProduct(owners[0], patch, actor);
+
+      clearClaims();
+      catalogRepository.archiveProduct(productId, actor);
+      resolvedNote(
+        `${productId}: MERGE — draft content merged into ${owners[0]}; draft archived`,
+        owners[0]
+      );
+      return { ok: true, action, owners, mergedInto: owners[0] };
+    }
+
+    case KIDS_CONFLICT_ACTIONS.SEPARATE: {
+      if (!owners.length) return { ok: false, error: "No ownership conflict to resolve." };
+      clearClaims();
+      const flags = [
+        ...new Set([
+          ...(product.reviewFlags ?? []).filter(
+            (flag) => flag !== REVIEW_FLAGS.CONFLICT_UNRESOLVED
+          ),
+          REVIEW_FLAGS.NEEDS_MEDIA,
+        ]),
+      ];
+      catalogRepository.updateDraft(productId, { reviewFlags: flags }, actor);
+      resolvedNote(`${productId}: SEPARATE — draft keeps its identity and needs new media`);
+      return { ok: true, action, owners };
+    }
+
+    default:
+      return { ok: false, error: "Unknown reconciliation action." };
+  }
+};
+
+/**
+ * Which review flags a product's CURRENT state has already satisfied —
+ * used by the admin desk to retire flags the moment their field is real.
+ */
+export const flagsSatisfiedByProduct = (product) => {
+  if (!product) return [];
+  const cleared = [];
+  if (!isPlaceholderProductName(product.name)) {
+    cleared.push(REVIEW_FLAGS.NAME_REVIEW_REQUIRED, REVIEW_FLAGS.KIDS_MIGRATION_REVIEW);
+  }
+  if (Number(product.price) > 0) cleared.push(REVIEW_FLAGS.PRICE_REVIEW_REQUIRED);
+  if (product.category && product.subcategory) cleared.push(REVIEW_FLAGS.TAXONOMY_REVIEW_REQUIRED);
+  const view = getProductWorkflowView(product);
+  if (view.mediaSet.primary) cleared.push(REVIEW_FLAGS.NEEDS_MEDIA);
+  if (view.mediaSet.primary && !view.conflicts.length) {
+    cleared.push(REVIEW_FLAGS.MEDIA_OWNERSHIP_REVIEW, REVIEW_FLAGS.CONFLICT_UNRESOLVED);
+  }
+  return [...new Set(cleared)];
+};
+
+/** Admin-only: explicitly resolve review flags. Logged in the shared diary. */
+export const clearReviewFlags = (productId, flags = [], actor = null) => {
+  const product = catalogRepository.find(productId);
+  if (!product) return { ok: false, error: "Product not found." };
+  const removing = new Set((Array.isArray(flags) ? flags : []).map(String));
+  const next = (product.reviewFlags ?? []).filter((flag) => !removing.has(flag));
+  const result = catalogRepository.updateDraft(productId, { reviewFlags: next }, actor);
+  note(
+    ACTIVITY_ACTIONS.PRODUCT_REVIEW_FLAGS_CLEARED,
+    `Cleared review flags on ${productId}: ${[...removing].join(", ") || "none"}`,
+    actor,
+    productId
+  );
+  return { ok: true, product: result.product };
+};
+
+/** Set the primary image — register cover when owned, claim when claimed. */
+export const setPrimaryMedia = (productId, mediaId, actor = null) => {
+  const product = catalogRepository.find(productId);
+  if (!product) return { ok: false, error: "Product not found." };
+  const media = mediaRepository.getById(mediaId);
+  if (!media) return { ok: false, error: "Media not found." };
+
+  if (media.productId && String(media.productId) === String(productId)) {
+    const cover = mediaRepository.setCover(productId, mediaId);
+    if (!cover) return { ok: false, error: "Could not set the cover." };
+    note(
+      ACTIVITY_ACTIONS.MEDIA_COVER_CHANGED,
+      `Primary image for ${productId} set to ${mediaFileName(media)}`,
+      actor,
+      productId
+    );
+    return { ok: true, product: catalogRepository.find(productId) };
+  }
+
+  const claimed = (product.mediaIds ?? []).map(String);
+  const mediaIds = claimed.includes(String(mediaId))
+    ? claimed
+    : [...claimed, String(mediaId)];
+  const result = catalogRepository.updateDraft(
+    productId,
+    { primaryMediaId: String(mediaId), mediaIds, galleryMediaIds: mediaIds },
+    actor
+  );
+  note(
+    ACTIVITY_ACTIONS.MEDIA_COVER_CHANGED,
+    `Primary image for ${productId} set to ${mediaFileName(media)}`,
+    actor,
+    productId
+  );
+  return { ok: true, product: result.product };
+};
+
+/** Admin-only: correct the detected view label of a media asset. */
+export const updateMediaViewLabel = (mediaId, view, actor = null) => {
+  const media = mediaRepository.getById(mediaId);
+  if (!media) return { ok: false, error: "Media not found." };
+  const clean = view ? String(view).toLowerCase().trim() : null;
+  const updated = mediaRepository.update(mediaId, { view: clean });
+  if (!updated) return { ok: false, error: "Could not update the view label." };
+  note(
+    ACTIVITY_ACTIONS.MEDIA_EDITED,
+    `View label for ${mediaFileName(media)} set to ${clean ?? "unlabelled"}`,
+    actor,
+    media.productId ?? null
+  );
+  return { ok: true, media: updated };
+};
+
+/* ------------------------------------------------------------------ */
 /* Workflow metrics — the single snapshot for audits and the report    */
 /* ------------------------------------------------------------------ */
 
@@ -822,6 +1119,22 @@ export const getWorkflowMetrics = () => {
     (product) => product.category === "kidswear" && product.status === PRODUCT_STATUS.PUBLISHED
   );
 
+  /* Phase 22.1 — reconciliation snapshot. */
+  const kidsGroupPool = kidsMedia.map((item) => ({ ...item, fileName: mediaFileName(item) }));
+  const kidsMediaGroups = buildMediaGroups(kidsGroupPool);
+  const kidsRows = getKidsReconciliationRows();
+  const kidsConflictRows = kidsRows.filter((row) => row.conflicts.length);
+  const kidsNeedsReviewRows = kidsRows.filter(
+    (row) =>
+      row.product.status === PRODUCT_STATUS.DRAFT &&
+      (row.conflicts.length || row.blockers.length || row.issues.length)
+  );
+  const kidsReadyRows = kidsRows.filter((row) => row.ready);
+  const kidsPotentialSameProductGroups = getPotentialProductGroups().filter(
+    (group) =>
+      !group.confirmed && group.media.every((row) => /^kids-\d{3}\.\w+$/i.test(String(row.file ?? "")))
+  );
+
   return {
     products: {
       total: products.length,
@@ -855,8 +1168,19 @@ export const getWorkflowMetrics = () => {
     },
     kids: {
       totalMedia: kidsMedia.length,
+      totalGroups: kidsMediaGroups.length,
+      singleImageProducts: kidsMediaGroups.filter((group) => !group.isGrouped).length,
+      multiViewProducts: kidsMediaGroups.filter((group) => group.isGrouped).length,
+      existingProductConflicts: kidsConflictRows.length,
+      potentialSameProductGroups: kidsPotentialSameProductGroups.length,
+      needsReview: kidsNeedsReviewRows.length,
+      readyToPublish: kidsReadyRows.length,
+      publishedKidDrafts: kidsRows.filter(
+        (row) => row.product.status === PRODUCT_STATUS.PUBLISHED
+      ).length,
       draftProducts: kidsDrafts.length,
       publishedProducts: kidsPublished.length,
+      unassignedMedia: kidsMedia.filter((item) => item.scope === MEDIA_SCOPES.UNASSIGNED).length,
       mediaWithValidOwnership: kidsMedia.filter(
         (item) =>
           item.productId &&
@@ -895,5 +1219,14 @@ export default {
   getMediaInbox,
   getPotentialProductGroups,
   decideProductGroup,
+  KIDS_CONFLICT_ACTIONS,
+  KIDS_CONFLICT_ACTION_LABELS,
+  isReadyToPublish,
+  getKidsReconciliationRows,
+  reconcileKidsConflict,
+  flagsSatisfiedByProduct,
+  clearReviewFlags,
+  setPrimaryMedia,
+  updateMediaViewLabel,
   getWorkflowMetrics,
 };

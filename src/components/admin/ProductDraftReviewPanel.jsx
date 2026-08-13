@@ -1,37 +1,66 @@
 /**
- * PRATIKSHYA FASHON — Product draft review panel (Phase 22).
+ * PRATIKSHYA FASHON — Product draft review panel (Phase 22 + 22.1).
  *
  * The admin side of one DRAFT: the complete group preview (ProductPreview),
- * the commercial fields, employee assignment, ownership-conflict resolution
- * and the workflow actions — Save / Submit / Approve & Publish / Archive.
+ * the commercial fields (Product ID, name, category, subcategory, price,
+ * compare-at, discount, description), view labels & primary image,
+ * ownership-conflict reconciliation, review-flag resolution and the
+ * workflow actions — Save / Submit / Approve & Publish / Archive.
  * Every action routes through the workflow service and the shared diary.
  */
 
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { Archive, ArrowRight, Check, Save } from "lucide-react";
+import { Archive, ArrowRight, Check, Save, Star } from "lucide-react";
 import ProductPreview from "../product/ProductPreview";
 import StatusBadge from "../employee/StatusBadge";
 import catalogRepository, { getPublishIssues } from "../../services/catalogRepository";
 import {
+  KIDS_CONFLICT_ACTIONS,
   approveProduct,
   archiveProduct,
   changeProductId,
+  clearReviewFlags,
+  flagsSatisfiedByProduct,
   getProductWorkflowView,
   publishProduct,
+  reconcileKidsConflict,
+  setPrimaryMedia,
   submitProductForReview,
-  transferMediaOwnership,
+  updateMediaViewLabel,
 } from "../../services/productWorkflow";
 import { CATEGORY_OPTIONS, getProductStatusLabel } from "../../config/productCatalogConfig";
 import taxonomyRepository from "../../services/taxonomyRepository";
 import { employeeFullName } from "../../utils/employee";
 import { getEmployee, loadEmployees } from "../../services/employees/employeeService";
+import { reviewFlagLabel } from "../../services/productReviewFlags";
+import { formatINR } from "../../utils/shopping";
 
 const fieldClass =
   "w-full border border-mist bg-canvas px-3 py-2 font-ui text-sm outline-none focus:border-accent";
 const labelClass = "mb-1 block font-ui text-[10px] uppercase tracking-[.16em] text-taupe";
 
 const statusTone = { PUBLISHED: "ink", PENDING_REVIEW: "alert", DRAFT: "quiet", ARCHIVED: "muted" };
+
+const VIEW_LABEL_OPTIONS = [
+  "",
+  "front",
+  "side",
+  "left-side",
+  "right-side",
+  "back",
+  "detail",
+  "close",
+  "front-close",
+  "multiple",
+];
+
+const discountPercent = (price, compareAt) => {
+  const selling = Number(price) || 0;
+  const compare = Number(compareAt) || 0;
+  if (selling <= 0 || compare <= selling) return null;
+  return Math.round(((compare - selling) / compare) * 100);
+};
 
 export default function ProductDraftReviewPanel({ product, actor, onNotice }) {
   const [name, setName] = useState(product.name ?? "");
@@ -83,7 +112,14 @@ export default function ProductDraftReviewPanel({ product, actor, onNotice }) {
     };
     const result = catalogRepository.updateDraft(product.id, { ...patch, ...pricingPatch }, actor);
     if (result.ok) {
-      onNotice?.({ tone: "ok", text: `Saved ${product.id}.` });
+      /* Fields now carrying real values retire their review flags. */
+      const satisfied = flagsSatisfiedByProduct(result.product);
+      const cleared = satisfied.filter((flag) => (result.product.reviewFlags ?? []).includes(flag));
+      if (cleared.length) clearReviewFlags(product.id, cleared, actor);
+      onNotice?.({
+        tone: "ok",
+        text: `Saved ${product.id}.${cleared.length ? ` ${cleared.length} review flag${cleared.length === 1 ? "" : "s"} resolved.` : ""}`,
+      });
     } else {
       onNotice?.({ tone: "warn", text: result.error });
     }
@@ -130,13 +166,47 @@ export default function ProductDraftReviewPanel({ product, actor, onNotice }) {
       setConfirmTransfer(conflict.mediaId);
       return;
     }
-    const result = transferMediaOwnership(conflict.mediaId, product.id, actor, { confirm: true });
+    const result = reconcileKidsConflict(product.id, KIDS_CONFLICT_ACTIONS.TRANSFER, actor);
     if (result.ok) {
       setConfirmTransfer(null);
-      onNotice?.({ tone: "ok", text: `Ownership of ${conflict.file} moved to ${product.id}.` });
+      onNotice?.({
+        tone: "ok",
+        text: `Ownership of ${conflict.file} moved to ${product.id}.${
+          result.archivedOwners?.length
+            ? ` Retired ${result.archivedOwners.join(", ")} (no media left).`
+            : ""
+        }`,
+      });
     } else {
       onNotice?.({ tone: "warn", text: result.error });
     }
+  };
+
+  const clearFlag = (flag) => {
+    const result = clearReviewFlags(product.id, [flag], actor);
+    onNotice?.(
+      result.ok
+        ? { tone: "ok", text: `Resolved review flag: ${reviewFlagLabel(flag)}.` }
+        : { tone: "warn", text: result.error }
+    );
+  };
+
+  const setPrimary = (mediaId) => {
+    const result = setPrimaryMedia(product.id, mediaId, actor);
+    onNotice?.(
+      result.ok
+        ? { tone: "ok", text: `Primary image for ${product.id} updated.` }
+        : { tone: "warn", text: result.error }
+    );
+  };
+
+  const setViewLabel = (mediaId, value) => {
+    const result = updateMediaViewLabel(mediaId, value || null, actor);
+    onNotice?.(
+      result.ok
+        ? { tone: "ok", text: `View label updated.` }
+        : { tone: "warn", text: result.error }
+    );
   };
 
   const changeId = () => {
@@ -190,6 +260,33 @@ export default function ProductDraftReviewPanel({ product, actor, onNotice }) {
 
         {/* Commercial fields --------------------------------------- */}
         <div className="space-y-4">
+          {product.reviewFlags?.length ? (
+            <div className="border border-mist bg-ivory/60 px-3 py-2">
+              <p className="mb-1.5 font-ui text-[10px] uppercase tracking-[.16em] text-taupe">
+                Review flags
+              </p>
+              <ul className="flex flex-wrap gap-1.5">
+                {product.reviewFlags.map((flag) => (
+                  <li
+                    key={flag}
+                    className="inline-flex items-center gap-1.5 border border-mist bg-canvas px-2 py-1 font-ui text-[10px] uppercase tracking-[.1em] text-ink/80"
+                  >
+                    {reviewFlagLabel(flag)}
+                    <button
+                      type="button"
+                      onClick={() => clearFlag(flag)}
+                      title={`Resolve: ${reviewFlagLabel(flag)}`}
+                      aria-label={`Resolve: ${reviewFlagLabel(flag)}`}
+                      className="text-taupe transition-colors hover:text-accent"
+                    >
+                      ✕
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+
           {conflicts.length ? (
             <div className="border border-accent/40 bg-accent/5 px-3 py-2">
               <p className="font-ui text-[10px] uppercase tracking-[.16em] text-accent">
@@ -215,6 +312,49 @@ export default function ProductDraftReviewPanel({ product, actor, onNotice }) {
                   </button>
                 </div>
               ))}
+            </div>
+          ) : null}
+
+          {/* View labels & primary image ---------------------------- */}
+          {view?.mediaSet?.gallery?.length ? (
+            <div className="border border-mist bg-ivory/60 px-3 py-2">
+              <p className="mb-2 font-ui text-[10px] uppercase tracking-[.16em] text-taupe">
+                View labels &amp; primary image
+              </p>
+              <ul className="space-y-1.5">
+                {view.mediaSet.gallery.map((item) => (
+                  <li key={item.id ?? item.src} className="flex flex-wrap items-center gap-2">
+                    {item.src ? (
+                      <img src={item.src} alt="" className="h-12 w-10 shrink-0 border border-mist object-cover" />
+                    ) : null}
+                    <span className="min-w-0 flex-1 truncate font-ui text-[11px] text-taupe">
+                      {item.fileName ?? item.src?.split("/").pop() ?? item.id}
+                    </span>
+                    <select
+                      value={item.view ?? ""}
+                      onChange={(event) => setViewLabel(item.id, event.target.value)}
+                      disabled={!item.id}
+                      className="border border-mist bg-canvas px-2 py-1 font-ui text-[11px] outline-none focus:border-accent disabled:opacity-40"
+                      aria-label={`View label for ${item.fileName ?? item.id}`}
+                    >
+                      {VIEW_LABEL_OPTIONS.map((option) => (
+                        <option key={option || "unlabelled"} value={option}>
+                          {option ? option.replace(/-/g, " ") : "Unlabelled"}
+                        </option>
+                      ))}
+                    </select>
+                    <button
+                      type="button"
+                      onClick={() => setPrimary(item.id)}
+                      disabled={!item.id}
+                      className="border border-mist px-2 py-1 font-ui text-[10px] uppercase tracking-[.1em] text-taupe transition-colors hover:border-ink hover:text-ink disabled:opacity-40"
+                    >
+                      <Star size={10} className="mr-1 inline" aria-hidden="true" />
+                      {product.primaryMediaId === item.id || item.role === "COVER" ? "Primary" : "Set primary"}
+                    </button>
+                  </li>
+                ))}
+              </ul>
             </div>
           ) : null}
 
@@ -303,6 +443,14 @@ export default function ProductDraftReviewPanel({ product, actor, onNotice }) {
               />
             </div>
           </div>
+
+          {discountPercent(price, compareAt) != null ? (
+            <p className="font-ui text-[11px] text-taupe">
+              Discount: <span className="text-accent">{discountPercent(price, compareAt)}% off</span>{" "}
+              ({formatINR(Number(price) || 0)} vs {formatINR(Number(compareAt) || 0)}) — derived from
+              price &amp; compare-at, never stored separately.
+            </p>
+          ) : null}
 
           <div>
             <label htmlFor={`desc-${product.id}`} className={labelClass}>

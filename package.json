@@ -11,6 +11,7 @@
     "audit:homepage": "node --import ./scripts/node-loader/register.mjs scripts/audit-homepage.mjs",
     "audit:product-media": "node --import ./scripts/node-loader/register.mjs scripts/audit-product-media.mjs",
     "audit:media-products": "node --import ./scripts/node-loader/register.mjs scripts/audit-media-products.mjs",
+    "audit:kids-products": "node --import ./scripts/node-loader/register.mjs scripts/audit-kids-products.mjs",
     "audit:media": "node --import ./scripts/node-loader/register.mjs scripts/audit-media.mjs",
     "media:analyze": "node scripts/optimize-media.mjs --dry-run",
     "media:optimize": "node scripts/optimize-media.mjs"

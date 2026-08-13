@@ -74,6 +74,11 @@ export const ACTIVITY_ACTIONS = {
   PRODUCT_GROUP_DECIDED: "PRODUCT_GROUP_DECIDED",
   PRODUCT_VARIANT_REVIEW_REQUIRED: "PRODUCT_VARIANT_REVIEW_REQUIRED",
 
+  /* Products — Phase 22.1. Kids reconciliation, recorded in this same
+     diary, never a second log. */
+  PRODUCT_CONFLICT_RESOLVED: "PRODUCT_CONFLICT_RESOLVED",
+  PRODUCT_REVIEW_FLAGS_CLEARED: "PRODUCT_REVIEW_FLAGS_CLEARED",
+
   /* Inventory — Phase 14. The stock ledger holds quantity-level detail;
      this shared diary carries the readable cross-module activity note. */
   INVENTORY_MOVEMENT: "INVENTORY_MOVEMENT",
@@ -186,6 +191,8 @@ const ACTION_LABELS = {
   [ACTIVITY_ACTIONS.PRODUCT_GROUP_SPLIT]: "Product media group split",
   [ACTIVITY_ACTIONS.PRODUCT_GROUP_DECIDED]: "Product group decision recorded",
   [ACTIVITY_ACTIONS.PRODUCT_VARIANT_REVIEW_REQUIRED]: "Variant review required",
+  [ACTIVITY_ACTIONS.PRODUCT_CONFLICT_RESOLVED]: "Product media conflict resolved",
+  [ACTIVITY_ACTIONS.PRODUCT_REVIEW_FLAGS_CLEARED]: "Product review flags cleared",
   [ACTIVITY_ACTIONS.INVENTORY_MOVEMENT]: "Inventory updated",
   [ACTIVITY_ACTIONS.RETURN_REQUESTED]: "Return requested",
   [ACTIVITY_ACTIONS.RETURN_APPROVED]: "Return approved",
