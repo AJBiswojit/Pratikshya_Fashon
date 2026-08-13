@@ -25,6 +25,8 @@ import { getLiveStorefrontProducts, productHref } from "../src/data/products/ind
 import {
   resolveCategoryCover,
   resolveCollectionCover,
+  resolveHeroSlideImages,
+  resolveHomepageHeroMedia,
   resolveProductCover,
   selectBrideGroomLooks,
   selectSareeEditProducts,
@@ -102,6 +104,85 @@ printSection("SHOP BY CATEGORY", report.shopByCategory, (row) => `${row.group} �
 printSection("COLLECTIONS", report.collections);
 printSection("NEW ARRIVALS", report.newArrivals, (row) => row.name);
 printSection("SALE", [report.sale]);
+
+/* ------------------------------------------------------------------ */
+/* HOMEPAGE HERO — canonical five-asset register                       */
+/* ------------------------------------------------------------------ */
+
+const EXPECTED_HERO_FILENAMES = [
+  "hero001.avif",
+  "hero002.avif",
+  "hero003.avif",
+  "hero004.avif",
+  "hero005.avif",
+];
+const filenameOf = (source) =>
+  source?.currentFilename ||
+  source?.fileName ||
+  source?.src?.split("?")[0].split("/").pop() ||
+  null;
+const resolvedHero = resolveHeroSlideImages();
+const registeredHero = resolveHomepageHeroMedia();
+const actualHeroFilenames = resolvedHero.map(filenameOf);
+const activeHomeHero = mediaRepository.getMarketingMedia("HOME_HERO", { publicOnly: true });
+const duplicateHeroAssets =
+  actualHeroFilenames.length - new Set(actualHeroFilenames.filter(Boolean)).size;
+const missingHeroAssets = EXPECTED_HERO_FILENAMES.filter((fileName) => {
+  const registered = registeredHero.some((media) => filenameOf(media) === fileName);
+  const onDisk = existsSync(join(process.cwd(), "public", "library", fileName));
+  return !registered || !onDisk;
+});
+const oldHeroAssignments = activeHomeHero.filter(
+  (media) => !EXPECTED_HERO_FILENAMES.includes(filenameOf(media))
+);
+const invalidHeroRecords = registeredHero.filter(
+  (media) =>
+    media.productId ||
+    media.mappingStatus !== "MAPPED" ||
+    !(media.usageRoles || []).includes("HERO") ||
+    !String(media.url || "").endsWith(".avif")
+);
+const heroComponentSource = readFileSync(
+  join(process.cwd(), "src/components/storefront/HeroCarousel.jsx"),
+  "utf8"
+);
+const heroResolverSource = readFileSync(
+  join(process.cwd(), "src/services/media/mediaResolver.js"),
+  "utf8"
+);
+const hardcodedHeroPaths =
+  heroComponentSource.match(/["'`]\/library\/hero\d{3}\.avif["'`]/g)?.length ?? 0;
+const randomizedHeroSelection =
+  `${heroComponentSource}\n${heroResolverSource}`.match(/Math\.random\s*\(|\.shuffle\s*\(/g)?.length ?? 0;
+const heroOrderMatches =
+  JSON.stringify(actualHeroFilenames) === JSON.stringify(EXPECTED_HERO_FILENAMES);
+
+line("## HOMEPAGE HERO MEDIA AUDIT");
+line(`Expected hero assets: ${EXPECTED_HERO_FILENAMES.length}`);
+line(`Actual hero assets: ${registeredHero.length}`);
+line(`Expected filenames: ${EXPECTED_HERO_FILENAMES.join(", ")}`);
+line(`Resolved filenames: ${actualHeroFilenames.join(", ")}`);
+line(`Duplicate hero assets: ${duplicateHeroAssets}`);
+line(`Missing hero assets: ${missingHeroAssets.length}`);
+line(`Old hero assets still actively assigned: ${oldHeroAssignments.length}`);
+line(`Hardcoded hero paths: ${hardcodedHeroPaths}`);
+line(`Randomized hero selection: ${randomizedHeroSelection}`);
+line(`Invalid hero records: ${invalidHeroRecords.length}`);
+line(`Deterministic order: ${heroOrderMatches ? "PASS" : "FAIL"}`);
+line();
+
+if (
+  registeredHero.length !== EXPECTED_HERO_FILENAMES.length ||
+  duplicateHeroAssets ||
+  missingHeroAssets.length ||
+  oldHeroAssignments.length ||
+  hardcodedHeroPaths ||
+  randomizedHeroSelection ||
+  invalidHeroRecords.length ||
+  !heroOrderMatches
+) {
+  process.exitCode = 1;
+}
 
 /* ------------------------------------------------------------------ */
 /* SAREE EDIT — product/media ownership                                */

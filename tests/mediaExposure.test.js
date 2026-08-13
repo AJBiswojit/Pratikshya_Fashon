@@ -40,14 +40,14 @@ test("the register is seeded with seed media + the ingested library", () => {
   const all = mediaRepository.getAll();
   const ingested = all.filter((media) => media.ingested);
   assert.ok(all.length > 180, `expected a seeded register, got ${all.length}`);
-  // Phase 21.6: 166 library + 10 house = 176
-  assert.equal(ingested.length, 176, "Phase 21.6 ingested library must reach the register");
+  // Phase 21.6: 166 library + 10 house + 5 canonical homepage heroes = 181
+  assert.equal(ingested.length, 181, "the complete ingested library must reach the register");
 });
 
 test("mapped / unmapped / needs-review counts match the ingestion report", () => {
   const all = mediaRepository.getAll();
-  // Phase 21.6 counts after migration
-  assert.equal(all.filter((media) => media.mappingStatus === "MAPPED").length, 165);
+  // Phase 21.6 counts after migration plus five mapped homepage HERO records
+  assert.equal(all.filter((media) => media.mappingStatus === "MAPPED").length, 170);
   assert.equal(all.filter((media) => media.mappingStatus === "UNMAPPED").length, 5);
   assert.equal(all.filter((media) => media.mappingStatus === "NEEDS_REVIEW").length, 6);
 });
@@ -225,8 +225,8 @@ test("AI Shopping resolves the real product cover from the library", () => {
 
 test("the exposure audit reports a truthful, connected chain", () => {
   const report = auditMediaExposure();
-  assert.equal(report.inventory.total, 202);
-  assert.equal(report.inventory.mapped, 165);
+  assert.equal(report.inventory.total, 205);
+  assert.equal(report.inventory.mapped, 170);
   assert.equal(report.inventory.unmapped, 5);
   assert.ok(report.inventory.exposed > 0, "some media must be exposed");
   assert.ok(report.inventory.exposed + report.inventory.mappedButUnused === report.inventory.mapped);

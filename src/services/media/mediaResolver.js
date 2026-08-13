@@ -16,6 +16,7 @@
 import {
   AI_MIRROR_ELIGIBLE_CATEGORIES,
   AI_MIRROR_EXCLUDED_CATEGORIES,
+  MARKETING_PLACEMENTS,
   MEDIA_SCOPES,
   MEDIA_STATUS,
   MEDIA_TYPES,
@@ -25,7 +26,7 @@ import {
 import { imageRef } from "../../data/pratikshyaImageManifest";
 import { getLiveStorefrontProducts, productHref } from "../../data/products";
 import taxonomyRepository from "../taxonomyRepository";
-import { getAll, getById, getProductMedia } from "./mediaRepository";
+import { getAll, getById, getMarketingMedia, getProductMedia } from "./mediaRepository";
 import { placementImageSource } from "./marketingMediaSource";
 import {
   isIngestedPhotographyUrl,
@@ -873,19 +874,85 @@ export const resolveThemeImage = (theme, usedIds = null) => {
   return withReason(imageRef(config.fallback), FALLBACK_REASONS.HOUSE_FALLBACK);
 };
 
+/** The carousel's authored copy themes, paired to HOME_HERO media by index. */
+export const HOMEPAGE_HERO_THEMES = [
+  "festive",
+  "bridal",
+  "heritage",
+  "celebration",
+  "arrivals",
+];
+
+const HOMEPAGE_HERO_MAPPING_METHOD = "HOMEPAGE_HERO_REGISTER";
+
 /**
- * Editorial copy stays with the carousel; only the plate is resolved here.
- * An ACTIVE HOME_HERO marketing record still wins the lead slide.
+ * The canonical HOME_HERO register, in authored `sortOrder`.
+ *
+ * Requiring the dedicated placement, HERO usage role and ingestion marker
+ * keeps product/category photography (and legacy one-off hero overrides) out
+ * of this set. The resolver receives records from `mediaRepository`; no file
+ * address is authored in the carousel or in this module.
  */
-export const resolveHeroSlideImage = (theme, { heroMedia = null, lead = false, usedIds = null } = {}) => {
-  if (lead && heroMedia) {
-    const override = placementImageSource(heroMedia);
-    if (override) {
-      usedIds?.add(heroMedia.id);
-      return withReason(override, FALLBACK_REASONS.DIRECT);
-    }
-  }
-  return resolveThemeImage(theme, usedIds);
+export const resolveHomepageHeroMedia = (heroMedia = null) => {
+  const candidates = Array.isArray(heroMedia)
+    ? heroMedia
+    : getMarketingMedia(MARKETING_PLACEMENTS.HOME_HERO, { publicOnly: true });
+
+  return candidates
+    .filter(isUsable)
+    .filter((media) => media.placement === MARKETING_PLACEMENTS.HOME_HERO)
+    .filter((media) => (media.usageRoles || []).includes(USAGE_ROLES.HERO))
+    .filter((media) => media.mappingMethod === HOMEPAGE_HERO_MAPPING_METHOD)
+    .filter((media) => !media.productId)
+    .slice()
+    .sort((a, b) => a.sortOrder - b.sortOrder || String(a.id).localeCompare(String(b.id)));
+};
+
+/**
+ * Safe outage fallback: an ACTIVE, non-product HERO record only. Product,
+ * category and AI imagery can never be substituted into the homepage hero.
+ */
+const resolveSafeHeroFallback = (usedIds = null) => {
+  const used = usedIds instanceof Set ? usedIds : new Set(usedIds || []);
+  const fallback = getAll()
+    .filter(isUsable)
+    .filter((media) => !media.productId)
+    .filter((media) => (media.usageRoles || []).includes(USAGE_ROLES.HERO))
+    .filter((media) => !used.has(media.id))
+    .sort((a, b) => compareMedia(a, b, { preferredRoles: [USAGE_ROLES.HERO] }))[0];
+
+  return fallback
+    ? withReason(asSource(fallback), FALLBACK_REASONS.HOUSE_FALLBACK)
+    : withReason(imageRef("hero-atelier"), FALLBACK_REASONS.HOUSE_FALLBACK);
+};
+
+/**
+ * Resolve one carousel plate from the canonical HOME_HERO register. Theme is
+ * used only to retain the existing copy/slide API; its fixed index determines
+ * hero001 → hero005 order. Legacy theme media remains available to editorial
+ * sections through `resolveThemeImage`, but is no longer assigned here.
+ */
+export const resolveHeroSlideImage = (theme, { heroMedia = null, usedIds = null } = {}) => {
+  const registered = resolveHomepageHeroMedia(heroMedia);
+  const themeIndex = HOMEPAGE_HERO_THEMES.indexOf(theme);
+  const index = themeIndex >= 0 ? themeIndex : 0;
+  const selected = registered[index];
+
+  if (!selected) return resolveSafeHeroFallback(usedIds);
+
+  usedIds?.add(selected.id);
+  const source = asSource(selected);
+  const nextHero = registered.find((media, candidateIndex) => candidateIndex !== index && media.id !== selected.id);
+  const fallback = asSource(nextHero)?.src || resolveSafeHeroFallback(usedIds)?.src;
+  return withReason({ ...source, fallback }, FALLBACK_REASONS.DIRECT);
+};
+
+/** Resolve all five homepage plates in their deterministic register order. */
+export const resolveHeroSlideImages = (heroMedia = null) => {
+  const usedIds = new Set();
+  return HOMEPAGE_HERO_THEMES.map((theme) =>
+    resolveHeroSlideImage(theme, { heroMedia, usedIds })
+  );
 };
 
 /**
@@ -893,16 +960,10 @@ export const resolveHeroSlideImage = (theme, { heroMedia = null, lead = false, u
  * seed their exclusion set from this so the hero, editorial and category
  * cards do not all show the same photograph at once (Phase 21.5 reuse rule).
  */
-export const resolveHeroImageIds = (heroMedia = null) => {
-  const usedIds = new Set();
-  const themes = ["festive", "bridal", "heritage", "celebration", "arrivals"];
-  return themes
-    .map((theme, index) =>
-      resolveHeroSlideImage(theme, { heroMedia, lead: index === 0, usedIds })
-    )
+export const resolveHeroImageIds = (heroMedia = null) =>
+  resolveHeroSlideImages(heroMedia)
     .map((source) => source?.id)
     .filter(Boolean);
-};
 
 export const resolveEditorialFrame = (theme, usedIds = null) => resolveThemeImage(theme, usedIds);
 
@@ -988,7 +1049,9 @@ export default {
   resolveCategoryCover,
   resolveCollectionCover,
   resolveThemeImage,
+  resolveHomepageHeroMedia,
   resolveHeroSlideImage,
+  resolveHeroSlideImages,
   resolveHeroImageIds,
   resolveEditorialFrame,
   resolveSaleBackdrop,

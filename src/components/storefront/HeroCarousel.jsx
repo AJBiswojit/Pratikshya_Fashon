@@ -9,17 +9,15 @@
  * supports keyboard, touch swipe and `prefers-reduced-motion`, and preloads
  * the next plate so a frame never goes blank.
  *
- * It draws its plates from the existing PRATIKSHYA media architecture —
- * the image manifest via `imageRef`/`PratikshyaImage` — and honours an
- * ACTIVE `HOME_HERO` marketing record by letting it stand in for the first
- * plate through the same `resolvePlacementImage` seam the single-image hero
- * already used. No new image repository, no external URLs.
+ * It draws all five plates from the existing PRATIKSHYA media architecture —
+ * HOME_HERO register records through `mediaRepository` / `mediaResolver` and
+ * the existing `PratikshyaImage` component. No image address is authored in
+ * this component; there is no second repository and there are no external URLs.
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ArrowLeft, ArrowRight, Pause, Play } from "lucide-react";
 import PratikshyaImage from "../PratikshyaImage";
-import { imageRef } from "../../data/pratikshyaImageManifest";
 import { resolveHeroSlideImage } from "../../services/media/mediaResolver";
 import { resolveCategoryRoute, resolveCollectionRoute } from "../../services/taxonomyRouting";
 import { AtelierButton, header as headerSpacing } from "../../design-system";
@@ -30,11 +28,9 @@ const AUTOPLAY_INTERVAL_MS = 5500;
 const CROSSFADE_MS = 900;
 
 /**
- * Editorial plates. Each `image` is a manifest reference (house artwork)
- * that an ACTIVE marketing record may override for the lead plate. CTAs
- * resolve to the canonical taxonomy route for the category/collection the
- * slide represents, so the hero and the category cards point at the same
- * managed slugs.
+ * Editorial copy and CTAs remain unchanged. Each `image` is resolved by its
+ * stable slide theme from the ordered HOME_HERO register, so the carousel and
+ * the media audit consume the same canonical five-record set.
  */
 const buildSlides = (heroMedia) => {
   const usedIds = new Set();
@@ -50,8 +46,8 @@ const buildSlides = (heroMedia) => {
       title: "The Festive Edit",
       body: "Timeless silhouettes crafted for the celebrations that matter most.",
       cta: { label: "Explore Edit", href: festiveEditHref },
-      image: resolveHeroSlideImage("festive", { heroMedia, lead: true, usedIds }) || imageRef("editorial-hero"),
-      objectPosition: "58% center",
+      image: resolveHeroSlideImage("festive", { heroMedia, usedIds }),
+      objectPosition: "52% center",
       tone: "light",
     },
     {
@@ -60,8 +56,8 @@ const buildSlides = (heroMedia) => {
       title: "Made for Your Moment",
       body: "Statement craftsmanship and heirloom detail for the day you'll always remember.",
       cta: { label: "Shop Lehengas", href: lehengasHref },
-      image: resolveHeroSlideImage("bridal", { usedIds }) || imageRef("lehenga-bridal"),
-      objectPosition: "50% center",
+      image: resolveHeroSlideImage("bridal", { heroMedia, usedIds }),
+      objectPosition: "48% center",
       tone: "dark",
     },
     {
@@ -70,8 +66,8 @@ const buildSlides = (heroMedia) => {
       title: "The Art of the Saree",
       body: "Banarasi, Pato and silk — traditional craft, reimagined for today.",
       cta: { label: "Shop Sarees", href: sareesHref },
-      image: resolveHeroSlideImage("heritage", { usedIds }) || imageRef("saree-ivory-silk"),
-      objectPosition: "55% center",
+      image: resolveHeroSlideImage("heritage", { heroMedia, usedIds }),
+      objectPosition: "58% center",
       tone: "light",
     },
     {
@@ -80,8 +76,8 @@ const buildSlides = (heroMedia) => {
       title: "Dressed, Together",
       body: "Coordinated festive wardrobes for weddings, receptions and every gathering around them.",
       cta: { label: "Shop Bridal", href: bridalHref },
-      image: resolveHeroSlideImage("celebration", { usedIds }) || imageRef("commerce-hero"),
-      objectPosition: "50% center",
+      image: resolveHeroSlideImage("celebration", { heroMedia, usedIds }),
+      objectPosition: "52% center",
       tone: "dark",
     },
     {
@@ -90,8 +86,8 @@ const buildSlides = (heroMedia) => {
       title: "Your Next Signature Look",
       body: "The latest pieces to arrive from the PRATIKSHYA atelier.",
       cta: { label: "Discover Now", href: newArrivalsHref },
-      image: resolveHeroSlideImage("arrivals", { usedIds }) || imageRef("lehenga-wine"),
-      objectPosition: "50% center",
+      image: resolveHeroSlideImage("arrivals", { heroMedia, usedIds }),
+      objectPosition: "62% center",
       tone: "dark",
     },
   ];
@@ -110,16 +106,10 @@ const usePrefersReducedMotion = () => {
   return reduced;
 };
 
-/**
- * Resolve the actual URL a manifest/overridden image object points at so we
- * can warm the browser cache with a plain <link rel="preload">. Mirrors the
- * resolution inside `PratikshyaImage` (string id -> manifest -> src).
- */
+/** Resolve a registered image's URL so the next plate can be preloaded. */
 const resolveImageSrc = (image) => {
   if (!image) return null;
-  if (typeof image === "string") {
-    return resolveImageSrc(imageRef(image));
-  }
+  if (typeof image === "string") return image;
   return image.src || image.fallback || null;
 };
 

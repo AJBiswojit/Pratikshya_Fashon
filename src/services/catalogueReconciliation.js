@@ -197,7 +197,10 @@ export const uncataloguedGroups = (groups = null) =>
 export const staticReconciliationGroups = () => {
   const photography = getIngestedRecords()
     .filter((media) => !isHouseMedia(media))
-    .filter((media) => !isKidsMedia(media));
+    .filter((media) => !isKidsMedia(media))
+    .filter(
+      (media) => media.scope === MEDIA_SCOPES.PRODUCT || media.scope === MEDIA_SCOPES.UNASSIGNED
+    );
   return buildMediaGroups(
     photography.map((media) => ({ ...media, fileName: reconciliationFileName(media) }))
   );

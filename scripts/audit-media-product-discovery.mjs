@@ -66,6 +66,7 @@ line(`FILES ON DISK              ${diskFiles.length}`);
 line(`FILES KNOWN TO REGISTERS   ${totals.libraryFiles}`);
 line(`  · product photography    ${totals.productMediaFiles}`);
 line(`  · house artwork          ${totals.houseMediaFiles}`);
+line(`  · marketing hero media   ${totals.marketingMediaFiles}`);
 line(`TOTAL MEDIA GROUPS         ${totals.groups}`);
 line(`  · multi-view groups      ${totals.multiViewGroups}`);
 line(`  · standalone groups      ${totals.standaloneGroups}`);
