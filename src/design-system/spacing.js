@@ -49,10 +49,20 @@ export const grid = {
   footer: "grid md:grid-cols-4",
 };
 
-/** Header height, used by anything that must clear the fixed navigation. */
+/**
+ * Header height, used by anything that must clear the fixed navigation.
+ *
+ * `height` is the physical height of the fixed header (`h-16 md:h-20`).
+ * `offset` clears that fixed header by pushing the first in-flow section
+ * down by the same amount. It is expressed as a *margin-top* rather than
+ * padding: the hero carousel's plates are absolutely positioned
+ * (`inset-0`) against the section's padding box, so padding would leave
+ * the image running up behind the header. A margin moves the whole section
+ * (and its absolutely-positioned children) below the header cleanly.
+ */
 export const header = {
   height: "h-16 md:h-20",
-  offset: "pt-20",
+  offset: "mt-16 md:mt-20",
 };
 
 export const spacing = {
