@@ -45,6 +45,7 @@ export default function ProductCard({
   const {
     name,
     category,
+    categoryLabel,
     price,
     originalPrice,
     label,
@@ -101,7 +102,7 @@ export default function ProductCard({
 
       {showCategory && category ? (
         <p className="font-ui text-[10px] uppercase tracking-[.2em] text-taupe mb-1">
-          {category}
+          {categoryLabel ?? category}
         </p>
       ) : null}
 

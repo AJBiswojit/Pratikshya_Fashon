@@ -224,6 +224,11 @@ const HERO_THEMES = {
     categoryId: "lehengas",
     fallback: "lehenga-bridal",
   },
+  groom: {
+    roles: [USAGE_ROLES.HERO, USAGE_ROLES.EDITORIAL, USAGE_ROLES.LOOKBOOK],
+    categoryId: "menswear",
+    fallback: "groom-sherwani",
+  },
   heritage: {
     roles: [USAGE_ROLES.HERO, USAGE_ROLES.EDITORIAL, USAGE_ROLES.LOOKBOOK],
     categoryId: "sarees",

@@ -21,6 +21,7 @@ import { ArrowLeft, ArrowRight, Pause, Play } from "lucide-react";
 import PratikshyaImage from "../PratikshyaImage";
 import { imageRef } from "../../data/pratikshyaImageManifest";
 import { resolveHeroSlideImage } from "../../services/media/mediaResolver";
+import { resolveCategoryRoute, resolveCollectionRoute } from "../../services/taxonomyRouting";
 import { AtelierButton } from "../../design-system";
 import { cn } from "../../utils/cn";
 
@@ -31,17 +32,24 @@ const CROSSFADE_MS = 900;
 /**
  * Editorial plates. Each `image` is a manifest reference (house artwork)
  * that an ACTIVE marketing record may override for the lead plate. CTAs
- * point at real catalogue/collection routes defined in navigationConfig.
+ * resolve to the canonical taxonomy route for the category/collection the
+ * slide represents, so the hero and the category cards point at the same
+ * managed slugs.
  */
 const buildSlides = (heroMedia) => {
   const usedIds = new Set();
+  const festiveEditHref = resolveCollectionRoute("festive-edit")?.href ?? "/collections/festive-edit";
+  const lehengasHref = resolveCategoryRoute("lehengas")?.href ?? "/women/bridal-lehengas";
+  const sareesHref = resolveCategoryRoute("sarees")?.href ?? "/women/silk-sarees";
+  const bridalHref = resolveCategoryRoute("bridal-couture")?.href ?? "/bridal";
+  const newArrivalsHref = resolveCollectionRoute("new-arrivals")?.href ?? "/collections/new-arrivals";
   return [
     {
       id: "festive-edit",
       eyebrow: "New Collection",
       title: "The Festive Edit",
       body: "Timeless silhouettes crafted for the celebrations that matter most.",
-      cta: { label: "Explore Edit", href: "/collections/festive-edit" },
+      cta: { label: "Explore Edit", href: festiveEditHref },
       image: resolveHeroSlideImage("festive", { heroMedia, lead: true, usedIds }) || imageRef("editorial-hero"),
       objectPosition: "58% center",
       tone: "light",
@@ -51,7 +59,7 @@ const buildSlides = (heroMedia) => {
       eyebrow: "Bridal Couture",
       title: "Made for Your Moment",
       body: "Statement craftsmanship and heirloom detail for the day you'll always remember.",
-      cta: { label: "Shop Lehengas", href: "/women/bridal-lehengas" },
+      cta: { label: "Shop Lehengas", href: lehengasHref },
       image: resolveHeroSlideImage("bridal", { usedIds }) || imageRef("lehenga-bridal"),
       objectPosition: "50% center",
       tone: "dark",
@@ -61,7 +69,7 @@ const buildSlides = (heroMedia) => {
       eyebrow: "Heritage Weaves",
       title: "The Art of the Saree",
       body: "Banarasi, Pato and silk — traditional craft, reimagined for today.",
-      cta: { label: "Shop Sarees", href: "/women/silk-sarees" },
+      cta: { label: "Shop Sarees", href: sareesHref },
       image: resolveHeroSlideImage("heritage", { usedIds }) || imageRef("saree-ivory-silk"),
       objectPosition: "55% center",
       tone: "light",
@@ -71,7 +79,7 @@ const buildSlides = (heroMedia) => {
       eyebrow: "The Celebration Edit",
       title: "Dressed, Together",
       body: "Coordinated festive wardrobes for weddings, receptions and every gathering around them.",
-      cta: { label: "Shop Bridal", href: "/bridal" },
+      cta: { label: "Shop Bridal", href: bridalHref },
       image: resolveHeroSlideImage("celebration", { usedIds }) || imageRef("commerce-hero"),
       objectPosition: "50% center",
       tone: "dark",
@@ -81,7 +89,7 @@ const buildSlides = (heroMedia) => {
       eyebrow: "New Arrivals",
       title: "Your Next Signature Look",
       body: "The latest pieces to arrive from the PRATIKSHYA atelier.",
-      cta: { label: "Discover Now", href: "/collections/new-arrivals" },
+      cta: { label: "Discover Now", href: newArrivalsHref },
       image: resolveHeroSlideImage("arrivals", { usedIds }) || imageRef("lehenga-wine"),
       objectPosition: "50% center",
       tone: "dark",

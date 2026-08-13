@@ -11,37 +11,28 @@ import {
   gap,
   useReveal,
 } from "../../design-system";
-import { getLiveStorefrontProducts } from "../../data/products";
-import { navigationScopes } from "../../data/products/taxonomy";
 import { resolveCategoryCover } from "../../services/media/mediaResolver";
-import { getProductCoverImage } from "../../services/media/productMediaSource";
 import taxonomyRepository from "../../services/taxonomyRepository";
+import { categoryHref } from "../../services/taxonomyRouting";
 import { cn } from "../../utils/cn";
 
 /**
  * SHOP BY CATEGORY — landing section.
  *
- * The complete, customer-facing catalogue, arranged as editorial groups
- * (Women / Men / Kids / Accessories / Innerwear) instead of a single short
- * rail. Every card is resolved from the central taxonomyRepository — nothing
- * here hard-codes a category, a route or a picture:
- *
- *   · category cards use the category's managed ACTIVE banner when one is
- *     attached, otherwise the category's own manifest artwork (imageRef);
- *   · broad buckets (Men's Wear, Kids Wear) open into their routed
- *     subcategories, each card carrying a real product's catalogue image
- *     and linking to the subcategory's existing storefront route;
- *   · archived or non-customer-visible records simply drop out, and a card
- *     is only emitted when its route and its media both resolve.
+ * Every ACTIVE managed category becomes one card. The card reads its name,
+ * slug, sort order and featured state from the central taxonomyRepository,
+ * its route from that slug (`taxonomyRouting.categoryHref`) and its plate
+ * from the central mediaResolver — nothing here hard-codes a category, a
+ * route or a picture. A category archived or renamed in the Admin Portal
+ * simply drops out, and a category added there appears here automatically
+ * (the presentation groups only label rows; any category they do not mention
+ * is appended under its own heading).
  */
 
 /**
- * Editorial grouping. This is presentation metadata only: it names the five
- * merchandising groups and maps them to taxonomy records that already exist.
- * The records themselves are always read from `taxonomyRepository`, so an
- * archived/renamed category disappears instead of leaving a broken card.
- * `expandSubcategories` groups resolve their category's routed subcategories
- * (falling back to the category card when none are individually routable).
+ * Presentation grouping only: labels plus references to category ids that
+ * already exist in the repository. No name, slug, image or route is copied
+ * here — those always resolve from the managed record.
  */
 const CATEGORY_GROUPS = [
   {
@@ -49,45 +40,23 @@ const CATEGORY_GROUPS = [
     label: "Women",
     categories: ["sarees", "lehengas", "bridal-couture", "kurtis-and-suits", "dupattas"],
   },
-  { id: "men", label: "Men", categories: ["menswear"], expandSubcategories: true },
-  { id: "kids", label: "Kids", categories: ["kidswear"], expandSubcategories: true },
+  { id: "men", label: "Men", categories: ["menswear"] },
+  { id: "kids", label: "Kids", categories: ["kidswear"] },
   { id: "accessories", label: "Accessories", categories: ["bangles", "jewellery"] },
   { id: "innerwear", label: "Innerwear", categories: ["innerwear"] },
 ];
 
-/** Reverse index: categoryId + subcategory name → existing storefront route. */
-const buildSubcategoryRoutes = () => {
-  const routes = new Map();
-  Object.entries(navigationScopes).forEach(([path, scope]) => {
-    const filters = scope?.filters ?? {};
-    if (!filters.category || !filters.subcategory) return;
-    const key = `${filters.category}::${String(filters.subcategory).toLowerCase()}`;
-    if (!routes.has(key)) routes.set(key, path);
-  });
-  return routes;
-};
-
-const SUBCATEGORY_ROUTES = buildSubcategoryRoutes();
-
-/** Managed ACTIVE banner, then category library media, then authored artwork. */
-const resolveCategoryImage = (category, usedIds) => resolveCategoryCover(category, usedIds);
+const byOrder = (a, b) =>
+  a.sortOrder - b.sortOrder || Number(b.featured) - Number(a.featured) || a.name.localeCompare(b.name);
 
 const categoryCard = (category, usedIds) => ({
   key: `category-${category.id}`,
-  to: `/category/${category.slug}`,
+  to: categoryHref(category),
   name: category.name,
   eyebrow: category.eyebrow || "",
-  image: resolveCategoryImage(category, usedIds),
+  featured: category.featured,
+  image: resolveCategoryCover(category, usedIds),
   alt: `${category.name} collection at PRATIKSHYA FASHON`,
-});
-
-const subcategoryCard = (category, subcategory, route, product) => ({
-  key: `subcategory-${category.id}-${subcategory.id}`,
-  to: route,
-  name: subcategory.name,
-  eyebrow: "",
-  image: getProductCoverImage(product) || product.image,
-  alt: `${subcategory.name} collection at PRATIKSHYA FASHON`,
 });
 
 export default function ShopByCategory({ excludeIds = null }) {
@@ -97,46 +66,29 @@ export default function ShopByCategory({ excludeIds = null }) {
   const active = taxonomyRepository.activeCategories();
   const activeById = new Map(active.map((category) => [category.id, category]));
 
-  /* Reused from the shared, cached storefront list — New Arrivals on this
-     same page already resolves it, so this adds no extra catalogue pass. */
-  const products = getLiveStorefrontProducts();
-
+  const groupedIds = new Set();
   const groups = CATEGORY_GROUPS.map((group) => {
-    const categories = (group.categories ?? [])
+    const cards = (group.categories ?? [])
       .map((id) => activeById.get(id))
       .filter(Boolean)
-      .sort((a, b) => a.sortOrder - b.sortOrder);
-
-    const cards = [];
-
-    if (group.expandSubcategories) {
-      categories.forEach((category) => {
-        const subcards = taxonomyRepository
-          .activeSubcategories(category.id)
-          .map((subcategory) => {
-            const route = SUBCATEGORY_ROUTES.get(
-              `${category.id}::${subcategory.name.toLowerCase()}`
-            );
-            if (!route) return null;
-            const product = products.find(
-              (entry) => entry.category === category.id && entry.subcategory === subcategory.name
-            );
-            if (!product) return null;
-            return subcategoryCard(category, subcategory, route, product);
-          })
-          .filter(Boolean);
-
-        /* A broad bucket keeps its own card only when it has no routed
-           subcategories to open into. */
-        if (subcards.length) cards.push(...subcards);
-        else cards.push(categoryCard(category, usedIds));
+      .sort(byOrder)
+      .map((category) => {
+        groupedIds.add(category.id);
+        return categoryCard(category, usedIds);
       });
-    } else {
-      categories.forEach((category) => cards.push(categoryCard(category, usedIds)));
-    }
-
     return { ...group, cards };
   }).filter((group) => group.cards.length > 0);
+
+  /* An ACTIVE category the presentation groups don't mention still appears,
+     so a future category reaches the homepage without any JSX change. */
+  const remainder = active.filter((category) => !groupedIds.has(category.id));
+  if (remainder.length > 0) {
+    groups.push({
+      id: "more",
+      label: "More from the Atelier",
+      cards: remainder.sort(byOrder).map((category) => categoryCard(category, usedIds)),
+    });
+  }
 
   if (!groups.length) return null;
 

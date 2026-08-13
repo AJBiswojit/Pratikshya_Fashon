@@ -12,6 +12,7 @@ import {
 } from "../../design-system";
 import { buildFacets } from "../../data/products/facets";
 import useCatalogueQuery from "../../hooks/useCatalogueQuery";
+import { resolveCollectionRoute } from "../../services/taxonomyRouting";
 import { cn } from "../../utils/cn";
 import ActiveFilters from "./ActiveFilters";
 import FilterDrawer from "./FilterDrawer";
@@ -155,7 +156,7 @@ export default function CatalogueBrowser({
                   {emptyAction ?? (
                     <AtelierButton
                       as={Link}
-                      to="/collection/featured"
+                      to={resolveCollectionRoute("featured")?.href ?? "/collection/featured"}
                       variant="outline"
                       size="md"
                     >
