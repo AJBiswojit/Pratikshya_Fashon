@@ -18,6 +18,7 @@
 import { MEDIA_TYPES, PRODUCT_MEDIA_ROLES } from "../../config/mediaTypes";
 import { imageRef } from "../../data/pratikshyaImageManifest";
 import { getProductMedia } from "./mediaRepository";
+import { getProductMediaSet } from "./productMediaSet";
 
 /**
  * Media records and manifest images are both accepted by `PratikshyaImage`,
@@ -67,39 +68,45 @@ const catalogueSlide = (image, index, product) => ({
   image,
   src: null,
   poster: "",
-  role: index === 0 ? PRODUCT_MEDIA_ROLES.COVER : PRODUCT_MEDIA_ROLES.GALLERY,
-  fromRepository: false,
-  view: index === 0 ? "front" : `view-${index + 1}`,
-  groupKey: product.id,
-  viewScore: index,
-  isStandalone: false,
-  fileName: null,
+  role: image?.role || (index === 0 ? PRODUCT_MEDIA_ROLES.COVER : PRODUCT_MEDIA_ROLES.GALLERY),
+  fromRepository: Boolean(image?.fromRepository),
+  view: image?.view || (index === 0 ? "front" : `view-${index + 1}`),
+  groupKey: image?.groupKey || product.id,
+  viewScore: image?.viewScore ?? index,
+  isStandalone: Boolean(image?.isStandalone),
+  fileName: image?.fileName || null,
 });
 
-/** The catalogue plates a product was authored with. */
+/** Product-owned plates only — never a category-wide gallery pad. */
 const cataloguePlates = (product) => {
   if (!product) return [];
-  const authored = product.images?.length ? product.images : [product.image];
+  const set = getProductMediaSet(product);
+  const authored = set.gallery.length ? set.gallery : product.image ? [product.image] : [];
   return authored.filter(Boolean).map((image, index) => catalogueSlide(image, index, product));
 };
 
 /**
  * Every slide the product page should show, images first, then video.
  *
- * Published media replaces the authored plates entirely when it exists, so
- * an operator who curates a product gets exactly what they arranged rather
- * than a mixture. Products the Admin Portal has not touched are untouched.
+ * Images come from the canonical product media set: register media whose
+ * productId matches, plus the product's own authored primary. Category
+ * galleries and another product's plates are never mixed in.
  */
 export const getProductSlides = (product) => {
   if (!product) return [];
 
+  const set = getProductMediaSet(product);
   const published = getProductMedia(product.id, { publicOnly: true });
-  const images = published.filter((item) => item.type === MEDIA_TYPES.IMAGE);
+  const publishedById = new Map(published.map((item) => [item.id, item]));
   const videos = published.filter((item) => item.type === MEDIA_TYPES.VIDEO);
 
-  /* No published imagery: the catalogue carries the page, with any
-     published film appended so a video-only addition still appears. */
-  const imageSlides = images.length ? images.map(slide) : cataloguePlates(product);
+  const imageSlides = set.gallery.length
+    ? set.gallery.map((entry, index) => {
+        const match = entry.id ? publishedById.get(entry.id) : null;
+        if (match && match.type === MEDIA_TYPES.IMAGE) return slide(match);
+        return catalogueSlide(entry, index, product);
+      })
+    : cataloguePlates(product);
 
   return [...imageSlides, ...videos.map(slide)];
 };
@@ -107,14 +114,13 @@ export const getProductSlides = (product) => {
 /**
  * The single plate every card, listing and search result uses.
  *
- * Cards never show video. When no cover has been published the authored
- * catalogue image stands, which is why existing products keep working.
+ * Cards never show video. Resolved through the product media set so a
+ * product never borrows another product's cover.
  */
 export const getProductCoverImage = (product) => {
   if (!product) return null;
-  const published = getProductMedia(product.id, { publicOnly: true, type: MEDIA_TYPES.IMAGE });
-  const cover = published.find((item) => item.role === PRODUCT_MEDIA_ROLES.COVER) ?? published[0];
-  return cover ? asImageSource(cover) : (product.image ?? null);
+  const set = getProductMediaSet(product);
+  return set.primary || product.image || null;
 };
 
 /** True when a product has published film — used to badge the gallery. */

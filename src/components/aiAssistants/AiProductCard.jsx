@@ -8,6 +8,7 @@ import {
   formatPrice,
 } from "../../design-system";
 import { productHref } from "../../data/products";
+import { getProductCardMedia } from "../../services/media/productMediaSet";
 import { cn } from "../../utils/cn";
 
 /**
@@ -29,6 +30,7 @@ export default function AiProductCard({
   if (!product) return null;
 
   const discount = discountPercent(product.price, product.originalPrice);
+  const { image, hoverImage } = getProductCardMedia(product);
   const purchasable = product.inStock !== false && product.availability !== "made-to-order";
   const availabilityText =
     product.availability === "made-to-order"
@@ -46,7 +48,14 @@ export default function AiProductCard({
         className="group block"
         aria-label={`View ${product.name}`}
       >
-        <MediaFrame image={product.image} hoverImage={product.hoverImage} alt={product.name} aspect="product" zoom="strong" className="relative">
+        <MediaFrame
+          image={getProductCardMedia(product).image}
+          hoverImage={getProductCardMedia(product).hoverImage}
+          alt={product.name}
+          aspect="product"
+          zoom="strong"
+          className="relative"
+        >
           {discount ? (
             <AtelierBadge className="absolute left-3 top-3">{discount}% off</AtelierBadge>
           ) : product.label ? (
