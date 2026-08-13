@@ -247,14 +247,6 @@ const productMedia = [
  */
 const marketingMedia = [
   marketingImage({
-    id: "pm-seed-101",
-    placement: MARKETING_PLACEMENTS.HOME_HERO,
-    imageId: "hero-atelier",
-    campaign: "Atelier Opening",
-    section: "Hero",
-    title: "Home hero — atelier fabric",
-  }),
-  marketingImage({
     id: "pm-seed-102",
     placement: MARKETING_PLACEMENTS.SAREE_SECTION,
     imageId: "saree-banarasi",
@@ -277,16 +269,6 @@ const marketingMedia = [
     campaign: "Festive Edit",
     section: "Campaign",
     title: "Festive band — cotton backdrop",
-  }),
-  marketingImage({
-    id: "pm-seed-105",
-    placement: MARKETING_PLACEMENTS.HOME_HERO,
-    imageId: "saree-ivory-silk",
-    campaign: "Winter Weddings",
-    section: "Hero",
-    sortOrder: 1,
-    status: MEDIA_STATUS.DRAFT,
-    title: "Home hero — winter weddings (draft)",
   }),
   marketingImage({
     id: "pm-seed-106",

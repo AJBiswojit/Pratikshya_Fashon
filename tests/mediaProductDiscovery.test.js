@@ -221,6 +221,22 @@ test("house artwork is recognised as marketing, not as a product candidate", () 
   assert.equal(identity.isProductCandidate, false);
 });
 
+test("homepage hero plates stay in marketing inventory and never become products", () => {
+  const identity = deriveIdentityFromFilename("hero001.avif");
+  assert.equal(identity.isHomepageHero, true);
+  assert.equal(identity.isMarketing, true);
+  assert.equal(identity.isProductCandidate, false);
+
+  const heroFiles = discovery.inventory.filter((row) => /^hero00[1-5]\.avif$/.test(row.fileName));
+  assert.equal(heroFiles.length, 5);
+  heroFiles.forEach((row) => {
+    assert.equal(row.isMarketing, true);
+    assert.equal(row.isProductCandidate, false);
+    assert.equal(row.existingProductId, null);
+  });
+  assert.ok(discovery.rows.every((row) => !/^hero00[1-5]$/.test(row.groupKey)));
+});
+
 test("the filename-derived report explains every group's identity and action", () => {
   const report = filenameDerivedDiscovery(discovery);
   assert.equal(report.length, discovery.rows.length);

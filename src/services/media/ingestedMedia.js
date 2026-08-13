@@ -26,6 +26,7 @@ const publicUrl = (rel) => {
 };
 
 const titleFrom = (asset) => {
+  if (asset.title) return asset.title;
   if (asset.house) return asset.originalFilename?.replace(/\.[a-z0-9]+$/i, "") || "House plate";
   const parts = [
     asset.gender,
@@ -36,6 +37,7 @@ const titleFrom = (asset) => {
 };
 
 const altFrom = (asset) => {
+  if (asset.alt) return asset.alt;
   const category = asset.subcategoryName || asset.categoryId || "atelier";
   return `PRATIKSHYA FASHON ${String(category).replace(/-/g, " ")}`;
 };
@@ -48,6 +50,7 @@ export const assetToRecord = (asset) => {
   if (!asset?.id) return null;
   const url = publicUrl(asset.optimizedPath || asset.originalPath);
   const productId = asset.productId || null;
+  const placement = asset.placement || null;
   const role = productId
     ? asset.role === PRODUCT_MEDIA_ROLES.COVER
       ? PRODUCT_MEDIA_ROLES.COVER
@@ -79,12 +82,19 @@ export const assetToRecord = (asset) => {
       groupKey ? `group:${groupKey}` : null,
       view ? `view:${view}` : null,
     ].filter(Boolean),
-    scope: productId ? MEDIA_SCOPES.PRODUCT : MEDIA_SCOPES.UNASSIGNED,
+    scope: productId
+      ? MEDIA_SCOPES.PRODUCT
+      : placement
+        ? MEDIA_SCOPES.MARKETING
+        : MEDIA_SCOPES.UNASSIGNED,
     status: asset.broken || asset.duplicateStatus === "DUPLICATE" ? MEDIA_STATUS.DRAFT : MEDIA_STATUS.ACTIVE,
     productId,
     role,
-    sortOrder: Number(asset.sortOrder) || viewScore,
-    placement: null,
+    sortOrder:
+      placement && Number.isFinite(Number(asset.sortOrder))
+        ? Number(asset.sortOrder)
+        : Number(asset.sortOrder) || viewScore,
+    placement,
     campaign: null,
     campaignStart: null,
     campaignEnd: null,

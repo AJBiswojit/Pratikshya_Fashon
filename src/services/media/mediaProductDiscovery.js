@@ -52,6 +52,7 @@ import { getIngestedRecords } from "./ingestedMedia";
 import { buildMediaGroups } from "./mediaGroups";
 import { parseMediaFilename } from "./mediaNaming";
 import { DEFAULT_PRODUCT_ID_PREFIX, PRODUCT_ID_PREFIXES } from "../../config/productIdPrefixes";
+import { MEDIA_SCOPES } from "../../config/mediaTypes";
 import {
   assignReconciliationIds,
   assignedProductMediaMap,
@@ -110,8 +111,12 @@ export const FILENAME_FAMILY_RULES = [
   { pattern: /^kids-/, category: "kidswear", subtype: "Kids", idPrefix: "KID" },
 ];
 
-/** House artwork is marketing plate, never product photography. */
+/** House artwork is a marketing plate, never product photography. */
 export const isHouseFileName = (fileName) => /^house-/i.test(String(fileName || "").trim());
+
+/** Canonical homepage hero files are marketing plates, never products. */
+export const isHomepageHeroFileName = (fileName) =>
+  /^hero00[1-5]\.avif$/i.test(String(fileName || "").trim());
 
 /** The confirmed Kids plates (KID-001 … KID-021) — finalised in Phase 22. */
 export const isKidsFileName = (fileName) => /^kids-\d{3}\./i.test(String(fileName || "").trim());
@@ -134,6 +139,7 @@ export const deriveIdentityFromFilename = (fileName) => {
   const sequenceMatch = key.match(/(\d+)$/);
   const sequence = sequenceMatch ? Number(sequenceMatch[1]) : null;
   const house = isHouseFileName(parsed.fileName);
+  const homepageHero = isHomepageHeroFileName(parsed.fileName);
   const kids = isKidsFileName(parsed.fileName);
 
   return {
@@ -158,9 +164,11 @@ export const deriveIdentityFromFilename = (fileName) => {
         ? `${rule.idPrefix}-${String(sequence).padStart(3, "0")}`
         : null,
     isHouse: house,
+    isHomepageHero: homepageHero,
+    isMarketing: house || homepageHero,
     isKids: kids,
-    /** House plates are not products; everything else is a product candidate. */
-    isProductCandidate: !house,
+    /** House and homepage HERO plates are marketing, never product candidates. */
+    isProductCandidate: !house && !homepageHero,
   };
 };
 
@@ -170,6 +178,18 @@ export const deriveIdentityFromFilename = (fileName) => {
 
 /** The filename a media record is known by, whatever shape it arrives in. */
 const nameOf = (media) => reconciliationFileName(media);
+
+/** Marketing placement records and canonical hero filenames are not products. */
+const isMarketingMedia = (media) =>
+  Boolean(
+    media &&
+      (media.scope === MEDIA_SCOPES.MARKETING ||
+        media.placement ||
+        isHomepageHeroFileName(nameOf(media)))
+  );
+
+const isProductMediaCandidate = (media) =>
+  Boolean(media && !isHouseMedia(media) && !isMarketingMedia(media));
 
 /**
  * Complete inventory of the media library, one row per FILE.
@@ -251,6 +271,10 @@ export const buildLibraryInventory = ({ products = [], diskFiles = null } = {}) 
         source: media?.source ?? (diskSet?.has(fileName) ? "Filesystem only" : "Unknown"),
         usage: media?.usageRoles?.length ? media.usageRoles.join(" · ") : "",
         isHouse: media ? isHouseMedia(media) : Boolean(identity?.isHouse),
+        isMarketing: media ? isMarketingMedia(media) : Boolean(identity?.isMarketing),
+        isProductCandidate: media
+          ? isProductMediaCandidate(media)
+          : Boolean(identity?.isProductCandidate),
         isKids: media ? isKidsMedia(media) : Boolean(identity?.isKids),
         onDisk: diskSet ? diskSet.has(fileName) : null,
         inManifest: Boolean(manifestMedia),
@@ -274,19 +298,22 @@ export const buildLibraryInventory = ({ products = [], diskFiles = null } = {}) 
  * a coverage audit that hides 21 confirmed products cannot prove coverage.
  */
 export const discoveryMediaGroups = ({ diskFiles = null } = {}) => {
-  const register = mediaRepository
+  const allRegistered = mediaRepository
     .getAll()
-    .filter((media) => media.ingested || media.source === "Ingested library")
-    .filter((media) => !isHouseMedia(media));
+    .filter((media) => media.ingested || media.source === "Ingested library");
+  const register = allRegistered.filter(isProductMediaCandidate);
 
-  const seen = new Set(register.map((media) => nameOf(media)));
+  /* `seen` includes every known commercial file, not just products. This is
+     what prevents a registered HOME_HERO plate from re-entering as a
+     filesystem-only product candidate. */
+  const seen = new Set(allRegistered.map((media) => nameOf(media)));
   const extras = [];
 
   /* A manifest asset the register somehow dropped, and a disk file neither
-     knows about, still represent real product media. They are folded in so
-     the group count is a property of the LIBRARY, not of the register. */
+     knows about, still represent real product media. Marketing records remain
+     in inventory but are never folded into product groups. */
   getIngestedRecords()
-    .filter((media) => !isHouseMedia(media))
+    .filter(isProductMediaCandidate)
     .forEach((media) => {
       const fileName = nameOf(media);
       if (fileName && !seen.has(fileName)) {
@@ -297,7 +324,8 @@ export const discoveryMediaGroups = ({ diskFiles = null } = {}) => {
 
   (Array.isArray(diskFiles) ? diskFiles : []).forEach((file) => {
     const fileName = String(file).split("/").pop().toLowerCase();
-    if (!fileName || seen.has(fileName) || isHouseFileName(fileName)) return;
+    const identity = deriveIdentityFromFilename(fileName);
+    if (!fileName || seen.has(fileName) || !identity?.isProductCandidate) return;
     seen.add(fileName);
     extras.push({ id: null, fileName, productId: null, categoryId: null });
   });
@@ -538,8 +566,9 @@ export const getMediaProductDiscovery = ({ products = [], diskFiles = null } = {
     ? inventory.filter((row) => row.onDisk === false).map((row) => row.fileName)
     : [];
 
-  const productFiles = inventory.filter((row) => !row.isHouse);
+  const productFiles = inventory.filter((row) => row.isProductCandidate);
   const houseFiles = inventory.filter((row) => row.isHouse);
+  const marketingFiles = inventory.filter((row) => row.isMarketing);
 
   return {
     inventory,
@@ -554,6 +583,7 @@ export const getMediaProductDiscovery = ({ products = [], diskFiles = null } = {
       libraryFiles: inventory.length,
       productMediaFiles: productFiles.length,
       houseMediaFiles: houseFiles.length,
+      marketingMediaFiles: marketingFiles.length,
       groups: rows.length,
       groupsWithProducts: rows.filter((row) => row.productId).length,
       groupsWithoutProducts: rows.filter((row) => !row.productId).length,
@@ -600,6 +630,7 @@ export default {
   FILENAME_FAMILY_RULES,
   deriveIdentityFromFilename,
   isHouseFileName,
+  isHomepageHeroFileName,
   isKidsFileName,
   buildLibraryInventory,
   discoveryMediaGroups,

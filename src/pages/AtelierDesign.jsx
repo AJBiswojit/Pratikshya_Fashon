@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { MARKETING_PLACEMENTS } from "../config/mediaTypes";
-import { useActivePlacementMedia } from "../hooks/useMedia";
+import { useMarketingMedia } from "../hooks/useMedia";
 import { resolveHeroImageIds } from "../services/media/mediaResolver";
 import HeroCarousel from "../components/storefront/HeroCarousel";
 import SareeEditCarousel from "../components/storefront/SareeEditCarousel";
@@ -18,13 +18,10 @@ import {
 } from "../design-system";
 
 export default function AtelierDesign() {
-  /* Phase 12 seams. Each of these is the *same* frame the page has always
-     had — only the picture inside it can now be replaced from the Admin
-     Portal. With no ACTIVE marketing record the house artwork stands, so
-     the layout, motion and treatment are untouched. The hero carousel
-     honours an ACTIVE HOME_HERO record by letting it stand in for the
-     lead editorial plate. */
-  const heroMedia = useActivePlacementMedia(MARKETING_PLACEMENTS.HOME_HERO);
+  /* The carousel reads the complete HOME_HERO placement through the existing
+     repository hook. The resolver validates the canonical HERO role and owns
+     deterministic slide order; this page never authors an image address. */
+  const heroMedia = useMarketingMedia(MARKETING_PLACEMENTS.HOME_HERO);
 
   /* The hero reserves its five plates first; the editorial, category and sale
      seams below seed their exclusion set from this list so the homepage never
