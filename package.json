@@ -8,6 +8,7 @@
     "build": "vite build",
     "preview": "vite preview",
     "test": "node --import ./scripts/node-loader/register.mjs --test \"tests/*.test.js\"",
+    "qa:render": "node --import ./scripts/node-loader/register-jsx.mjs scripts/qa-render-kids.mjs",
     "audit:homepage": "node --import ./scripts/node-loader/register.mjs scripts/audit-homepage.mjs",
     "audit:product-media": "node --import ./scripts/node-loader/register.mjs scripts/audit-product-media.mjs",
     "audit:media-products": "node --import ./scripts/node-loader/register.mjs scripts/audit-media-products.mjs",

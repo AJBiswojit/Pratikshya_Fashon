@@ -40,6 +40,7 @@ import {
 } from "../src/services/kidsProductIdentity.js";
 import {
   KIDS_ACTIVITY_ACTIONS,
+  ensureKidsIdentitiesConfirmed,
   KIDS_CHECKLIST_ITEMS,
   KIDS_STAGES,
   approveKidsProduct,
@@ -557,6 +558,101 @@ test("the product route stays stable when the name changes", () => {
   assert.equal(after.productId, before.productId);
   assert.notEqual(after.name, before.name);
   cleanupScratch({ ...scratch, product: after });
+});
+
+test("a real KID product walks the whole path: conflict → edit → approve → publish", () => {
+  const ID = "KID-002";
+  const before = catalogRepository.find(ID);
+  assert.equal(kidsStageOf(before), KIDS_STAGES.DRAFT);
+  assert.ok(getKidsPublishBlockers(before).length > 0, "starts blocked");
+
+  /* The prior owner is a real published product. */
+  const priorOwnerId = mediaRepository.getById(before.mediaIds?.[0] ?? "")?.productId
+    ?? catalogRepository.all().find((p) => p.id === "pf-080")?.id;
+
+  /* 1 — the ownership conflict is resolved explicitly. */
+  const decided = reconcileKidsConflict(ID, KIDS_CONFLICT_ACTIONS.TRANSFER, ADMIN);
+  assert.ok(decided.ok, decided.error);
+  assert.equal(mediaByFile("kids-002.webp").productId, ID, "the plate now belongs to KID-002");
+
+  /* An emptied prior owner is archived, never left live without an image. */
+  if (priorOwnerId && priorOwnerId !== ID) {
+    const prior = catalogRepository.find(priorOwnerId);
+    if (prior && !(prior.mediaIds ?? []).length) {
+      assert.notEqual(prior.status, PRODUCT_STATUS.PUBLISHED, "a media-less product must not stay live");
+    }
+  }
+
+  /* 2 — the remaining information is supplied. */
+  catalogRepository.updateDraft(
+    ID,
+    { description: "A soft cotton casual set for everyday wear.", stock: 10 },
+    ADMIN
+  );
+
+  /* 3 — the identity decision is the system's job, not a manual chore: it
+     must never be the thing standing between an admin and publishing. */
+  const blockers = getKidsPublishBlockers(catalogRepository.find(ID));
+  assert.equal(
+    blockers.some((reason) => /Confirmed product identity missing/.test(reason)),
+    false,
+    "the SEPARATE_PRODUCT decision self-heals; it must not block an admin"
+  );
+  assert.deepEqual(blockers, [], "everything required is now satisfied");
+
+  /* 4 — approval is still mandatory before publishing. */
+  const early = publishKidsProduct(ID, ADMIN);
+  assert.equal(early.ok, false);
+  assert.ok(early.errors.some((reason) => /Admin review incomplete/.test(reason)));
+
+  /* 5 — the full lifecycle. */
+  assignProductToEmployee(ID, MANAGER_ID, ADMIN);
+  submitProductForReview(ID, ADMIN);
+  assert.ok(approveKidsProduct(ID, ADMIN).ok);
+  const published = publishKidsProduct(ID, ADMIN);
+  assert.ok(published.ok, (published.errors ?? []).join("; "));
+
+  const live = getLiveStorefrontProducts().find((product) => product.id === ID);
+  assert.ok(live, "the product is now on the storefront");
+  assert.equal(live.slug, "kid-002", "routed on the permanent Product ID");
+
+  /* 6 — the other twenty are untouched by one product's publication. */
+  const others = getKidsFinalizationRows().filter((row) => row.productId !== ID);
+  assert.equal(others.length, 20);
+  assert.equal(
+    others.every((row) => row.stage !== KIDS_STAGES.PUBLISHED),
+    true,
+    "publishing one Kids product must never publish another"
+  );
+
+  /* Restore, so ordering between tests cannot matter. */
+  catalogRepository.updateProduct(ID, { status: PRODUCT_STATUS.DRAFT }, ADMIN);
+});
+
+test("the confirmed identity decision self-heals after the register is reset", async () => {
+  const { resetGroups } = await import("../src/services/media/productMediaGroups.js");
+
+  /* Simulate the register being wiped — a reset, a cleared store, a browser
+     with no history. The 21 identities are a house decision, not user data:
+     the system must put them back rather than block on their absence. */
+  resetGroups();
+  assert.equal(kidsIdentityConfirmed("KID-003"), false, "precondition: the decision is gone");
+
+  const healed = ensureKidsIdentitiesConfirmed(ADMIN);
+  assert.equal(healed, true, "the decision is re-recorded");
+  KIDS_PRODUCT_IDS.forEach((id) => {
+    assert.equal(kidsIdentityConfirmed(id), true, `${id} is confirmed again`);
+  });
+
+  /* And it must never be the reason a publish is refused. */
+  resetGroups();
+  const blockers = getKidsPublishBlockers(catalogRepository.find("KID-003"));
+  assert.equal(
+    blockers.some((reason) => /Confirmed product identity missing/.test(reason)),
+    false,
+    "reading the blockers heals the decision instead of reporting it"
+  );
+  assert.equal(kidsIdentityConfirmed("KID-003"), true);
 });
 
 /* ------------------------------------------------------------------ */

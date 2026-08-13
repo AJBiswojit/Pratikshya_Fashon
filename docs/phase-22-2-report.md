@@ -128,14 +128,35 @@ assignment, media) are ignored on save.
 | Check | Result |
 | --- | --- |
 | `npm install` | clean |
-| `npm test` | **242 / 242 pass** (was 219; +23 new) |
+| `npm test` | **244 / 244 pass** (was 219; +25 new) |
 | `npm run build` | ✓ built |
+| `npm run qa:render` | **35 / 35 render checks pass** |
 | `git diff --check` | clean |
 | `npm run audit:kids-products` | **PASS** |
 | `npm run audit:media-products` | PASS |
 | `npm run audit:product-media` | PASS |
-| `npm run audit:homepage` | PASS |
-| `/admin/products/review`, `/employee/products/review`, `/category/kids` | 200, modules compile |
+| `npm run audit:homepage` | exit 0 |
+
+### Render QA
+
+No headless browser is available in this environment, and a route returning
+200 only proves the SPA shell loaded. `npm run qa:render`
+(`scripts/qa-render-kids.mjs`) therefore server-renders the three surfaces and
+asserts on the real output, so a broken import, a bad prop or a crashing
+selector fails the build rather than the user:
+
+- **Admin** — 21 Product IDs and 21 filenames present, 21 distinct images with
+  none reused, search, all filters, the checklist, all four conflict actions,
+  the blocker list, the "nothing is transferred silently" warning, hover and
+  ownership lines, no leaked `undefined` / `[object Object]`.
+- **Employee** — renders authenticated with assigned products, mandatory image,
+  filename, price and inventory fields, Save Draft and Submit for Review.
+- **Storefront** — 21 cards, one image each, none reused, zero hover swaps, no
+  `KID-xxx` draft leaked.
+
+A `scripts/node-loader/jsx-resolve.mjs` hook (QA only, never loaded by Vite or
+production) adds JSX support to the existing test loader via Vite's own
+`transformWithEsbuild`.
 
 ### Audit figures
 
@@ -151,6 +172,29 @@ Invalid media references:        0
 Hover replacements:              0
 Potential same-product groups:   0
 ```
+
+### A bug the render pass could not catch
+
+Driving `KID-001` through the whole path end to end — resolve conflict, edit,
+approve, publish — surfaced a defect that all 242 unit tests and all 35 render
+checks had missed. The `SEPARATE_PRODUCT` bootstrap only ran when
+`getKidsFinalizationRows()` was read, so an admin publishing through any other
+entry point was blocked by:
+
+> Confirmed product identity missing — record the SEPARATE_PRODUCT decision for
+> KID-001 first.
+
+The system was demanding the admin perform bookkeeping the system itself owns,
+with no UI to do it. `ensureKidsIdentitiesConfirmed` now self-heals: it is
+called wherever identity is asserted, and its once-per-session latch is trusted
+only while the register still agrees, so a reset or a failed write re-records
+the decision instead of blocking a publish. Covered by two new tests.
+
+Verified end to end afterwards: blockers fall 8 → 2 → 0 as real work is done,
+publish-before-approval is refused, the published product routes on
+`kid-001` (not the colliding name slug), the emptied prior owner `pf-079` is
+archived rather than left live without an image, the other 20 stay DRAFT, and
+nine distinct actions are written to the activity diary.
 
 ### Expected open items
 
@@ -172,10 +216,12 @@ unchanged.
 **New** — `src/services/kidsProductIdentity.js`,
 `src/services/kidsProductFinalization.js`,
 `src/components/admin/AdminKidsFinalizationPanel.jsx`,
-`tests/kidsFinalization.test.js`, this report.
+`tests/kidsFinalization.test.js`, `scripts/qa-render-kids.mjs`,
+`scripts/node-loader/{jsx-resolve,register-jsx}.mjs`, this report.
 
 **Extended** — `src/services/productWorkflow.js`,
 `src/services/productDraftMigration.js`, `src/services/productReviewFlags.js`,
 `src/pages/admin/AdminProductReview.jsx`,
 `src/pages/employee/EmployeeProductReview.jsx`,
-`scripts/audit-kids-products.mjs`, `tests/kidsReconciliation.test.js`.
+`scripts/audit-kids-products.mjs`, `tests/kidsReconciliation.test.js`,
+`package.json` (adds `qa:render`).

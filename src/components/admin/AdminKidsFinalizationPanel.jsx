@@ -258,6 +258,7 @@ export default function AdminKidsFinalizationPanel({ actor, onNotice, focusId = 
           <Search size={13} className="text-taupe" aria-hidden="true" />
           <span className="sr-only">Search Kids products</span>
           <input
+            type="search"
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             placeholder="Search by Product ID, media filename, name, subcategory or employee…"

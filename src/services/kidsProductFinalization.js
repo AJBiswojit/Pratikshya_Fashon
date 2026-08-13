@@ -185,8 +185,28 @@ export const confirmKidsProductIdentities = (actor = null) => {
  */
 let identitiesEnsured = false;
 
-export const ensureKidsIdentitiesConfirmed = (actor = null) => {
-  if (identitiesEnsured) return false;
+/**
+ * Records the SEPARATE_PRODUCT decision for all 21 confirmed identities if it
+ * is not already on file.
+ *
+ * The decision is a system-owned invariant — it is what the house has already
+ * confirmed, not a task an admin must remember to perform — so this runs
+ * lazily wherever identity is asserted. The `identitiesEnsured` latch keeps
+ * the common case to a single pass per session, but it is only trusted while
+ * the register still agrees: if a decision goes missing (a reset, a cleared
+ * store, a failed write) the latch is dropped and the decision re-recorded,
+ * so a publish can never be blocked by bookkeeping the system owns.
+ *
+ * @param {object|string|null} actor
+ * @param {{ force?: boolean }} [options]
+ * @returns {boolean} whether anything new was confirmed
+ */
+export const ensureKidsIdentitiesConfirmed = (actor = null, { force = false } = {}) => {
+  if (identitiesEnsured && !force) {
+    const intact = KIDS_PRODUCT_IDS.every((productId) => kidsIdentityConfirmed(productId));
+    if (intact) return false;
+    identitiesEnsured = false;
+  }
   identitiesEnsured = true;
   const result = confirmKidsProductIdentities(actor ?? "Phase 22.2 confirmation");
   return result.confirmed.some((entry) => !entry.alreadyConfirmed);
@@ -391,9 +411,15 @@ export const getKidsPublishBlockers = (product) => {
     );
   }
   if (confirmed && !kidsIdentityConfirmed(product.id)) {
-    reasons.push(
-      `Confirmed product identity missing — record the ${KIDS_GROUP_DECISION} decision for ${product.id} first.`
-    );
+    /* The SEPARATE_PRODUCT decision for the 21 is a system-owned invariant,
+       not something an admin has to discover and perform by hand. Record it
+       now — then only a genuine failure to persist it can block publishing. */
+    ensureKidsIdentitiesConfirmed();
+    if (!kidsIdentityConfirmed(product.id)) {
+      reasons.push(
+        `Confirmed product identity missing — record the ${KIDS_GROUP_DECISION} decision for ${product.id} first.`
+      );
+    }
   }
   const expected = kidsMediaFileForProductId(product.id);
   const set = getProductMediaSet(product);
