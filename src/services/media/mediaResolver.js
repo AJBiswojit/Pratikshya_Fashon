@@ -986,6 +986,31 @@ export const resolveSaleBackdrop = (festiveMedia = null, usedIds = null) => {
 };
 
 /**
+ * The Festive Edit campaign's editorial plate.
+ *
+ * The premium festive band leads with a real library editorial — festive
+ * lehenga photography — resolved through the same deterministic `selectMedia`
+ * rules as the rest of the homepage (featured → preferred role → quality →
+ * stable id order; never random). When no festive library photography can
+ * stand, it falls back through the existing sale/offer chain so the section
+ * can never render empty. The selected image is always semantically festive
+ * (lehenga / saree / bridal), never a texture, kids, jewellery or menswear
+ * plate.
+ */
+export const resolveFestiveCampaignImage = (festiveMedia = null, usedIds = null) => {
+  const selected = selectMedia({
+    roles: [USAGE_ROLES.SALE, USAGE_ROLES.BANNER, USAGE_ROLES.EDITORIAL],
+    categoryId: "lehengas",
+    preferPortrait: true,
+    usedIds,
+    limit: 1,
+    excludeHouse: true,
+  })[0];
+  if (selected) return withReason(asSource(selected, "lehengas"), FALLBACK_REASONS.DIRECT);
+  return resolveSaleBackdrop(festiveMedia, usedIds);
+};
+
+/**
  * Product cover for any customer surface.
  *
  * Priority (Phase 21.8): the product's own library COVER/PRIMARY media,
@@ -1055,6 +1080,7 @@ export default {
   resolveHeroImageIds,
   resolveEditorialFrame,
   resolveSaleBackdrop,
+  resolveFestiveCampaignImage,
   resolveProductCover,
   buildProductLibraryIndex,
   productMediaTier,
