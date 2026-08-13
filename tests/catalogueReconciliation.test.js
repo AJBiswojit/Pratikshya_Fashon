@@ -21,21 +21,23 @@ import { getProductMediaSet } from "../src/services/media/productMediaSet.js";
 import { getLiveStorefrontProducts } from "../src/data/products/index.js";
 import {
   assignReconciliationIds,
+  assignedProductMediaMap,
   ensureCatalogueReconciliation,
   getCatalogueReconciliationSummary,
   reconciliationDraftRecords,
-  reconciliationMediaGroups,
+  staticUncataloguedGroups,
   uncataloguedGroups,
 } from "../src/services/catalogueReconciliation.js";
 
-test("every uncatalogued product-media group becomes one draft record", () => {
-  const groups = uncataloguedGroups();
-  const drafts = reconciliationDraftRecords();
-  assert.ok(groups.length > 0, "there must be uncatalogued media groups to reconcile");
+test("every uncatalogued group is assigned to a published product or drafted", () => {
+  const products = catalogRepository.all();
+  const drafts = reconciliationDraftRecords(products);
+  const assigned = assignedProductMediaMap(products);
+  assert.ok(staticUncataloguedGroups().length > 0, "there must be uncatalogued media to reconcile");
   assert.equal(
-    drafts.length,
-    groups.length,
-    "one draft record per uncatalogued media group — never more, never fewer"
+    assigned.size + drafts.length,
+    staticUncataloguedGroups().length,
+    "assigned + drafted must account for every uncatalogued media group"
   );
 });
 
@@ -98,7 +100,7 @@ test("drafts never reach the storefront until published", () => {
 });
 
 test("safe names and review flags keep new drafts from publishing", () => {
-  const drafts = reconciliationDraftRecords();
+  const drafts = reconciliationDraftRecords(catalogRepository.all());
   drafts.forEach((draft) => {
     const product = catalogRepository.find(draft.id);
     assert.ok(product);
@@ -134,15 +136,14 @@ test("the reconciliation sync is idempotent and additive", () => {
 });
 
 test("the summary accounts for every media group", () => {
-  const summary = getCatalogueReconciliationSummary();
-  const groups = reconciliationMediaGroups();
-  assert.equal(summary.totalMediaGroups, groups.length);
+  const products = catalogRepository.all();
+  const summary = getCatalogueReconciliationSummary(products);
+  assert.equal(summary.totalMediaGroups, staticUncataloguedGroups().length + summary.cataloguedGroups);
   assert.equal(
-    summary.cataloguedGroups + summary.uncataloguedGroups,
-    groups.length,
-    "catalogued + uncatalogued partition the media groups"
+    summary.cataloguedGroups + summary.assignedToPublished + summary.draftRecords,
+    summary.totalMediaGroups,
+    "catalogued + assigned + drafted partition the media groups"
   );
-  assert.equal(summary.uncataloguedGroups, 0 + uncataloguedGroups().length);
   assert.equal(summary.newProductCandidates, summary.draftRecords);
 });
 

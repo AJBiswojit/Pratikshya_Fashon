@@ -494,10 +494,17 @@ export const getProductMediaSet = (productIdOrProduct, productHint = null) => {
     });
   });
 
-  authoredOwnedPlates(product).forEach((plate) => {
-    if (owned.some((item) => sameMedia(item, plate))) return;
-    owned.push(plate);
-  });
+  /* Phase 23.2 — authored plates are a FALLBACK, never a gallery peer.
+     A shared house / category / campaign plate must not enter a product's
+     gallery or hover when the product already owns canonical library media.
+     Only when the register has no owned media for this product do the
+     authored plates stand in (the legacy catalogue fallback). */
+  if (owned.length === 0) {
+    authoredOwnedPlates(product).forEach((plate) => {
+      if (owned.some((item) => sameMedia(item, plate))) return;
+      owned.push(plate);
+    });
+  }
 
   /* Phase 22 — the record's own media claims (mediaIds / primaryMediaId /
      galleryMediaIds). Consistent claims join the set; contested claims are

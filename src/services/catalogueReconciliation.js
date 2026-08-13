@@ -32,13 +32,19 @@
  */
 
 import mediaRepository from "./media/mediaRepository";
+import { getIngestedRecords } from "./media/ingestedMedia";
 import { buildMediaGroups } from "./media/mediaGroups";
 import { parseMediaFilename } from "./media/mediaNaming";
-import { MEDIA_SCOPES, MAPPING_STATUS, DUPLICATE_STATUS } from "../config/mediaTypes";
+import {
+  MEDIA_SCOPES,
+  MAPPING_STATUS,
+  DUPLICATE_STATUS,
+  PRODUCT_MEDIA_ROLES,
+} from "../config/mediaTypes";
 import { DEFAULT_PRODUCT_ID_PREFIX, PRODUCT_ID_PREFIXES } from "../config/productIdPrefixes";
 import { REVIEW_FLAGS, isPlaceholderProductName } from "./productReviewFlags";
 
-export const CATALOGUE_RECONCILIATION_VERSION = 1;
+export const CATALOGUE_RECONCILIATION_VERSION = 2;
 export const CATALOGUE_RECONCILIATION_KEY = "pratikshya_catalogue_reconciliation_version";
 export const CATALOGUE_RECONCILIATED_AT = "2026-08-13T00:00:00.000Z";
 export const CATALOGUE_RECONCILIATION_AUTHOR = "Catalogue reconciliation";
@@ -178,6 +184,132 @@ export const uncataloguedGroups = (groups = null) =>
   );
 
 /* ------------------------------------------------------------------ */
+/* Stable (manifest-derived) groups                                    */
+/* ------------------------------------------------------------------ */
+
+/**
+ * The ingestion manifest's productId mapping is STATIC — it never changes at
+ * runtime. Phase 23.2 assigns media to published products through the live
+ * register, which would otherwise shift `uncataloguedGroups()` and renumber
+ * Product IDs. These stable helpers derive groups from the manifest so the
+ * Product IDs — and the assignment map — stay fixed forever.
+ */
+export const staticReconciliationGroups = () => {
+  const photography = getIngestedRecords()
+    .filter((media) => !isHouseMedia(media))
+    .filter((media) => !isKidsMedia(media));
+  return buildMediaGroups(
+    photography.map((media) => ({ ...media, fileName: reconciliationFileName(media) }))
+  );
+};
+
+/** Stable uncatalogued groups — manifest productId is null (always 61). */
+export const staticUncataloguedGroups = () =>
+  staticReconciliationGroups().filter((group) => !(group.files || []).some((file) => file.productId));
+
+/** Does the static manifest give this product its own photography? */
+export const hasStaticMedia = (productId) =>
+  getIngestedRecords().some(
+    (media) =>
+      !isHouseMedia(media) &&
+      !isKidsMedia(media) &&
+      String(media.productId) === String(productId)
+  );
+
+/* ------------------------------------------------------------------ */
+/* Phase 23.2 — canonical media → published product assignment         */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Deterministically maps uncatalogued library media groups to EXISTING
+ * published products that have no register-owned media, so the storefront
+ * renders the canonical product photography instead of the legacy shared
+ * house / category plates those products were authored with.
+ *
+ * The mapping is the same deterministic-by-filename convention the Kids
+ * reconciliation already uses — never visual similarity, never a guess of
+ * physical identity beyond "same category, same subcategory, ordered".
+ *
+ *   · bangles   — published bangles ↔ jewellery-bangle-* (by id order)
+ *   · jewellery — published Earrings ↔ jewellery-earring-* (subcategory match)
+ *   · innerwear — published innerwear ↔ women-innerwear-* (by id order)
+ *
+ * Groups left over (more library photos than published products, or a
+ * subcategory with no published match) remain NEW product drafts.
+ *
+ * The result is a Map<groupKey, productId>. It is read-only: ownership is
+ * applied by `syncCanonicalMediaAssignment` through the media repository.
+ */
+export const assignedProductMediaMap = (products = []) => {
+  const assignment = new Map();
+  const published = (Array.isArray(products) ? products : []).filter(
+    (product) => product && product.status === "PUBLISHED"
+  );
+  if (!published.length) return assignment;
+
+  const groups = staticUncataloguedGroups();
+  const byCategory = new Map();
+  groups.forEach((group) => {
+    const { category } = categoryForGroup(group);
+    if (!byCategory.has(category)) byCategory.set(category, []);
+    byCategory.get(category).push(group);
+  });
+
+  const pair = (categoryId, { subcategory = null } = {}) => {
+    const products = published
+      .filter((product) => product.category === categoryId)
+      .filter((product) => !hasStaticMedia(product.id))
+      .filter((product) => (subcategory ? product.subcategory === subcategory : true))
+      .sort((a, b) => String(a.id).localeCompare(String(b.id)));
+
+    const categoryGroups = (byCategory.get(categoryId) || [])
+      .filter((group) => (subcategory ? subcategoryForGroup(group) === subcategory : true))
+      .sort((a, b) => a.groupKey.localeCompare(b.groupKey));
+
+    const count = Math.min(products.length, categoryGroups.length);
+    for (let index = 0; index < count; index += 1) {
+      assignment.set(categoryGroups[index].groupKey, products[index].id);
+    }
+  };
+
+  pair("bangles");
+  pair("jewellery", { subcategory: "Earrings" });
+  pair("innerwear");
+
+  return assignment;
+};
+
+/**
+ * Applies the canonical-media assignment to the media register, idempotently.
+ * Each mapped group's files become PRODUCT media owned by the target product
+ * (first view COVER, the rest GALLERY). Existing ownership is never stolen:
+ * a file already owned by a different product is left alone.
+ */
+export const syncCanonicalMediaAssignment = (products = []) => {
+  const assignment = assignedProductMediaMap(products);
+  if (!assignment.size) return 0;
+
+  const groups = new Map(staticUncataloguedGroups().map((group) => [group.groupKey, group]));
+  let changed = 0;
+
+  assignment.forEach((productId, groupKey) => {
+    const group = groups.get(groupKey);
+    if (!group) return;
+    (group.files || []).forEach((file, index) => {
+      const media = mediaRepository.getById(file.id);
+      if (!media) return;
+      if (media.productId && String(media.productId) === String(productId)) return;
+      if (media.productId) return; // owned elsewhere — never reassign silently
+      const role = index === 0 ? PRODUCT_MEDIA_ROLES.COVER : PRODUCT_MEDIA_ROLES.GALLERY;
+      const assigned = mediaRepository.assignToProduct(file.id, productId, role);
+      if (assigned) changed += 1;
+    });
+  });
+
+  return changed;
+};
+
+/* ------------------------------------------------------------------ */
 /* Deterministic Product IDs                                           */
 /* ------------------------------------------------------------------ */
 
@@ -285,11 +417,21 @@ export const draftRecordForGroup = (group, id) => {
   };
 };
 
-/** All reconciliation draft records, deterministically. */
-export const reconciliationDraftRecords = () => {
-  const groups = uncataloguedGroups();
+/**
+ * All reconciliation draft records, deterministically. Groups whose media is
+ * assigned to an existing published product (Phase 23.2) are NOT drafted —
+ * they are already represented by that published product.
+ */
+export const reconciliationDraftRecords = (products = []) => {
+  const assigned = assignedProductMediaMap(products);
+  /* IDs are assigned over the FULL static uncatalogued group set (always 61),
+     so a group's Product ID never renumbers when another group is assigned to
+     a published product — bangle-009 stays BAN-009, innerwear-004 stays
+     INN-004, earring-003 stays JEW-008, forever. */
+  const groups = staticUncataloguedGroups();
   const ids = assignReconciliationIds(groups);
   return groups
+    .filter((group) => !assigned.has(group.groupKey))
     .map((group) => draftRecordForGroup(group, ids.get(group.groupKey)))
     .sort((a, b) => String(a.id).localeCompare(String(b.id)));
 };
@@ -364,7 +506,8 @@ const upgradeReconciliationDraft = (current, template) => {
  */
 export const ensureCatalogueReconciliation = (items) => {
   const register = Array.isArray(items) ? items : [];
-  const templates = reconciliationDraftRecords();
+  const assigned = assignedProductMediaMap(items);
+  const templates = reconciliationDraftRecords(items);
   const byId = new Map(templates.map((template) => [template.id, template]));
   const present = new Set();
 
@@ -379,17 +522,39 @@ export const ensureCatalogueReconciliation = (items) => {
   const missing = templates.filter((template) => !present.has(template.id));
   const merged = missing.length ? [...upgraded, ...missing] : upgraded;
 
+  /* Phase 23.2 — a draft whose media group is now assigned to a published
+     product is redundant: the published product owns that media, so the
+     draft is retired (ARCHIVED) rather than left to claim another product's
+     media forever. */
+  const reconciled = merged.map((row) => {
+    if (
+      row &&
+      typeof row === "object" &&
+      row.sourceGroupKey &&
+      assigned.has(row.sourceGroupKey) &&
+      row.status !== "ARCHIVED" &&
+      row.status !== "PUBLISHED"
+    ) {
+      return {
+        ...row,
+        status: "ARCHIVED",
+        reviewFlags: [...new Set([...(row.reviewFlags ?? []), REVIEW_FLAGS.MEDIA_OWNERSHIP_MOVED])],
+      };
+    }
+    return row;
+  });
+
   /* A reconciliation draft never shares a route with another record. Its
      stable slug is its Product ID. */
   const claimedByOthers = new Set(
-    merged
+    reconciled
       .filter((row) => !byId.has(String(row?.id ?? "")))
       .map((row) => String(row?.slug ?? ""))
       .filter(Boolean)
   );
   const seenSlugs = new Set();
 
-  return merged.map((row) => {
+  return reconciled.map((row) => {
     const id = String(row?.id ?? "");
     if (!byId.has(id)) return row;
     const slug = String(row?.slug ?? "");
@@ -436,11 +601,11 @@ export const syncCatalogueReconciliation = (items) => {
 /* ------------------------------------------------------------------ */
 
 /** The reconciliation snapshot the audits and reports read. */
-export const getCatalogueReconciliationSummary = () => {
-  const groups = reconciliationMediaGroups();
-  const uncatalogued = uncataloguedGroups(groups);
-  const catalogued = cataloguedGroups(groups);
-  const drafts = reconciliationDraftRecords();
+export const getCatalogueReconciliationSummary = (products = []) => {
+  const groups = staticReconciliationGroups();
+  const uncatalogued = staticUncataloguedGroups();
+  const assigned = assignedProductMediaMap(products);
+  const drafts = reconciliationDraftRecords(products);
 
   const byCategory = new Map();
   groups.forEach((group) => {
@@ -450,7 +615,8 @@ export const getCatalogueReconciliationSummary = () => {
         category,
         mediaGroups: 0,
         cataloguedGroups: 0,
-        uncataloguedGroups: 0,
+        assignedToPublished: 0,
+        newDrafts: 0,
         needsReviewGroups: 0,
       });
     }
@@ -458,15 +624,17 @@ export const getCatalogueReconciliationSummary = () => {
     entry.mediaGroups += 1;
     const hasProduct = (group.files || []).some((file) => file.productId);
     if (hasProduct) entry.cataloguedGroups += 1;
-    else entry.uncataloguedGroups += 1;
+    else if (assigned.has(group.groupKey)) entry.assignedToPublished += 1;
+    else entry.newDrafts += 1;
     if (groupNeedsReview(group)) entry.needsReviewGroups += 1;
   });
 
   return {
     totalMediaGroups: groups.length,
-    cataloguedGroups: catalogued.length,
+    cataloguedGroups: groups.length - uncatalogued.length,
     uncataloguedGroups: uncatalogued.length,
-    newProductCandidates: uncatalogued.length,
+    assignedToPublished: assigned.size,
+    newProductCandidates: uncatalogued.length - assigned.size,
     draftRecords: drafts.length,
     needsReviewGroups: groups.filter(groupNeedsReview).length,
     byCategory: [...byCategory.values()].sort((a, b) => a.category.localeCompare(b.category)),
@@ -484,8 +652,13 @@ export default {
   collectionForGroup,
   groupNeedsReview,
   reconciliationMediaGroups,
+  staticReconciliationGroups,
+  staticUncataloguedGroups,
+  hasStaticMedia,
   cataloguedGroups,
   uncataloguedGroups,
+  assignedProductMediaMap,
+  syncCanonicalMediaAssignment,
   assignReconciliationIds,
   reconciliationDraftName,
   draftRecordForGroup,

@@ -54,7 +54,7 @@ const nonProductMedia = media.filter(
 );
 
 const groups = reconciliationMediaGroups();
-const summary = getCatalogueReconciliationSummary();
+const summary = getCatalogueReconciliationSummary(products);
 
 const productById = new Map(products.map((product) => [String(product.id), product]));
 
@@ -95,33 +95,18 @@ const missingGroups = uncataloguedGroups().filter(
     )
 );
 
-const byCategory = new Map();
-groups.forEach((group) => {
-  const { category } = categoryForGroup(group);
-  if (!byCategory.has(category)) {
-    byCategory.set(category, {
-      category,
-      mediaGroups: 0,
-      cataloguedGroups: 0,
-      newCandidates: 0,
-      needsReview: 0,
-      missingGroups: 0,
-    });
-  }
-  const entry = byCategory.get(category);
-  entry.mediaGroups += 1;
-  const hasProduct = (group.files ?? []).some((file) => file.productId);
-  if (hasProduct) entry.cataloguedGroups += 1;
-  else entry.newCandidates += 1;
-  if (groupNeedsReview(group)) entry.needsReview += 1;
-});
+/* Per-category figures come from the stable reconciliation summary, plus the
+   live "missing product" detection below. */
+const missingByCategory = new Map();
 missingGroups.forEach((group) => {
   const { category } = categoryForGroup(group);
-  const entry = byCategory.get(category);
-  if (entry) entry.missingGroups += 1;
+  missingByCategory.set(category, (missingByCategory.get(category) ?? 0) + 1);
 });
 
-const categoryRows = [...byCategory.values()].sort((a, b) => a.category.localeCompare(b.category));
+const categoryRows = summary.byCategory.map((row) => ({
+  ...row,
+  missingGroups: missingByCategory.get(row.category) ?? 0,
+}));
 
 /* ------------------------------------------------------------------ */
 /* Report                                                              */
@@ -135,13 +120,15 @@ line(`TOTAL MEDIA                ${media.length}`);
 line(`PRODUCT MEDIA              ${productPhotography.length}`);
 line(`NON-PRODUCT MEDIA          ${nonProductMedia.length}`);
 line(`MEDIA GROUPS               ${groups.length}`);
-line(`  · catalogued             ${summary.cataloguedGroups}`);
+line(`  · catalogued (manifest)  ${summary.cataloguedGroups}`);
+line(`  · assigned to published  ${summary.assignedToPublished}`);
 line(`  · uncatalogued           ${summary.uncataloguedGroups}`);
 line();
 
 line("# PRODUCTS");
 line();
 line(`EXISTING PRODUCTS          ${products.length}`);
+line(`ASSIGNED TO PUBLISHED      ${summary.assignedToPublished} media groups`);
 line(`NEW PRODUCT CANDIDATES     ${summary.newProductCandidates}`);
 line(`NEEDS REVIEW (groups)      ${summary.needsReviewGroups}`);
 line(`DUPLICATES                 ${exactDuplicates.length} exact, ${possibleDuplicates.length} possible`);
@@ -158,8 +145,9 @@ line();
 line(
   pad("CATEGORY", 18) +
     pad("MEDIA GROUPS", 14) +
-    pad("EXISTING", 10) +
-    pad("NEW", 10) +
+    pad("CATALOGUED", 11) +
+    pad("ASSIGNED", 10) +
+    pad("NEW", 9) +
     pad("NEEDS REVIEW", 14) +
     pad("PUBLISHED", 11) +
     pad("MISSING", 9)
@@ -171,9 +159,10 @@ categoryRows.forEach((row) => {
   line(
     pad(row.category || "(unclassified)", 18) +
       pad(row.mediaGroups, 14) +
-      pad(row.cataloguedGroups, 10) +
-      pad(row.newCandidates, 10) +
-      pad(row.needsReview, 14) +
+      pad(row.cataloguedGroups, 11) +
+      pad(row.assignedToPublished, 10) +
+      pad(row.newDrafts, 9) +
+      pad(row.needsReviewGroups, 14) +
       pad(published, 11) +
       pad(row.missingGroups, 9)
   );
