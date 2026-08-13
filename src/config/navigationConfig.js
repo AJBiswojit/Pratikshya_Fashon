@@ -151,33 +151,31 @@ export const primaryNavigation = [
     id: "kids",
     label: "Kids",
     to: "/kids",
-    eyebrow: "Little Celebrations",
+    eyebrow: "Little Heirlooms",
     description:
-      "Girls wear, boys wear, ethnic sets and party silhouettes with a gentle sense of occasion.",
+      "Girls' dresses, boys' tee-and-shorts sets and everyday coordinates for the youngest guests.",
     columns: [
       {
         title: "Girls",
         links: [
-          { label: "Ethnic Sets", to: "/kids/girls-ethnic-sets" },
-          { label: "Lehenga Sets", to: "/kids/girls-lehenga-sets" },
-          { label: "Festive Frocks", to: "/kids/girls-festive-frocks" },
+          { label: "Dresses", to: "/kids/girls-dresses" },
+          { label: "Casual Sets", to: "/kids/girls-casual-sets" },
         ],
       },
       {
         title: "Boys",
         links: [
-          { label: "Kurta Sets", to: "/kids/boys-kurta-sets" },
-          { label: "Sherwani", to: "/kids/boys-sherwani" },
-          { label: "Festive Shirts", to: "/kids/boys-festive-shirts" },
+          { label: "T-Shirt & Shorts", to: "/kids/boys-tshirt-shorts" },
+          { label: "Casual Sets", to: "/kids/boys-casual-sets" },
         ],
       },
     ],
     feature: {
       image: "kids-festive-wear",
-      eyebrow: "Festive Little Ones",
+      eyebrow: "Little Heirlooms",
       title: "The Kids Edit",
-      caption: "Festive pieces for the youngest guests.",
-      to: "/kids/girls-ethnic-sets",
+      caption: "Everyday coordinates for the youngest guests.",
+      to: "/kids",
     },
   },
   {

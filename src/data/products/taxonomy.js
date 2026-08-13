@@ -46,7 +46,7 @@ export const materials = [
 
 export const occasions = [
   "Bridal", "Wedding", "Reception", "Sangeet", "Mehendi", "Haldi", "Festive",
-  "Puja", "Party", "Everyday", "Office", "Gifting",
+  "Puja", "Party", "Everyday", "Play", "Office", "Gifting",
 ];
 
 export const collections = activeCollections().map((collection) => ({
@@ -66,6 +66,10 @@ export const colorSwatches = {
   Emerald: "#1f5741", Teal: "#1f5560", Navy: "#20304d", Indigo: "#33406b",
   Blush: "#e8d5c4", Rose: "#b76e79", Black: "#1c1a18", Silver: "#b8bcc0",
   Beige: "#d8c9b4", Sage: "#8a9a80",
+  /* Kidswear remap — the colours the 21 library plates actually carry. */
+  Cream: "#f3ead9", Tan: "#c9a87c", Brown: "#7d5a38", Yellow: "#dfb93e",
+  Blue: "#3b6ea5", White: "#f6f4ef", "Sky Blue": "#a9cce0", Olive: "#7a7c4c",
+  Charcoal: "#3c4043", Grey: "#9b9ea3", Terracotta: "#c07a54", Peach: "#e8b28c",
 };
 
 export const colors = Object.keys(colorSwatches);
@@ -201,12 +205,10 @@ export const navigationScopes = {
   "/men/sherwani": { filters: { category: "menswear", subcategory: "Sherwani" } },
   "/men/wedding-kurta": { filters: { category: "menswear", occasion: "Wedding" } },
   "/kids": { filters: { gender: "Kids" } },
-  "/kids/girls-ethnic-sets": { filters: { category: "kidswear", subcategory: "Girls Ethnic Set" } },
-  "/kids/girls-lehenga-sets": { filters: { category: "kidswear", subcategory: "Girls Lehenga Set" } },
-  "/kids/girls-festive-frocks": { filters: { category: "kidswear", subcategory: "Girls Festive Frock" } },
-  "/kids/boys-kurta-sets": { filters: { category: "kidswear", subcategory: "Boys Kurta Set" } },
-  "/kids/boys-sherwani": { filters: { category: "kidswear", subcategory: "Boys Sherwani" } },
-  "/kids/boys-festive-shirts": { filters: { category: "kidswear", subcategory: "Boys Festive Shirt" } },
+  "/kids/girls-dresses": { filters: { category: "kidswear", subcategory: "Girls Dress" } },
+  "/kids/girls-casual-sets": { filters: { category: "kidswear", subcategory: "Girls Casual Set" } },
+  "/kids/boys-casual-sets": { filters: { category: "kidswear", subcategory: "Boys Casual Set" } },
+  "/kids/boys-tshirt-shorts": { filters: { category: "kidswear", subcategory: "Boys T-Shirt & Shorts Set" } },
   "/jewellery": { filters: { category: "jewellery" } },
   "/jewellery/bridal-bangles": { filters: { category: "bangles", subcategory: "Bridal Bangles" } },
   "/jewellery/gold-finish-bangles": { filters: { category: "bangles", subcategory: "Gold-finish Bangles" } },

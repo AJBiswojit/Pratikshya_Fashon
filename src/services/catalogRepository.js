@@ -41,6 +41,110 @@ export const slugify = (value) =>
 const KEY = "pratikshya_products";
 export const PRODUCTS_CHANGED_EVENT = "pratikshya-products-changed";
 
+/* ------------------------------------------------------------------ */
+/* Kidswear remap sync                                                 */
+/* ------------------------------------------------------------------ */
+
+/**
+ * One-time repair for browsers that persisted a product register before
+ * the Kidswear media-to-product remap. Those registers carry the
+ * misclassified kidswear rows (festive/ethnic names on casual plates,
+ * women's-style pricing, wrong media) and — because a stored register
+ * otherwise wins forever — would keep showing them to returning shoppers.
+ *
+ * On the first read after the remap, stored kidswear rows that are known
+ * pre-remap rows are replaced with the freshly authored kidswear records.
+ * A marker key guarantees the repair runs exactly once, so later Admin /
+ * Employee edits to any kids product persist normally.
+ */
+export const CATALOGUE_SYNC_VERSION = 2;
+const CATALOGUE_SYNC_KEY = "pratikshya_catalogue_sync_version";
+
+/** Every kidswear product name published before the remap (pre-fix + prior fix). */
+const LEGACY_KIDSWEAR_NAMES = new Set(
+  [
+    "Girls' Festive Lehenga Set in Rose",
+    "Girls' Silk Lehenga in Emerald",
+    "Girls' Ethnic Set in Marigold",
+    "Girls' Festive Frock in Blush",
+    "Boys' Cotton Kurta Set in Ivory",
+    "Boys' Silk Kurta Set in Navy",
+    "Boys' Wedding Sherwani in Gold",
+    "Boys' Festive Shirt in Sage",
+    "Girls' Blue Gingham Check Dress",
+    "Girls' Blue Gingham Check Two-Piece Set",
+    "Boys' Giraffe Graphic T-Shirt & Shorts Set",
+    "Girls' Blue Embroidered Palm Sundress",
+    "Boys' Easter Bunny Print Shirt & Shorts Set",
+    "Boys' Tropical Palm Print Beach Set",
+    "Boys' Dinosaur Graphic T-Shirt Set",
+    "Girls' Floral & Butterfly Sundress",
+    "Boys' Red Heart Print Shirt & Shorts Set",
+    "Boys' Teal Textured Stripe Beach Set",
+    "Girls' Floral Garden Tiered Sundress",
+    "Boys' Palm Embroidered Summer Set",
+    "Girls' Graphic T-Shirt & Yellow Shorts Set",
+    "Girls' Dinosaur Graphic Top & Denim Jeans",
+    "Boys' Summer Beach Print Shirt Set",
+    "Boys' Black Script Logo T-Shirt Set",
+    "Boys' Yellow & Green Stripe Beach Set",
+    "Girls' Butterfly Print Ruffle Top & Denim Shorts",
+    "Girls' White Ruffle Top & Embroidered Pants Set",
+    "Boys' Wild Street Graphic Tee & Denim Overalls",
+    "Boys' Blue Stitch-Border Beach Shirt Set",
+  ].map((name) => name.toLowerCase())
+);
+
+const authoredIdAt = (index) => `pf-${String(index + 1).padStart(3, "0")}`;
+
+const freshKidswearRows = () =>
+  catalogue
+    .map((product, index) => ({ ...product, id: product.id || authoredIdAt(index) }))
+    .filter((product) => product.category === "kidswear");
+
+/**
+ * Pure repair: drop stored kidswear rows that are known pre-remap rows
+ * (matched by authored-range id or legacy name) and append the freshly
+ * authored kidswear records. Exported so the remap behaviour is testable
+ * without a browser storage shim.
+ */
+export const replaceStaleKidswearRows = (items) => {
+  const fresh = freshKidswearRows();
+  const freshIds = new Set(fresh.map((product) => String(product.id)));
+  const next = (items || []).filter((record) => {
+    if (!record || typeof record !== "object") return true;
+    if (record.category !== "kidswear") return true;
+    const id = String(record.id || "");
+    if (freshIds.has(id)) return false;
+    return !LEGACY_KIDSWEAR_NAMES.has(String(record.name || "").toLowerCase());
+  });
+  next.push(...fresh);
+  return next;
+};
+
+const syncKidswearRegister = (items) => {
+  const storage = typeof localStorage !== "undefined" ? localStorage : null;
+  if (!storage) return items;
+
+  let storedVersion = 0;
+  try {
+    storedVersion = Number(storage.getItem(CATALOGUE_SYNC_KEY) || 0);
+  } catch {
+    /* storage read failure — leave the register untouched */
+  }
+  if (storedVersion >= CATALOGUE_SYNC_VERSION) return items;
+
+  const next = replaceStaleKidswearRows(items);
+
+  try {
+    storage.setItem(CATALOGUE_SYNC_KEY, String(CATALOGUE_SYNC_VERSION));
+    storage.setItem(KEY, JSON.stringify(next));
+  } catch {
+    /* storage failure must never reset products */
+  }
+  return next;
+};
+
 export const PRODUCT_STATUS = {
   DRAFT: "DRAFT",
   PENDING_REVIEW: "PENDING_REVIEW",
@@ -105,8 +209,11 @@ const read = () => {
       return readCache.parsed;
     }
     const healed = healRead(raw);
-    readCache = { raw, parsed: healed };
-    return healed;
+    /* A stored register gets the one-time kidswear remap repair; a seeded
+       register never does — fresh browsers always read the live catalogue. */
+    const synced = raw ? syncKidswearRegister(healed) : healed;
+    readCache = { raw: raw ?? null, parsed: synced };
+    return synced;
   } catch {
     return healRead(null);
   }
