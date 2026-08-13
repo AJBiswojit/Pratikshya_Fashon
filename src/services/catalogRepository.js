@@ -22,6 +22,7 @@
 
 import catalogue from "../data/products/catalogue.js";
 import { getProductMediaSummary } from "./media/mediaRepository";
+import { getProductMediaSet } from "./media/productMediaSet";
 import {
   ACTIVITY_ACTIONS,
   describeActor,
@@ -30,6 +31,10 @@ import {
 } from "./employees/activityService";
 import { DISCOUNT_TYPES, computePricing } from "../utils/pricing";
 import { formatINR } from "../utils/shopping";
+import { syncProductDraftRecords } from "./productDraftMigration";
+
+/** Phase 22 — names that do not count as real product information. */
+const PLACEHOLDER_PRODUCT_NAMES = new Set(["untitled", "not yet defined", "undefined"]);
 
 export const slugify = (value) =>
   String(value)
@@ -147,9 +152,24 @@ const syncKidswearRegister = (items) => {
 
 export const PRODUCT_STATUS = {
   DRAFT: "DRAFT",
+  /** Phase 22 — the review state. `REVIEW` is the canonical name in the
+      workflow vocabulary; it is stored as PENDING_REVIEW so every existing
+      consumer keeps working. Both strings are accepted on read/write. */
+  REVIEW: "PENDING_REVIEW",
   PENDING_REVIEW: "PENDING_REVIEW",
   PUBLISHED: "PUBLISHED",
   ARCHIVED: "ARCHIVED",
+};
+
+/** Normalises any status spelling a record may carry into one value. */
+export const normaliseProductStatus = (value) => {
+  if (!value) return null;
+  const upper = String(value).toUpperCase();
+  if (upper === "REVIEW" || upper === "IN_REVIEW" || upper === "UNDER_REVIEW") {
+    return PRODUCT_STATUS.PENDING_REVIEW;
+  }
+  if (Object.values(PRODUCT_STATUS).includes(upper)) return upper;
+  return null;
 };
 
 export const REVIEW_STATE = {
@@ -212,8 +232,10 @@ const read = () => {
     /* A stored register gets the one-time kidswear remap repair; a seeded
        register never does — fresh browsers always read the live catalogue. */
     const synced = raw ? syncKidswearRegister(healed) : healed;
-    readCache = { raw: raw ?? null, parsed: synced };
-    return synced;
+    /* Phase 22 — additive, idempotent Kids draft migration. */
+    const migrated = syncProductDraftRecords(synced);
+    readCache = { raw: raw ?? null, parsed: migrated };
+    return migrated;
   } catch {
     return healRead(null);
   }
@@ -363,13 +385,16 @@ export const normaliseProductRecord = (raw = {}, index = 0) => {
   const isTrending = Boolean(raw.isTrending ?? flags.trending);
 
   const review = raw.review && typeof raw.review === "object" ? raw.review : {};
-  const status = raw.status || (raw.published === false ? "DRAFT" : "PUBLISHED");
+  const status = normaliseProductStatus(raw.status) || (raw.published === false ? "DRAFT" : "PUBLISHED");
 
   return {
     ...raw,
 
     /* Identity */
     id,
+    /** Phase 22 — the permanent Product ID. `productId` mirrors `id`; the
+        Product ID never changes when the editable name changes. */
+    productId: raw.productId || id,
     name,
     slug,
     sku: raw.sku || `PF-${String(index + 1).padStart(5, "0")}`,
@@ -446,6 +471,13 @@ export const normaliseProductRecord = (raw = {}, index = 0) => {
         : computed.mrp > computed.finalPrice
           ? computed.mrp
           : undefined,
+    /** Phase 22 — compare-at price for the draft editor, mirroring the
+        storefront originalPrice. One field, one meaning. */
+    compareAtPrice:
+      raw.compareAtPrice != null && Number(raw.compareAtPrice) > 0
+        ? Number(raw.compareAtPrice)
+        : null,
+    currency: raw.currency || "INR",
     pricing,
     priceHistory: asArray(raw.priceHistory),
 
@@ -475,6 +507,20 @@ export const normaliseProductRecord = (raw = {}, index = 0) => {
       reviewedAt: review.reviewedAt || null,
       rejectionReason: review.rejectionReason || "",
     },
+    reviewedAt: raw.reviewedAt || review.reviewedAt || null,
+
+    /* Phase 22 — media-to-product workflow.
+       mediaIds / primaryMediaId / galleryMediaIds are the product's OWN
+       media claims. Register-level ownership (media.productId) remains the
+       single ownership truth; a claim that conflicts with the register is
+       reported, never silently resolved. */
+    mediaIds: asArray(raw.mediaIds),
+    primaryMediaId: raw.primaryMediaId || null,
+    galleryMediaIds: asArray(raw.galleryMediaIds),
+    assignedEmployeeId: raw.assignedEmployeeId || null,
+
+    /** Phase 22 — deterministic review flags, never a second status system. */
+    reviewFlags: asArray(raw.reviewFlags),
 
     /* History */
     createdBy: raw.createdBy || null,
@@ -483,6 +529,9 @@ export const normaliseProductRecord = (raw = {}, index = 0) => {
     updatedAt: raw.updatedAt || nowIso(),
     publishedBy: raw.publishedBy || null,
     publishedAt: raw.publishedAt || null,
+
+    /** Phase 22 — field-level audit trail: who changed what, when. */
+    history: asArray(raw.history),
   };
 };
 
@@ -535,11 +584,23 @@ const skuTaken = (sku, ignoreProductId = null) => {
 /**
  * What still stands between a product and publication. One quality cover
  * is enough — video is never required.
+ *
+ * Phase 22 adds the workflow rules: a product cannot publish without a
+ * Product ID, a real name, a category, a positive price and primary media
+ * whose ownership is not in dispute. Nothing publishes silently.
  */
 export const getPublishIssues = (product) => {
   if (!product) return ["Product not found."];
   const issues = [];
-  if (!product.name?.trim()) issues.push("Product name is required.");
+  if (!product.id && !product.productId) issues.push("Product ID is required.");
+  if (!product.name?.trim()) {
+    issues.push("Product name is required.");
+  } else {
+    const firstWord = product.name.trim().toLowerCase().split(/\s+/)[0];
+    if (PLACEHOLDER_PRODUCT_NAMES.has(firstWord) || firstWord === "untitled") {
+      issues.push("Product name must be real product information, not a placeholder.");
+    }
+  }
   if (!product.sku?.trim()) issues.push("SKU is required.");
   if (!product.category) issues.push("Category is required.");
   const computed = computePricing(product.pricing);
@@ -549,10 +610,24 @@ export const getPublishIssues = (product) => {
   if (!product.description?.trim() && !product.shortDescription?.trim()) {
     issues.push("A description is required.");
   }
+  /* Phase 22 — the primary media must belong to THIS product. A claim
+     contested by another product's ownership blocks publication. */
+  const mediaSet = getProductMediaSet(product);
   const summary = getProductMediaSummary(product.id);
-  const hasCataloguePlate = Boolean(product.image) || Boolean(summary.hasCover);
+  const hasCataloguePlate =
+    Boolean(product.image) || Boolean(summary.hasCover) || Boolean(mediaSet.primary);
   if (!hasCataloguePlate) {
     issues.push("At least one cover image is required before publishing.");
+  }
+  if (mediaSet.ownershipConflicts?.length) {
+    issues.push(
+      `Media ownership must be resolved before publishing (${mediaSet.ownershipConflicts.length} conflict${
+        mediaSet.ownershipConflicts.length === 1 ? "" : "s"
+      }).`
+    );
+  }
+  if (!mediaSet.primary && !hasCataloguePlate) {
+    issues.push("A primary image owned by this product is required before publishing.");
   }
   issues.push(...computed.errors);
   return [...new Set(issues)];
@@ -583,9 +658,10 @@ const noteProduct = (action, product, actor, summary) => {
  * The single writer. Merges a draft onto the stored record, computes
  * derived truth (price mapping, flags, history) and signs the change.
  */
-const writeProduct = (draft, actor, { activity = null } = {}) => {
+const writeProduct = (draft, actor, { activity = null, existingId = null } = {}) => {
   const items = read();
-  const index = items.findIndex((p) => String(p.id) === String(draft.id));
+  const lookupId = existingId ?? draft.id;
+  const index = items.findIndex((p) => String(p.id) === String(lookupId));
   const existing = index >= 0 ? normaliseProductRecord(items[index], index) : null;
   const label = actorLabel(actor);
   const at = nowIso();
@@ -603,8 +679,13 @@ const writeProduct = (draft, actor, { activity = null } = {}) => {
   }
   merged.pricing = { ...merged.pricing, finalPrice: computed.finalPrice };
 
-  /* Slug — preserved where it exists, unique always. */
-  merged.slug = ensureUniqueSlug(draft.slug || merged.slug, merged.id);
+  /* Slug — preserved where it exists, unique always. A draft with no name
+     and no slug falls back to the Product ID so the record always has a
+     stable, addressable slug; renaming later regenerates it. */
+  merged.slug = ensureUniqueSlug(
+    draft.slug || merged.slug || slugify(merged.name || merged.id),
+    merged.id
+  );
 
   /* Flags mirror the flat fields the storefront already reads. */
   merged.flags = {
@@ -634,6 +715,39 @@ const writeProduct = (draft, actor, { activity = null } = {}) => {
       { at, by: label, from: Number(existing.price), to: Number(merged.price) },
       ...merged.priceHistory,
     ].slice(0, 24);
+  }
+
+  /* Phase 22 — field-level audit trail. Captures who changed what, when,
+     for the fields the house cares about: identity, name, media, category,
+     assignment, price and status. Sensitive data is never recorded. */
+  if (existing) {
+    const changed = [];
+    const noteField = (field, before, after) => {
+      if (String(before ?? "") === String(after ?? "")) return;
+      changed.push({ at, by: label, field, from: before ?? null, to: after ?? null });
+    };
+    noteField("id", existing.id, merged.id);
+    noteField("name", existing.name, merged.name);
+    noteField("category", existing.category, merged.category);
+    noteField("subcategory", existing.subcategory, merged.subcategory);
+    noteField("price", Number(existing.price) || null, Number(merged.price) || null);
+    noteField("assignedEmployeeId", existing.assignedEmployeeId, merged.assignedEmployeeId);
+    noteField("status", existing.status, merged.status);
+    const mediaBefore =
+      existing.primaryMediaId ||
+      (typeof existing.image === "string" ? existing.image : existing.image?.id || existing.image?.src) ||
+      null;
+    const mediaAfter =
+      merged.primaryMediaId ||
+      (typeof merged.image === "string" ? merged.image : merged.image?.id || merged.image?.src) ||
+      null;
+    noteField("media", mediaBefore, mediaAfter);
+    const claimedBefore = (existing.mediaIds ?? []).join(",");
+    const claimedAfter = (merged.mediaIds ?? []).join(",");
+    noteField("mediaClaims", claimedBefore, claimedAfter);
+    if (changed.length) {
+      merged.history = [...changed, ...merged.history].slice(0, 60);
+    }
   }
 
   const next = [...items];
@@ -701,11 +815,94 @@ export const catalogRepository = {
     return { ok: true, product };
   },
 
+  /**
+   * Phase 22 — create a product DRAFT.
+   *
+   * Unlike createProduct, the caller supplies the permanent Product ID
+   * (KID-007, MEN-001, …) and the record starts in DRAFT, so it is
+   * invisible to every customer-facing surface until a human publishes it.
+   */
+  createDraftProduct: (draft, actor = null) => {
+    const id = draft.id || `pf-${Date.now().toString(36)}`;
+    const product = writeProduct(
+      { ...draft, id, status: draft.status || PRODUCT_STATUS.DRAFT },
+      actor,
+      {
+        activity: {
+          action: ACTIVITY_ACTIONS.PRODUCT_DRAFT_CREATED,
+          summary: `Created product draft ${id}${draft.name ? ` · ${draft.name}` : ""}`,
+        },
+      }
+    );
+    return { ok: true, product };
+  },
+
   /** Update an existing product by id. Returns `{ ok, product }`. */
   updateProduct: (id, patch, actor = null) => {
     const existing = findNormalised(id);
     if (!existing) return { ok: false, error: "Product not found." };
     const product = writeProduct({ ...patch, id: existing.id }, actor);
+    return { ok: true, product };
+  },
+
+  /** Phase 22 — employee/admin edits to a draft, signed as PRODUCT_UPDATED. */
+  updateDraft: (id, patch, actor = null) => {
+    const existing = findNormalised(id);
+    if (!existing) return { ok: false, error: "Product not found." };
+    const product = writeProduct({ ...patch, id: existing.id }, actor, {
+      activity: {
+        action: ACTIVITY_ACTIONS.PRODUCT_UPDATED,
+        summary: `Updated draft ${existing.name || existing.id}`,
+      },
+    });
+    return { ok: true, product };
+  },
+
+  /** Phase 22 — assign (or unassign) the employee working on a product. */
+  assignToEmployee: (id, employeeId, actor = null) => {
+    const existing = findNormalised(id);
+    if (!existing) return { ok: false, error: "Product not found." };
+    const product = writeProduct(
+      { id, assignedEmployeeId: employeeId || null },
+      actor,
+      {
+        activity: {
+          action: ACTIVITY_ACTIONS.PRODUCT_ASSIGNED,
+          summary: employeeId
+            ? `Assigned ${existing.name || existing.id} to ${employeeId}`
+            : `Unassigned ${existing.name || existing.id}`,
+        },
+      }
+    );
+    return { ok: true, product };
+  },
+
+  /**
+   * Phase 22 — change the permanent Product ID. Admin-only, requires the
+   * new id to be free and well-formed; history records the change and the
+   * media register is kept in sync by the workflow layer.
+   */
+  changeProductId: (id, newProductId, actor = null) => {
+    const existing = findNormalised(id);
+    if (!existing) return { ok: false, error: "Product not found." };
+    const target = String(newProductId || "").trim().toUpperCase();
+    if (!/^[A-Z0-9][A-Z0-9-]{1,14}$/.test(target)) {
+      return { ok: false, error: "Product ID must be letters, digits and dashes (2–15 characters)." };
+    }
+    if (findNormalised(target) || findNormalised(String(newProductId).trim())) {
+      return { ok: false, error: "That Product ID is already in use." };
+    }
+    const product = writeProduct(
+      { ...existing, id: target, productId: target },
+      actor,
+      {
+        existingId: existing.id,
+        activity: {
+          action: ACTIVITY_ACTIONS.PRODUCT_RENAMED_ID,
+          summary: `Changed Product ID ${existing.id} → ${target}`,
+        },
+      }
+    );
     return { ok: true, product };
   },
 
@@ -731,7 +928,7 @@ export const catalogRepository = {
       actor,
       {
         activity: {
-          action: ACTIVITY_ACTIONS.PRODUCT_SUBMITTED,
+          action: ACTIVITY_ACTIONS.PRODUCT_SUBMITTED_FOR_REVIEW,
           summary: `Submitted ${existing.name} for review`,
         },
       }
@@ -992,6 +1189,8 @@ export const catalogMetrics = (items) => {
     published: list.filter((p) => p.status === "PUBLISHED").length,
     drafts: list.filter((p) => p.status === "DRAFT").length,
     pendingReview: list.filter((p) => p.status === "PENDING_REVIEW").length,
+    /** Phase 22 — "Review" is the workflow name for the review state. */
+    review: list.filter((p) => p.status === "PENDING_REVIEW").length,
     archived: list.filter((p) => p.status === "ARCHIVED").length,
     featured: list.filter((p) => p.isFeatured).length,
     bestsellers: list.filter((p) => p.isBestseller).length,

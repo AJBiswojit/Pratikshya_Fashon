@@ -57,6 +57,23 @@ export const ACTIVITY_ACTIONS = {
   PRODUCT_DUPLICATED: "PRODUCT_DUPLICATED",
   PRODUCT_BULK_UPDATED: "PRODUCT_BULK_UPDATED",
 
+  /* Products — Phase 22. Media-to-product workflow, recorded in this same
+     diary rather than a second logging system. */
+  PRODUCT_DRAFT_CREATED: "PRODUCT_DRAFT_CREATED",
+  PRODUCT_MEDIA_ASSIGNED: "PRODUCT_MEDIA_ASSIGNED",
+  PRODUCT_MEDIA_UNASSIGNED: "PRODUCT_MEDIA_UNASSIGNED",
+  PRODUCT_MEDIA_TRANSFERRED: "PRODUCT_MEDIA_TRANSFERRED",
+  PRODUCT_ASSIGNED: "PRODUCT_ASSIGNED",
+  PRODUCT_UPDATED: "PRODUCT_UPDATED",
+  PRODUCT_SUBMITTED_FOR_REVIEW: "PRODUCT_SUBMITTED_FOR_REVIEW",
+  PRODUCT_RENAMED_ID: "PRODUCT_RENAMED_ID",
+  PRODUCT_GROUP_CREATED: "PRODUCT_GROUP_CREATED",
+  PRODUCT_GROUP_UPDATED: "PRODUCT_GROUP_UPDATED",
+  PRODUCT_GROUP_MERGED: "PRODUCT_GROUP_MERGED",
+  PRODUCT_GROUP_SPLIT: "PRODUCT_GROUP_SPLIT",
+  PRODUCT_GROUP_DECIDED: "PRODUCT_GROUP_DECIDED",
+  PRODUCT_VARIANT_REVIEW_REQUIRED: "PRODUCT_VARIANT_REVIEW_REQUIRED",
+
   /* Inventory — Phase 14. The stock ledger holds quantity-level detail;
      this shared diary carries the readable cross-module activity note. */
   INVENTORY_MOVEMENT: "INVENTORY_MOVEMENT",
@@ -155,6 +172,20 @@ const ACTION_LABELS = {
   [ACTIVITY_ACTIONS.PRODUCT_RESTORED]: "Product restored",
   [ACTIVITY_ACTIONS.PRODUCT_DUPLICATED]: "Product duplicated",
   [ACTIVITY_ACTIONS.PRODUCT_BULK_UPDATED]: "Products updated in bulk",
+  [ACTIVITY_ACTIONS.PRODUCT_DRAFT_CREATED]: "Product draft created",
+  [ACTIVITY_ACTIONS.PRODUCT_MEDIA_ASSIGNED]: "Product media assigned",
+  [ACTIVITY_ACTIONS.PRODUCT_MEDIA_UNASSIGNED]: "Product media unassigned",
+  [ACTIVITY_ACTIONS.PRODUCT_MEDIA_TRANSFERRED]: "Product media ownership transferred",
+  [ACTIVITY_ACTIONS.PRODUCT_ASSIGNED]: "Product assigned to employee",
+  [ACTIVITY_ACTIONS.PRODUCT_UPDATED]: "Product draft updated",
+  [ACTIVITY_ACTIONS.PRODUCT_SUBMITTED_FOR_REVIEW]: "Product submitted for review",
+  [ACTIVITY_ACTIONS.PRODUCT_RENAMED_ID]: "Product ID changed",
+  [ACTIVITY_ACTIONS.PRODUCT_GROUP_CREATED]: "Product media group created",
+  [ACTIVITY_ACTIONS.PRODUCT_GROUP_UPDATED]: "Product media group updated",
+  [ACTIVITY_ACTIONS.PRODUCT_GROUP_MERGED]: "Product media groups merged",
+  [ACTIVITY_ACTIONS.PRODUCT_GROUP_SPLIT]: "Product media group split",
+  [ACTIVITY_ACTIONS.PRODUCT_GROUP_DECIDED]: "Product group decision recorded",
+  [ACTIVITY_ACTIONS.PRODUCT_VARIANT_REVIEW_REQUIRED]: "Variant review required",
   [ACTIVITY_ACTIONS.INVENTORY_MOVEMENT]: "Inventory updated",
   [ACTIVITY_ACTIONS.RETURN_REQUESTED]: "Return requested",
   [ACTIVITY_ACTIONS.RETURN_APPROVED]: "Return approved",
@@ -222,21 +253,27 @@ const normaliseEntry = (entry) => {
   };
 };
 
+/* In-memory mirror so the diary stays consistent when storage is
+   unavailable (tests, private mode) — never a second log. */
+let memoryActivity = null;
+
 export const loadActivity = () => {
   const stored = readStorage(EMPLOYEE_STORAGE_KEYS.ACTIVITY, null);
   if (Array.isArray(stored) && stored.length > 0) {
-    return stored.map(normaliseEntry).filter(Boolean);
+    memoryActivity = stored.map(normaliseEntry).filter(Boolean);
+    return memoryActivity;
   }
+  if (memoryActivity) return memoryActivity;
   const seeded = INITIAL_ACTIVITY.map(normaliseEntry).filter(Boolean);
+  memoryActivity = seeded;
   writeStorage(EMPLOYEE_STORAGE_KEYS.ACTIVITY, seeded);
   return seeded;
 };
 
 export const saveActivity = (entries) => {
-  writeStorage(
-    EMPLOYEE_STORAGE_KEYS.ACTIVITY,
-    (Array.isArray(entries) ? entries : []).map(normaliseEntry).filter(Boolean)
-  );
+  const clean = (Array.isArray(entries) ? entries : []).map(normaliseEntry).filter(Boolean);
+  memoryActivity = clean;
+  writeStorage(EMPLOYEE_STORAGE_KEYS.ACTIVITY, clean);
   /* Both portals keep live copies in context state; let them re-sync. */
   if (typeof window !== "undefined") {
     window.dispatchEvent(new Event(ACTIVITY_CHANGED_EVENT));

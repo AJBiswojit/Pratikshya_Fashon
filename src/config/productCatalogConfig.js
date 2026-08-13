@@ -39,6 +39,10 @@ export const getProductTypeLabel = (id) =>
 
 export const PRODUCT_STATUSES = {
   DRAFT: "DRAFT",
+  /* Phase 22 — "REVIEW" is the human-facing name of the review state.
+     The canonical stored value stays PENDING_REVIEW so every existing
+     consumer (review queue, metrics, status badges) keeps working. */
+  REVIEW: "PENDING_REVIEW",
   PENDING_REVIEW: "PENDING_REVIEW",
   PUBLISHED: "PUBLISHED",
   ARCHIVED: "ARCHIVED",
@@ -46,7 +50,7 @@ export const PRODUCT_STATUSES = {
 
 export const PRODUCT_STATUS_OPTIONS = [
   { id: "DRAFT", label: "Draft", tone: "quiet" },
-  { id: "PENDING_REVIEW", label: "Pending review", tone: "alert" },
+  { id: "PENDING_REVIEW", label: "Review", tone: "alert" },
   { id: "PUBLISHED", label: "Published", tone: "ink" },
   { id: "ARCHIVED", label: "Archived", tone: "muted" },
 ];
@@ -205,6 +209,34 @@ export const subcategoryOptionsFor = (categoryId) =>
 /* ------------------------------------------------------------------ */
 
 export const GENDER_OPTIONS = ["Women", "Men", "Kids", "Unisex"];
+
+/* ------------------------------------------------------------------ */
+/* Stable Product IDs (Phase 22)                                       */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Deterministic category-based Product ID prefixes. A new draft product
+ * created from media receives a permanent id like `KID-007` — never a
+ * random id, never an array index. The id is persisted in the product
+ * register and is never derived from the editable product name.
+ */
+export const PRODUCT_ID_PREFIXES = {
+  kidswear: "KID",
+  menswear: "MEN",
+  sarees: "SAR",
+  lehengas: "LEH",
+  "bridal-couture": "BRD",
+  "kurtis-and-suits": "KUR",
+  innerwear: "INN",
+  dupattas: "DUP",
+  bangles: "BAN",
+  jewellery: "JEW",
+};
+
+export const DEFAULT_PRODUCT_ID_PREFIX = "PRD";
+
+/** Names a draft may hold that do not count as real product information. */
+export const PLACEHOLDER_PRODUCT_NAMES = ["untitled", "not yet defined", "undefined"];
 
 /* ------------------------------------------------------------------ */
 /* Fabric & material — taxonomy list extended, never contradicted      */

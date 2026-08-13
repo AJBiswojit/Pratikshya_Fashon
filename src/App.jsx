@@ -60,6 +60,7 @@ const EmployeeLeave = lazy(() => import("./pages/employee/EmployeeLeave"));
 const EmployeePerformance = lazy(() => import("./pages/employee/EmployeePerformance"));
 const EmployeeProducts = lazy(() => import("./pages/employee/EmployeeProducts"));
 const EmployeeProductForm = lazy(() => import("./pages/employee/EmployeeProductForm"));
+const EmployeeProductReview = lazy(() => import("./pages/employee/EmployeeProductReview"));
 const EmployeeCustomers = lazy(() => import("./pages/employee/EmployeeCustomers"));
 const EmployeeOrders = lazy(() => import("./pages/employee/EmployeeOrders"));
 const EmployeeOrderDetail = lazy(() => import("./pages/employee/EmployeeOrderDetail"));
@@ -263,6 +264,7 @@ export default function App() {
                           <Route path="/employee/media/upload" element={<EmployeeMediaUpload />} />
                           <Route path="/employee/media/:mediaId" element={<EmployeeMediaDetail />} />
                           <Route path="/employee/products" element={<EmployeeProducts />} />
+                          <Route path="/employee/products/review" element={<EmployeeProductReview />} />
                           <Route path="/employee/products/new" element={<EmployeeProductForm />} />
                           <Route path="/employee/products/:productId/edit" element={<EmployeeProductForm />} />
                           <Route path="/employee/customers" element={<EmployeeCustomers />} />

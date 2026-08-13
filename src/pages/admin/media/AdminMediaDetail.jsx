@@ -19,6 +19,7 @@ import {
 import { useMediaRecord } from "../../../hooks/useMedia";
 import useMediaActions from "../../../hooks/useMediaActions";
 import catalogRepository from "../../../services/catalogRepository";
+import { transferMediaOwnership } from "../../../services/productWorkflow";
 import { formatEmployeeDateTime } from "../../../utils/employee";
 
 /**
@@ -57,6 +58,7 @@ export default function AdminMediaDetail() {
 
   const [draft, setDraft] = useState(() => draftOf(media));
   const [saved, setSaved] = useState(false);
+  const [assignmentConflict, setAssignmentConflict] = useState(null);
 
   useEffect(() => {
     if (media) setDraft(draftOf(media));
@@ -306,15 +308,62 @@ export default function AdminMediaDetail() {
 
           {/* Assignment ------------------------------------------- */}
           <AdminPanel eyebrow="Placement" title="Assignment">
+            {assignmentConflict ? (
+              <div className="mb-4 border border-accent/50 bg-accent/5 px-4 py-3">
+                <p className="font-ui text-sm text-accent">
+                  MEDIA ALREADY ASSIGNED — this asset belongs to{" "}
+                  <strong>{assignmentConflict.productName ?? assignmentConflict.productId}</strong>{" "}
+                  ({assignmentConflict.productId}). Media is never silently reassigned.
+                </p>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  <AtelierButton
+                    type="button"
+                    size="chip"
+                    onClick={() => {
+                      const result = transferMediaOwnership(
+                        media.id,
+                        assignmentConflict.targetProductId,
+                        null,
+                        { confirm: true }
+                      );
+                      setAssignmentConflict(null);
+                      setSaved(result.ok);
+                    }}
+                  >
+                    Reassign anyway (removes the plate from the previous product)
+                  </AtelierButton>
+                  <AtelierButton
+                    type="button"
+                    size="chip"
+                    variant="outline"
+                    onClick={() => setAssignmentConflict(null)}
+                  >
+                    Cancel
+                  </AtelierButton>
+                </div>
+              </div>
+            ) : null}
             <div className="grid gap-4 sm:grid-cols-2">
               <label className="space-y-1">
                 <span className={label}>Product</span>
                 <select
                   value={media.productId ?? ""}
                   disabled={!actions.access.canAssign}
-                  onChange={(event) =>
-                    actions.assignToProduct(media.id, event.target.value || null, null)
-                  }
+                  onChange={(event) => {
+                    const target = event.target.value || null;
+                    const moved = actions.assignToProduct(media.id, target, null);
+                    if (!moved && target) {
+                      const owner = catalogRepository.find(media.productId);
+                      setAssignmentConflict({
+                        targetProductId: target,
+                        productId: media.productId,
+                        productName: owner?.name ?? null,
+                      });
+                    } else {
+                      setAssignmentConflict(null);
+                      setSaved(Boolean(moved));
+                    }
+                  }}
                   className={field}
                 >
                   <option value="">Not assigned to a product</option>
