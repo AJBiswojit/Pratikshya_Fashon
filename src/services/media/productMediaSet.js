@@ -32,7 +32,7 @@ import {
   PRODUCT_MEDIA_ROLES,
 } from "../../config/mediaTypes";
 import { imageRef } from "../../data/pratikshyaImageManifest";
-import { getAll } from "./mediaRepository";
+import { getAll, getById } from "./mediaRepository";
 import { getViewOrderScore, parseMediaFilename } from "./mediaNaming";
 import { isIngestedPhotographyUrl, resolveLegacyMediaUrl } from "./mediaPaths";
 
@@ -88,6 +88,8 @@ const emptySet = (productId) => ({
   match: "none",
   status: PRODUCT_MEDIA_STATUS.NEEDS_REVIEW,
   items: [],
+  /** Phase 22 — media this product claims but does not own (yet). */
+  ownershipConflicts: [],
 });
 
 const isUrl = (value) =>
@@ -313,8 +315,16 @@ const describeMatch = (owned) => {
 /**
  * Assemble a media set from already-owned items. Exported so tests can
  * feed synthetic front/side/back lists without touching the register.
+ *
+ * `ownershipConflicts` is carried through so callers can show exactly
+ * which media is contested and by whom.
  */
-export const assembleProductMediaSet = (productId, ownedItems = [], product = null) => {
+export const assembleProductMediaSet = (
+  productId,
+  ownedItems = [],
+  product = null,
+  ownershipConflicts = []
+) => {
   const id = productId ? String(productId) : product?.id ? String(product.id) : null;
   if (!id) return emptySet(null);
 
@@ -346,6 +356,7 @@ export const assembleProductMediaSet = (productId, ownedItems = [], product = nu
 
   if (!owned.length) {
     const blank = emptySet(id);
+    blank.ownershipConflicts = ownershipConflicts ?? [];
     if (crossed) blank.status = PRODUCT_MEDIA_STATUS.CROSS_PRODUCT_REFERENCE;
     return blank;
   }
@@ -399,6 +410,7 @@ export const assembleProductMediaSet = (productId, ownedItems = [], product = nu
     match,
     status,
     items: owned,
+    ownershipConflicts: ownershipConflicts ?? [],
   };
 };
 
@@ -487,7 +499,16 @@ export const getProductMediaSet = (productIdOrProduct, productHint = null) => {
     owned.push(plate);
   });
 
-  return assembleProductMediaSet(id, owned, product);
+  /* Phase 22 — the record's own media claims (mediaIds / primaryMediaId /
+     galleryMediaIds). Consistent claims join the set; contested claims are
+     reported, never silently adopted. */
+  const { claims, conflicts } = resolveProductMediaClaims(product, id);
+  claims.forEach((item) => {
+    if (owned.some((ownedItem) => sameMedia(ownedItem, item))) return;
+    owned.push(item);
+  });
+
+  return assembleProductMediaSet(id, owned, product, conflicts);
 };
 
 /**
@@ -502,6 +523,79 @@ export const getProductCardMedia = (product) => {
     hoverImage: set.hasAlternate ? set.hover : undefined,
     mediaSet: set,
   };
+};
+
+/**
+ * Phase 22 — resolve a product's OWN media claims (mediaIds /
+ * primaryMediaId / galleryMediaIds on the record).
+ *
+ * A claim whose register owner is null or this very product is treated as
+ * owned and joins the media set. A claim whose register owner is a
+ * DIFFERENT product is never folded into the gallery — it is reported in
+ * `ownershipConflicts` with the owning Product ID, exactly like the
+ * "MEDIA ALREADY ASSIGNED" rule requires. Nothing is silently reassigned.
+ */
+export const resolveProductMediaClaims = (product, productId) => {
+  const claims = [];
+  const conflicts = [];
+  if (!product) return { claims, conflicts };
+
+  const id = productId ? String(productId) : product?.id ? String(product.id) : null;
+  const claimIds = new Set();
+  (Array.isArray(product.mediaIds) ? product.mediaIds : []).forEach((entry) => {
+    if (entry) claimIds.add(String(entry));
+  });
+  if (product.primaryMediaId) claimIds.add(String(product.primaryMediaId));
+  (Array.isArray(product.galleryMediaIds) ? product.galleryMediaIds : []).forEach((entry) => {
+    if (entry) claimIds.add(String(entry));
+  });
+
+  claimIds.forEach((mediaId) => {
+    const record = getById(mediaId);
+    if (!record) {
+      conflicts.push({
+        mediaId,
+        file: mediaId,
+        src: null,
+        ownerProductId: null,
+        reason: "MEDIA_NOT_FOUND",
+      });
+      return;
+    }
+    const source = asImageSource(record, id ? { ...product, id } : product);
+    if (!source?.src) {
+      conflicts.push({
+        mediaId: record.id,
+        file: fileNameOf(record) || record.id,
+        src: null,
+        ownerProductId: record.productId || null,
+        reason: "MEDIA_MISSING_FILE",
+      });
+      return;
+    }
+    const owner = record.productId;
+    if (owner && String(owner) !== id) {
+      conflicts.push({
+        mediaId: record.id,
+        file: fileNameOf(record) || record.id,
+        src: source.src,
+        ownerProductId: owner,
+        reason: "MEDIA_ALREADY_ASSIGNED",
+      });
+      return;
+    }
+    claims.push({
+      ...source,
+      productId: id,
+      view: viewOf(record),
+      groupKey: groupKeyOf(record),
+      fromRepository: false,
+      claimed: true,
+      role: record.role || null,
+    });
+  });
+
+  return { claims, conflicts };
 };
 
 /** Apply the canonical set onto a product row (image + hoverImage + images). */
@@ -525,6 +619,7 @@ export default {
   getProductMediaIndex,
   assembleProductMediaSet,
   isProductOwnedMedia,
+  resolveProductMediaClaims,
   HOVER_VIEW_PRIORITY,
   PRODUCT_MEDIA_STATUS,
 };

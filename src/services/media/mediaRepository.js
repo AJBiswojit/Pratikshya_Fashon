@@ -489,13 +489,41 @@ export const setCover = (productId, mediaId) => {
 };
 
 /**
+ * Phase 22 — who owns a media asset right now, if anyone.
+ * Ownership is the register's productId; the product name is resolved by
+ * callers that can see the catalogue (the repository itself stays free of
+ * product knowledge).
+ */
+export const getMediaOwner = (mediaId) => {
+  const current = readMedia().find((item) => item.id === mediaId);
+  if (!current?.productId) return null;
+  return { mediaId, productId: current.productId };
+};
+
+/**
  * Attaches media to a product — or detaches it when `productId` is null,
  * which returns the record to the unassigned library.
+ *
+ * Phase 22 — deterministic ownership validation. A media asset belongs to
+ * ONE product. Assigning an asset that already belongs to a DIFFERENT
+ * product is refused (returns null — "MEDIA ALREADY ASSIGNED") unless the
+ * caller explicitly confirms the reassignment with
+ * `{ confirmReassign: true }`. Media is never silently reassigned.
  */
-export const assignToProduct = (mediaId, productId, role = null) => {
+export const assignToProduct = (mediaId, productId, role = null, options = {}) => {
   const items = readMedia();
   const current = items.find((item) => item.id === mediaId);
   if (!current) return null;
+
+  const confirmReassign = Boolean(options?.confirmReassign);
+  if (
+    productId &&
+    current.productId &&
+    String(current.productId) !== String(productId) &&
+    !confirmReassign
+  ) {
+    return null;
+  }
 
   const timestamp = nowIso();
 
@@ -670,6 +698,7 @@ export const resetMedia = () => {
 const mediaRepository = {
   getAll,
   getById,
+  getMediaOwner,
   getProductMedia,
   getMarketingMedia,
   getUnassignedMedia,

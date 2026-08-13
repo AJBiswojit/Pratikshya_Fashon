@@ -94,7 +94,16 @@ export const EMPLOYEE_NAV_GROUPS = [
       { id: "orders", label: "Orders", to: "/employee/orders", icon: "bag", permission: P.ORDERS_VIEW },
       { id: "assisted", label: "Assisted Orders", to: "/employee/orders/assisted", icon: "userPlus", permission: P.ORDERS_CREATE },
       { id: "offers", label: "Offers", to: "/employee/offers", icon: "tag", permission: P.OFFERS_VIEW },
-      { id: "products", label: "Products", to: "/employee/products", icon: "sparkles", permission: P.PRODUCTS_VIEW },
+      {
+        id: "products",
+        label: "Products",
+        to: "/employee/products",
+        icon: "sparkles",
+        permission: P.PRODUCTS_VIEW,
+        children: [
+          { id: "products-review", label: "My Product Review", to: "/employee/products/review", icon: "badge", permission: P.PRODUCTS_VIEW },
+        ],
+      },
       { id: "customers", label: "Customers", to: "/employee/customers", icon: "users", permission: P.CUSTOMERS_VIEW },
     ],
   },
