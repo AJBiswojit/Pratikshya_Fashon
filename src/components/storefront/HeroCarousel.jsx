@@ -18,7 +18,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ArrowLeft, ArrowRight, Pause, Play } from "lucide-react";
 import PratikshyaImage from "../PratikshyaImage";
-import { resolveHeroSlideImage } from "../../services/media/mediaResolver";
+import {
+  resolveHeroSlideImage,
+  resolveHomepageHeroMedia,
+} from "../../services/media/mediaResolver";
 import { resolveCategoryRoute, resolveCollectionRoute } from "../../services/taxonomyRouting";
 import { AtelierButton, header as headerSpacing } from "../../design-system";
 import { cn } from "../../utils/cn";
@@ -116,6 +119,49 @@ const resolveImageSrc = (image) => {
 export default function HeroCarousel({ heroMedia }) {
   const slides = useMemo(() => buildSlides(heroMedia), [heroMedia]);
   const count = slides.length;
+
+  /* ------------------------------------------------------------------ */
+  /* Development-only hero runtime diagnostic (debug phase).             */
+  /*                                                                     */
+  /* Reflects the ACTUAL runtime resolution chain — what the resolver    */
+  /* returns through the existing media architecture, not just the       */
+  /* ingested manifest. Gated to dev so it is tree-shaken from a         */
+  /* production build and never reaches a customer.                      */
+  /* ------------------------------------------------------------------ */
+  useEffect(() => {
+    if (!import.meta.env?.DEV) return;
+    try {
+      const resolved = resolveHomepageHeroMedia(heroMedia);
+      /* Per-slide detail required by the debug trace: */
+      const detail = resolved.map((m) => ({
+        id: m.id,
+        fileName: m.fileName || m.currentFilename || null,
+        filePath: m.filePath || m.url || null,
+        usage: (m.usageRoles || []).join(",") || null,
+        status: m.status,
+        source: m.source,
+        sortOrder: m.sortOrder,
+      }));
+      /* Assert the resolver delivers exactly five distinct plates. */
+      const expected = ["hero001.avif", "hero002.avif", "hero003.avif", "hero004.avif", "hero005.avif"];
+      const names = resolved.map((m) => m.fileName || m.currentFilename || null);
+      const ok = resolved.length === 5 && expected.every((n, i) => names[i] === n);
+      // eslint-disable-next-line no-console
+      console.log(
+        [
+          "%cHERO RUNTIME MEDIA",
+          `count: ${resolved.length}`,
+          ...names.map((n, i) => `  ${i + 1}. ${n}`),
+          ok ? "RESOLVED: 5/5 (OK)" : `MISMATCH — expected 5 hero001-005, got ${resolved.length}`,
+        ].join("\n"),
+        "color:#b08d57;font-weight:bold"
+      );
+      // eslint-disable-next-line no-console
+      console.table(detail);
+    } catch {
+      /* Diagnostic only — never interfere with rendering. */
+    }
+  }, [heroMedia]);
 
   const [index, setIndex] = useState(0);
   const [pausedByUser, setPausedByUser] = useState(false);

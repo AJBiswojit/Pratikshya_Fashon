@@ -21,6 +21,7 @@
     "audit:product-repetition": "node --import ./scripts/node-loader/register.mjs scripts/audit-product-repetition.mjs",
     "audit:kids-products": "node --import ./scripts/node-loader/register.mjs scripts/audit-kids-products.mjs",
     "audit:media": "node --import ./scripts/node-loader/register.mjs scripts/audit-media.mjs",
+    "audit:hero-runtime": "node --import ./scripts/node-loader/register.mjs scripts/audit-hero-runtime.mjs",
     "media:analyze": "node scripts/optimize-media.mjs --dry-run",
     "media:optimize": "node scripts/optimize-media.mjs"
   },
