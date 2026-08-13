@@ -104,6 +104,7 @@ const AdminMediaReview = lazy(() => import("./pages/admin/media/AdminMediaReview
 const AdminMarketingMedia = lazy(() => import("./pages/admin/media/AdminMarketingMedia"));
 const AdminMediaDetail = lazy(() => import("./pages/admin/media/AdminMediaDetail"));
 const AdminProductMedia = lazy(() => import("./pages/admin/media/AdminProductMedia"));
+const AdminMediaProductMapping = lazy(() => import("./pages/admin/media/AdminMediaProductMapping"));
 const InventoryDashboardPage = lazy(() => import("./components/inventory/InventoryDashboardPage"));
 const InventoryOperationPage = lazy(() => import("./components/inventory/InventoryOperationPage"));
 const InventoryTransfersPage = lazy(() => import("./components/inventory/InventoryTransfersPage"));
@@ -194,6 +195,7 @@ export default function App() {
                           <Route path="/admin/media/upload" element={<AdminMediaUpload />} />
                           <Route path="/admin/media/review" element={<AdminMediaReview />} />
                           <Route path="/admin/media/marketing" element={<AdminMarketingMedia />} />
+                          <Route path="/admin/media/product-mapping" element={<AdminMediaProductMapping />} />
                           <Route path="/admin/media/:mediaId" element={<AdminMediaDetail />} />
                           <Route path="/admin/categories" element={<AdminCategories />} />
                           <Route path="/admin/categories/new" element={<AdminCategoryForm />} />

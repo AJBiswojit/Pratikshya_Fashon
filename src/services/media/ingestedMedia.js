@@ -1,12 +1,10 @@
 /**
- * PRATIKSHYA FASHON — Ingested media adapter (Phase 21.4).
+ * PRATIKSHYA FASHON — Ingested media adapter (Phase 21.4 + 21.6).
  *
  * Turns the build-time ingestion manifest into the same record shape the
- * media store already understands. The manifest is metadata only — image
- * bytes stay as static files under /library and /images.
- *
- * This module does not write. The store merges these records into the
- * register so every surface — admin, storefront, AI — reads one list.
+ * media store already understands. Phase 21.6 extends records with the
+ * deterministic filename parser (groupKey, view) so the storefront can
+ * build product galleries from the new naming convention.
  */
 
 import {
@@ -16,6 +14,7 @@ import {
   PRODUCT_MEDIA_ROLES,
 } from "../../config/mediaTypes";
 import ingestedManifest from "../../data/media/ingestedManifest.json";
+import { parseMediaFilename, getViewOrderScore } from "./mediaNaming.js";
 
 const INGESTED_AT = "2026-08-12T12:00:00.000Z";
 
@@ -41,11 +40,7 @@ const altFrom = (asset) => {
 
 /**
  * One ingested asset → a media-register record.
- *
- * Product-slotted assets become PRODUCT scope so the existing
- * `getProductMedia` / `getProductCover` path serves them. Everything else
- * stays UNASSIGNED (still queryable by categoryId / usageRoles) so we do
- * not invent a marketing placement for a folder dump.
+ * Extended in Phase 21.6 with normalized fields: groupKey, view, filePath
  */
 export const assetToRecord = (asset) => {
   if (!asset?.id) return null;
@@ -56,6 +51,13 @@ export const assetToRecord = (asset) => {
       ? PRODUCT_MEDIA_ROLES.COVER
       : PRODUCT_MEDIA_ROLES.GALLERY
     : null;
+
+  // Phase 21.6: parse filename for grouping
+  const parsed = parseMediaFilename(asset.currentFilename || asset.originalFilename || asset.optimizedPath || "");
+  const groupKey = asset.groupKey || parsed?.groupKey || null;
+  const view = asset.view || parsed?.view || null;
+  const isStandalone = parsed?.isStandalone ?? true;
+  const viewScore = getViewOrderScore(view);
 
   return {
     id: asset.id,
@@ -72,12 +74,14 @@ export const assetToRecord = (asset) => {
       asset.subcategoryName,
       asset.collectionId,
       asset.house ? "house" : null,
+      groupKey ? `group:${groupKey}` : null,
+      view ? `view:${view}` : null,
     ].filter(Boolean),
     scope: productId ? MEDIA_SCOPES.PRODUCT : MEDIA_SCOPES.UNASSIGNED,
     status: asset.broken || asset.duplicateStatus === "DUPLICATE" ? MEDIA_STATUS.DRAFT : MEDIA_STATUS.ACTIVE,
     productId,
     role,
-    sortOrder: Number(asset.sortOrder) || 0,
+    sortOrder: Number(asset.sortOrder) || viewScore,
     placement: null,
     campaign: null,
     campaignStart: null,
@@ -119,6 +123,12 @@ export const assetToRecord = (asset) => {
     broken: Boolean(asset.broken),
     createdAt: INGESTED_AT,
     updatedAt: INGESTED_AT,
+    // Phase 21.6 normalized fields
+    groupKey,
+    view,
+    viewScore,
+    isStandalone,
+    filePath: asset.optimizedPath ? publicUrl(asset.optimizedPath) : url,
   };
 };
 

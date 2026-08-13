@@ -33,25 +33,28 @@ const asImageSource = (media) => ({
   height: media.height || undefined,
 });
 
-/** A gallery slide, in the single shape the gallery renders. */
+/** A gallery slide, in the single shape the gallery renders. Phase 21.6 adds view/groupKey. */
 const slide = (media) => ({
   id: media.id,
   type: media.type,
   title: media.title,
   alt: media.alt || media.title,
   caption: media.caption || "",
-  /* Images: what PratikshyaImage draws. Videos: the poster plate. */
   image:
     media.type === MEDIA_TYPES.VIDEO
       ? media.poster
         ? { id: `${media.id}-poster`, src: media.poster, alt: media.alt || media.title }
         : null
       : asImageSource(media),
-  /* Videos only. */
   src: media.type === MEDIA_TYPES.VIDEO ? media.url : null,
   poster: media.poster || "",
   role: media.role,
   fromRepository: true,
+  view: media.view || null,
+  groupKey: media.groupKey || null,
+  viewScore: media.viewScore ?? 99,
+  isStandalone: Boolean(media.isStandalone),
+  fileName: media.fileName || media.currentFilename || null,
 });
 
 /** A catalogue plate, in the same shape. */
@@ -66,6 +69,11 @@ const catalogueSlide = (image, index, product) => ({
   poster: "",
   role: index === 0 ? PRODUCT_MEDIA_ROLES.COVER : PRODUCT_MEDIA_ROLES.GALLERY,
   fromRepository: false,
+  view: index === 0 ? "front" : `view-${index + 1}`,
+  groupKey: product.id,
+  viewScore: index,
+  isStandalone: false,
+  fileName: null,
 });
 
 /** The catalogue plates a product was authored with. */
