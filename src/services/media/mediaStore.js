@@ -193,6 +193,13 @@ export const normaliseMedia = (entry) => {
     lowResolution: Boolean(entry.lowResolution),
     broken: Boolean(entry.broken),
 
+    /* Phase 21.6 — normalized naming & grouping */
+    groupKey: cleanString(entry.groupKey) || null,
+    view: cleanString(entry.view) || null,
+    viewScore: Number.isFinite(Number(entry.viewScore)) ? Number(entry.viewScore) : null,
+    isStandalone: entry.isStandalone !== undefined ? Boolean(entry.isStandalone) : null,
+    filePath: cleanString(entry.filePath) || cleanString(entry.optimizedPath) || cleanString(entry.url) || null,
+
     /* Lifecycle */
     createdAt: cleanString(entry.createdAt, nowIso()),
     updatedAt: cleanString(entry.updatedAt, cleanString(entry.createdAt, nowIso())),
