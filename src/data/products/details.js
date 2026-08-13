@@ -18,7 +18,9 @@ const galleryByCategory = {
   bangles: ["bridal-bangles", "bridal-jewellery", "fabric-embroidered"],
   jewellery: ["bridal-jewellery", "bridal-bangles", "women-bridal-wear"],
   menswear: ["men-kurta", "groom-sherwani", "men-sherwani", "fabric-embroidered"],
-  kidswear: ["kids-festive-wear", "kids-kurta-sets", "fabric-silk", "fabric-cotton"],
+  /* Kidswear deliberately has no category-wide gallery pad: every kids
+     product owns exactly one library plate and must never inherit another
+     product's or another category's imagery. */
 };
 
 const descriptions = {
@@ -41,7 +43,7 @@ const descriptions = {
   menswear: (product) =>
     `${product.name} approaches occasion tailoring with restraint. Cut in ${product.fabric}, the silhouette is clean through the shoulder and easy through the body, with ${product.material.toLowerCase()} lending a precise note of ceremony.`,
   kidswear: (product) =>
-    `${product.name} translates festive craft into a silhouette made for movement. Soft ${product.fabric.toLowerCase()}, gentle finishing and thoughtfully placed ${product.material.toLowerCase()} keep the piece special, comfortable and ready for a long celebration.`,
+    `${product.name} is a comfort-first everyday piece for children. Cut in soft ${product.fabric.toLowerCase()}, with ${product.material.toLowerCase()} finishing and an easy, movement-friendly fit, it stays neat through play, birthdays and everything in between.`,
 };
 
 const categoryDetails = {
@@ -54,7 +56,7 @@ const categoryDetails = {
   bangles: "A coordinated bangle set with a warm, jewellery-grade finish. Store each piece separately to preserve its surface.",
   jewellery: "One jewellery piece or coordinated set as named. Each setting is checked and finished by hand.",
   menswear: "A tailored Indian silhouette with considered ease. Bottoms and styling accessories are included only when named as part of a set.",
-  kidswear: "A celebration-ready children's silhouette with soft internal finishing and room for comfortable movement.",
+  kidswear: "A comfortable everyday children's silhouette with soft internal finishing and room for play.",
 };
 
 const fabricCare = (product) => {

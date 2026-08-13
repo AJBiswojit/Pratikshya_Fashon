@@ -60,7 +60,7 @@ const CATEGORY_SEEDS = [
   { id: "bangles", name: "Bangles", slug: "bangles", eyebrow: "The Stack", description: "Bridal sets, gold-finish bangles, kada and cuffs.", image: "bridal-bangles", featured: true, sortOrder: 70 },
   { id: "jewellery", name: "Jewellery", slug: "jewellery", eyebrow: "Adornment", description: "Temple, kundan and polki pieces for the whole ceremony.", image: "bridal-jewellery", featured: true, sortOrder: 80 },
   { id: "menswear", name: "Men's Wear", slug: "men", eyebrow: "The Groom", description: "Kurta, sherwani and Nehru jackets tailored in-house.", image: "men-sherwani", featured: true, sortOrder: 90 },
-  { id: "kidswear", name: "Kids Wear", slug: "kids", eyebrow: "Little Heirlooms", description: "Festive sets for children, made in the same cloth as the grown-ups'.", image: "kids-festive-wear", featured: true, sortOrder: 100 },
+  { id: "kidswear", name: "Kids Wear", slug: "kids", eyebrow: "Little Heirlooms", description: "Everyday sets, dresses and casual coordinates for children.", image: "kids-festive-wear", featured: true, sortOrder: 100 },
 ];
 
 const COLLECTION_SEEDS = [
