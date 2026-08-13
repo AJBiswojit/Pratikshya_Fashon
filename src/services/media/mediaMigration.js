@@ -12,6 +12,11 @@
 
 import { parseMediaFilename, getViewOrderScore } from "./mediaNaming.js";
 import { buildMediaGroups } from "./mediaGroups.js";
+import {
+  HOUSE_PLATE_MIGRATION,
+  lookupLegacyMedia,
+  resolveLegacyMediaUrl,
+} from "./mediaPaths.js";
 
 export const MIGRATION_STATUS = {
   MIGRATED: "MIGRATED",
@@ -204,9 +209,20 @@ export const detectMediaGroups = (fileNames = []) => {
   };
 };
 
+/**
+ * Legacy `/images/…` (and leftover house filenames) → canonical library URL.
+ * Historical product / order / taxonomy ids are never rewritten.
+ */
+export const resolveLegacyPath = (value) => resolveLegacyMediaUrl(value);
+
+export const getHousePlateMigration = () => HOUSE_PLATE_MIGRATION;
+
 export default {
   buildMigrationManifest,
   verifyPhysicalFiles,
   detectMediaGroups,
+  resolveLegacyPath,
+  lookupLegacyMedia,
+  getHousePlateMigration,
   MIGRATION_STATUS,
 };

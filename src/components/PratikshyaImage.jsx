@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { categoryFallbacks, getImage } from "../data/pratikshyaImageManifest";
+import { resolveLegacyMediaUrl } from "../services/media/mediaPaths";
 
 const resolveImage = (image, category) => {
   if (typeof image === "string") {
@@ -13,8 +14,8 @@ const resolveImage = (image, category) => {
   const fallbackCategory = category || image.category || "default";
   return {
     ...image,
-    src: image.src || categoryFallbacks[fallbackCategory] || categoryFallbacks.default,
-    fallback: image.fallback || categoryFallbacks[fallbackCategory] || categoryFallbacks.default,
+    src: resolveLegacyMediaUrl(image.src) || categoryFallbacks[fallbackCategory] || categoryFallbacks.default,
+    fallback: resolveLegacyMediaUrl(image.fallback) || categoryFallbacks[fallbackCategory] || categoryFallbacks.default,
   };
 };
 

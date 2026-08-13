@@ -29,6 +29,7 @@ import mediaResolver, {
 import { auditMediaExposure } from "../src/services/media/mediaExposure.js";
 import taxonomyRepository from "../src/services/taxonomyRepository.js";
 import { getLiveStorefrontProducts, getProductById } from "../src/data/products/index.js";
+import { isIngestedPhotographyUrl } from "../src/services/media/mediaPaths.js";
 import { USAGE_ROLES } from "../src/config/mediaTypes.js";
 
 /* ------------------------------------------------------------------ */
@@ -74,7 +75,7 @@ test("a category with no library media falls back to authored artwork", () => {
   const dupattas = taxonomyRepository.findCategory("dupattas");
   const cover = resolveCategoryCover(dupattas);
   assert.ok(cover?.src, "dupattas should still resolve a plate");
-  assert.ok(!cover.src.includes("/library/"), "dupattas has no library media");
+  assert.equal(isIngestedPhotographyUrl(cover.src), false, "dupattas has no library photography");
 });
 
 /* ------------------------------------------------------------------ */

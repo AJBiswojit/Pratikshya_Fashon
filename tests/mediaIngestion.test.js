@@ -58,7 +58,7 @@ test("folder paths map onto existing taxonomy and never invent a category", () =
   assert.equal(bandhani.mappingStatus, "NEEDS_REVIEW");
 });
 
-test("house plates keep their original path and are never renamed", () => {
+test("house plates migrate into the canonical library without becoming products", () => {
   const named = assignDeterministicNames([
     {
       originalPath: "images/atelier-fabric.jpg",
@@ -66,9 +66,10 @@ test("house plates keep their original path and are never renamed", () => {
       house: true,
     },
   ]);
-  assert.equal(named[0].currentFilename, "atelier-fabric.jpg");
-  assert.equal(named[0].optimizedPath, "images/atelier-fabric.jpg");
+  assert.equal(named[0].currentFilename, "house-atelier-fabric.jpg");
+  assert.equal(named[0].optimizedPath, "library/house-atelier-fabric.jpg");
   assert.equal(named[0].skipOptimize, true);
+  assert.equal(named[0].productId, undefined);
 });
 
 test("deterministic names increment inside a prefix and do not drift on reorder", () => {

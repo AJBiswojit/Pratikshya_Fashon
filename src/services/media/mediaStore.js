@@ -26,6 +26,7 @@ import {
 } from "../../config/mediaTypes";
 import { SEED_MEDIA } from "../../data/media/seedMedia";
 import { getIngestedRecords } from "./ingestedMedia";
+import { resolveLegacyMediaUrl } from "./mediaPaths";
 
 /** Namespaced, in line with every other PRATIKSHYA FASHON storage key. */
 export const MEDIA_STORAGE_KEY = "pratikshya_media";
@@ -74,9 +75,9 @@ export const normaliseMedia = (entry) => {
 
   /* An ephemeral preview address is dropped on the way in and on the way
      out — the record survives as metadata with a house fallback plate. */
-  const url = isEphemeralUrl(entry.url) ? "" : cleanString(entry.url);
-  const poster = isEphemeralUrl(entry.poster) ? "" : cleanString(entry.poster);
-  const thumbnail = isEphemeralUrl(entry.thumbnail) ? "" : cleanString(entry.thumbnail);
+  const url = isEphemeralUrl(entry.url) ? "" : resolveLegacyMediaUrl(cleanString(entry.url));
+  const poster = isEphemeralUrl(entry.poster) ? "" : resolveLegacyMediaUrl(cleanString(entry.poster));
+  const thumbnail = isEphemeralUrl(entry.thumbnail) ? "" : resolveLegacyMediaUrl(cleanString(entry.thumbnail));
 
   const productId = cleanString(entry.productId) || null;
   const placement = cleanString(entry.placement) || null;
@@ -198,7 +199,10 @@ export const normaliseMedia = (entry) => {
     view: cleanString(entry.view) || null,
     viewScore: Number.isFinite(Number(entry.viewScore)) ? Number(entry.viewScore) : null,
     isStandalone: entry.isStandalone !== undefined ? Boolean(entry.isStandalone) : null,
-    filePath: cleanString(entry.filePath) || cleanString(entry.optimizedPath) || cleanString(entry.url) || null,
+    filePath:
+      resolveLegacyMediaUrl(
+        cleanString(entry.filePath) || cleanString(entry.optimizedPath) || cleanString(entry.url)
+      ) || null,
 
     /* Lifecycle */
     createdAt: cleanString(entry.createdAt, nowIso()),

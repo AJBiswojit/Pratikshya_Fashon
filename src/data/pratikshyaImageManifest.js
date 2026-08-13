@@ -1,7 +1,10 @@
+import { resolveHousePlateUrl } from "../services/media/mediaPaths";
+
 const pexels = (id, width = 800, height = 1200, ext = "jpeg") =>
   `https://images.pexels.com/photos/${id}/pexels-photo-${id}.${ext}?auto=compress&cs=tinysrgb&fit=crop&h=${height}&w=${width}`;
 
-const local = (path) => `/images/${path}`;
+/** House plates resolve through the Phase 21.11 canonical library map. */
+const local = (path) => resolveHousePlateUrl(path);
 
 export const categoryFallbacks = {
   men: local("pratikshya/groom/groom-sherwani.jpg"),

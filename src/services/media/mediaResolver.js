@@ -27,6 +27,10 @@ import { getLiveStorefrontProducts, productHref } from "../../data/products";
 import taxonomyRepository from "../taxonomyRepository";
 import { getAll, getById, getProductMedia } from "./mediaRepository";
 import { placementImageSource } from "./marketingMediaSource";
+import {
+  isIngestedPhotographyUrl,
+  resolveLegacyMediaUrl,
+} from "./mediaPaths";
 import { getProductCoverImage } from "./productMediaSource";
 import {
   applyProductMediaSet,
@@ -36,7 +40,7 @@ import {
 
 const asSource = (media, fallbackCategory = "default") => {
   if (!media) return null;
-  const src = media.url || media.thumbnail || media.poster;
+  const src = resolveLegacyMediaUrl(media.url || media.thumbnail || media.poster);
   if (!src) return null;
   return {
     id: media.id,
@@ -321,7 +325,7 @@ const sourceFilename = (source) =>
  * audit metadata only; the image itself always comes from getProductMediaSet.
  */
 const sareeEditMediaSource = (primary, registered) => {
-  const isLibraryAsset = sourcePath(primary).includes("/library/");
+  const isLibraryAsset = isIngestedPhotographyUrl(sourcePath(primary));
   const role = registered?.role || primary?.role;
   if (isLibraryAsset && role === PRODUCT_MEDIA_ROLES.COVER) return "PRODUCT_LIBRARY_COVER";
   if (isLibraryAsset) return "PRODUCT_LIBRARY_GALLERY";
@@ -367,7 +371,7 @@ export const selectSareeEditProducts = (
       const ownsImage = imageOwner === String(product.id);
       const registeredOwnershipIsValid = !registered || registeredOwner === String(product.id);
       const path = sourcePath(image);
-      const dedicatedLibrary = path.includes("/library/");
+      const dedicatedLibrary = isIngestedPhotographyUrl(path);
       const sourceLabel = String(registered?.source || "").toLowerCase();
       const isGenericEditorial =
         !dedicatedLibrary &&

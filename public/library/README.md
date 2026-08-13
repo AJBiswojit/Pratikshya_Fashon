@@ -1,7 +1,8 @@
 # Application media library
 
-Web-ready assets produced by `npm run media:optimize`.
+The single canonical commercial media root (Phases 21.4 / 21.6 / 21.11).
 
-- Source originals remain in `/public/media` and `/public/images`.
-- This folder is the only tree customer surfaces should read for ingested photographs.
-- Filenames are deterministic. Re-running the script does not mint new names.
+- Customer surfaces never read `public/images` or `public/media`.
+- Filenames follow the Phase 21.6 convention and are deterministic.
+- House fallback plates live here as `house-*.jpg`. They are not products.
+- Application code resolves addresses through `mediaResolver` / `productMediaSet` / `imageRef`.

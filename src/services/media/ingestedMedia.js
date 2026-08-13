@@ -15,12 +15,14 @@ import {
 } from "../../config/mediaTypes";
 import ingestedManifest from "../../data/media/ingestedManifest.json";
 import { parseMediaFilename, getViewOrderScore } from "./mediaNaming.js";
+import { resolveLegacyMediaUrl } from "./mediaPaths.js";
 
 const INGESTED_AT = "2026-08-12T12:00:00.000Z";
 
 const publicUrl = (rel) => {
   if (!rel) return "";
-  return rel.startsWith("/") ? rel : `/${rel}`;
+  const prefixed = rel.startsWith("/") ? rel : `/${rel}`;
+  return resolveLegacyMediaUrl(prefixed) || prefixed;
 };
 
 const titleFrom = (asset) => {
