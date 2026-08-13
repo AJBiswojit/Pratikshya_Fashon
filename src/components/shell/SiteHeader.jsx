@@ -189,6 +189,25 @@ export default function SiteHeader({ counts = {}, onOpenCart }) {
 
           {/* Utility actions */}
           <div className="flex items-center gap-1 md:gap-2 text-brass">
+            <Link
+              to="/explore"
+              onMouseEnter={scheduleClose}
+              className={cn(
+                "hidden md:inline-flex relative py-2 px-2 hover:text-accent shrink-0",
+                navType.link,
+                transition.colors,
+                pathname === "/explore" && "text-accent"
+              )}
+            >
+              Explore
+              <span
+                aria-hidden="true"
+                className={cn(
+                  "absolute -bottom-px left-2 right-2 h-px origin-left bg-accent transition-transform duration-500",
+                  pathname === "/explore" ? "scale-x-100" : "scale-x-0"
+                )}
+              />
+            </Link>
             {utilityNavigation.map((item) => {
               const Icon = utilityIcons[item.icon];
               const count = counts[item.id];

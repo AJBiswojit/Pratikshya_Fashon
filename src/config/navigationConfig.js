@@ -334,6 +334,13 @@ export const legalNavigation = [
  */
 export const standalonePages = [
   {
+    to: "/explore",
+    label: "Explore",
+    eyebrow: "Explore PRATIKSHYA",
+    description: "Discover pieces across every collection.",
+    image: "hero-atelier",
+  },
+  {
     to: "/search",
     label: "Search",
     eyebrow: "Find Your Piece",

@@ -204,6 +204,9 @@ const scanFiles = [
   "src/pages/Shop.jsx",
   "src/pages/SearchResults.jsx",
   "src/pages/Wishlist.jsx",
+  "src/pages/Explore.jsx",
+  "src/components/explore/ExploreProductGrid.jsx",
+  "src/components/explore/ExploreBrowser.jsx",
 ];
 
 const randomHoverFiles = [];

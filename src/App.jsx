@@ -22,6 +22,7 @@ import AdminLayout from "./layouts/AdminLayout";
 import AtelierDesign from "./pages/AtelierDesign";
 import CatalogueListing from "./pages/CatalogueListing";
 import CategoryPage from "./pages/CategoryPage";
+import Explore from "./pages/Explore";
 import NotFound from "./pages/NotFound";
 import SearchResults from "./pages/SearchResults";
 import Shop from "./pages/Shop";
@@ -133,6 +134,7 @@ const AiBusinessAssistant = lazy(() => import("./pages/admin/AiBusinessAssistant
 const EmployeeReports = lazy(() => import("./pages/employee/EmployeeReports"));
 
 const dedicatedPaths = new Set([
+  "/explore",
   "/search",
   "/cart",
   "/wishlist",
@@ -315,6 +317,7 @@ export default function App() {
                         <Route index element={<AtelierDesign />} />
 
                         <Route path="/shop" element={<Shop />} />
+                        <Route path="/explore" element={<Explore />} />
                         <Route path="/category/:slug" element={<CatalogueListing variant="category" />} />
                         <Route path="/collection/:slug" element={<CatalogueListing variant="collection" />} />
                         <Route path="/search" element={<SearchResults />} />

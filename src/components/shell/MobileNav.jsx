@@ -166,6 +166,18 @@ export default function MobileNav({ onClose, counts = {} }) {
         {/* Groups */}
         <nav aria-label="Mobile" className={cn("flex-1 py-6", pagePadding)}>
           <ul className="divide-y divide-mist/60">
+            <li className="py-1">
+              <Link
+                to="/explore"
+                onClick={onClose}
+                className={cn(
+                  "block py-3 text-2xl font-light tracking-tight text-ink hover:text-accent",
+                  transition.colors
+                )}
+              >
+                Explore
+              </Link>
+            </li>
             {primaryNavigation.map((group) => {
               const isOpen = expanded === group.id;
 
