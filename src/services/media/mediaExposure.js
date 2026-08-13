@@ -16,7 +16,12 @@
  * so the numbers always reflect what a customer would actually see.
  */
 
-import { MEDIA_SCOPES, MEDIA_STATUS, USAGE_ROLES } from "../../config/mediaTypes";
+import {
+  MEDIA_SCOPES,
+  MEDIA_STATUS,
+  PRODUCT_MEDIA_ROLES,
+  USAGE_ROLES,
+} from "../../config/mediaTypes";
 import { getLiveStorefrontProducts } from "../../data/products";
 import taxonomyRepository from "../taxonomyRepository";
 import mediaRepository from "./mediaRepository";
@@ -31,6 +36,7 @@ import {
   resolveProductCover,
   resolveProductGallery,
   resolveSaleBackdrop,
+  selectNewArrivalProducts,
 } from "./mediaResolver";
 
 const HERO_THEMES = ["festive", "bridal", "heritage", "celebration", "arrivals"];
@@ -260,6 +266,16 @@ const HOMEPAGE_GROUPS = [
   { id: "innerwear", label: "Innerwear", categories: ["innerwear"] },
 ];
 
+/** Resolver fallback reason → customer-facing source classification. */
+const SOURCE_CLASSIFICATION = {
+  DIRECT: "REAL_LIBRARY",
+  PRODUCT_GALLERY: "PRODUCT_GALLERY",
+  TAXONOMY_PRODUCT: "TAXONOMY_DERIVED",
+  RELATED_TAXONOMY: "TAXONOMY_DERIVED",
+  HOUSE_FALLBACK: "HOUSE_FALLBACK",
+  NO_SOURCE_MEDIA: "NO_SOURCE_MEDIA",
+};
+
 /** One resolved plate → the report row, proving the actual file it points at. */
 const describeResolved = (source) => {
   if (!source || !source.id) {
@@ -267,6 +283,8 @@ const describeResolved = (source) => {
       mediaId: null,
       filename: null,
       usage: null,
+      reason: source?.reason ?? null,
+      source: source?.reason ? SOURCE_CLASSIFICATION[source.reason] ?? null : null,
       mapped: false,
       library: false,
       fallback: true,
@@ -283,10 +301,22 @@ const describeResolved = (source) => {
     media?.originalFilename ||
     (source.src ? source.src.split("/").pop() : null) ||
     source.id;
+  const usage = media
+    ? media.scope === MEDIA_SCOPES.PRODUCT
+      ? media.role === PRODUCT_MEDIA_ROLES.COVER
+        ? "PRODUCT_PRIMARY"
+        : media.role === PRODUCT_MEDIA_ROLES.GALLERY
+          ? "PRODUCT_GALLERY"
+          : media.role
+      : (media.usageRoles || []).join(",") || null
+    : null;
+  const reason = source.reason ?? (library ? "DIRECT" : null);
   return {
     mediaId: source.id,
     filename,
-    usage: (media?.usageRoles || []).join(",") || null,
+    usage,
+    reason,
+    source: SOURCE_CLASSIFICATION[reason] ?? (library ? "REAL_LIBRARY" : "NO_SOURCE_MEDIA"),
     mapped: media ? media.mappingStatus === "MAPPED" : false,
     library,
     fallback: !library,
@@ -343,17 +373,17 @@ export const auditHomepageSections = () => {
   const collections = taxonomyRepository.activeCollections().map((collection) => ({
     name: collection.name,
     slug: collection.slug,
+    productCount: getLiveStorefrontProducts().filter((product) =>
+      taxonomyRepository.isProductInCollection(product, collection.id)
+    ).length,
     ...describeResolved(resolveCollectionCover(collection)),
   }));
 
-  const newArrivals = [...getLiveStorefrontProducts()]
-    .sort((a, b) => b.addedOrder - a.addedOrder)
-    .slice(0, 5)
-    .map((product) => ({
-      id: product.id,
-      name: product.name,
-      ...describeResolved(resolveProductCover(product)),
-    }));
+  const newArrivals = selectNewArrivalProducts(getLiveStorefrontProducts(), 5).map((product) => ({
+    id: product.id,
+    name: product.name,
+    ...describeResolved(resolveProductCover(product)),
+  }));
 
   const sale = describeResolved(resolveSaleBackdrop(null, new Set(heroUsed)));
 

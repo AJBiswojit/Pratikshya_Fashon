@@ -11,6 +11,7 @@ import {
   useReveal,
 } from "../../design-system";
 import { getLiveStorefrontProducts, productHref } from "../../data/products";
+import { selectNewArrivalProducts } from "../../services/media/mediaResolver";
 import { useProductCovers } from "../../hooks/useMedia";
 import { useWishlist } from "../../context/WishlistContext";
 import { useInventory } from "../../context/InventoryContext";
@@ -22,9 +23,10 @@ import { cn } from "../../utils/cn";
  * NEW ARRIVALS — landing section.
  *
  * A premium catalogue rail of the newest pieces, drawn from the one product
- * repository. Arrivals are ranked the way the catalogue itself ranks them:
- * records explicitly marked as new first, then by recency, so the rail is
- * always real catalogue truth and never a second dataset.
+ * repository. Qualification is unchanged (flagged arrivals first, then
+ * recency), but within that pool products with real library primary media
+ * lead, so the rail prefers actual product photography over authored plates.
+ * The ranking is shared with the audit via `selectNewArrivalProducts`.
  *
  * The card is the existing `ProductCard`, with the published media cover and
  * the shared wishlist wired through the same hooks the shop grid uses. "View
@@ -38,9 +40,7 @@ export default function NewArrivals() {
   const wishlist = useWishlist();
   const inventory = useInventory();
 
-  const arrivals = [...getLiveStorefrontProducts()]
-    .sort((a, b) => b.addedOrder - a.addedOrder)
-    .slice(0, COUNT);
+  const arrivals = selectNewArrivalProducts(getLiveStorefrontProducts(), COUNT);
 
   /* Rows carry the published cover when the Admin Portal has set one. */
   const rows = useProductCovers(arrivals);

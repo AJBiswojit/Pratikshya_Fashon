@@ -1,18 +1,30 @@
 /**
- * PRATIKSHYA FASHON — Homepage data-flow audit (Phase 21.7).
+ * PRATIKSHYA FASHON — Homepage data-flow audit (Phase 21.7 / 21.8).
  *
  * Proves that the homepage consumes the canonical taxonomy + media
  * architecture: it resolves every category/collection route from the managed
- * slugs and every plate from the central media resolver, then prints the
- * HOMEPAGE MEDIA REPORT and the HOMEPAGE REDIRECTION MATRIX.
+ * slugs and every plate from the central media resolver, then prints:
+ *
+ *   1. the HOMEPAGE MEDIA REPORT (per-section, per-item, with the actual file,
+ *      media id, source classification, usage and fallback reason),
+ *   2. the HOMEPAGE REDIRECTION MATRIX,
+ *   3. the NO-SOURCE-MEDIA register (every surface with no relevant
+ *      photography, where house artwork is the correct answer).
  *
  * Read-only. No writes, no image bytes, no React.
  *
  * Usage:
  *   node --import ./scripts/node-loader/register.mjs scripts/audit-homepage.mjs
+ *   npm run audit:homepage
  */
 
 import { auditHomepageSections } from "../src/services/media/mediaExposure.js";
+import { getLiveStorefrontProducts } from "../src/data/products/index.js";
+import {
+  resolveCategoryCover,
+  resolveCollectionCover,
+  resolveProductCover,
+} from "../src/services/media/mediaResolver.js";
 import taxonomyRepository from "../src/services/taxonomyRepository.js";
 import {
   resolveCategoryRoute,
@@ -28,12 +40,20 @@ const pad = (value, width) => String(value ?? "—").padEnd(width);
 
 const report = auditHomepageSections();
 
-const summarise = (rows) => {
-  const library = rows.filter((row) => row.library && !row.broken).length;
-  const fallback = rows.filter((row) => row.fallback).length;
-  const broken = rows.filter((row) => row.broken).length;
-  const mapped = rows.filter((row) => row.mapped).length;
-  return { library, fallback, broken, mapped };
+const tally = (rows) => {
+  const counts = {
+    REAL_LIBRARY: 0,
+    PRODUCT_GALLERY: 0,
+    TAXONOMY_DERIVED: 0,
+    HOUSE_FALLBACK: 0,
+    NO_SOURCE_MEDIA: 0,
+    broken: 0,
+  };
+  rows.forEach((row) => {
+    if (row.broken) counts.broken += 1;
+    if (counts[row.source] !== undefined) counts[row.source] += 1;
+  });
+  return counts;
 };
 
 const printSection = (title, rows, keyOf) => {
@@ -43,18 +63,33 @@ const printSection = (title, rows, keyOf) => {
     line();
     return;
   }
+  line(
+    pad("Item", 28) +
+      pad("Filename", 36) +
+      pad("Source", 18) +
+      pad("Usage", 20) +
+      "Fallback reason"
+  );
   rows.forEach((row) => {
     const key = keyOf ? keyOf(row) : row.name ?? row.filename;
-    line(`- ${pad(key, 26)} ${pad(row.filename, 34)} ${pad(row.usage, 22)} ${pad(row.mapped ? "mapped" : "unmapped", 10)} ${pad(row.broken ? "broken" : row.library ? "library" : "fallback", 10)} ${pad(row.scope, 12)}`);
+    line(
+      pad(key, 28) +
+        pad(row.filename, 36) +
+        pad(row.source, 18) +
+        pad(row.usage, 20) +
+        (row.reason ?? "—")
+    );
   });
-  const s = summarise(rows);
-  line(`  → library ${s.library} · fallback ${s.fallback} · broken ${s.broken} · mapped ${s.mapped}`);
+  const t = tally(rows);
+  line(
+    `  → REAL_LIBRARY ${t.REAL_LIBRARY} · PRODUCT_GALLERY ${t.PRODUCT_GALLERY} · ` +
+      `TAXONOMY_DERIVED ${t.TAXONOMY_DERIVED} · HOUSE_FALLBACK ${t.HOUSE_FALLBACK} · ` +
+      `NO_SOURCE_MEDIA ${t.NO_SOURCE_MEDIA} · broken ${t.broken}`
+  );
   line();
 };
 
 line("# HOMEPAGE MEDIA REPORT");
-line();
-line("Section · Asset · File · Usage · Mapped/Unmapped · Library/Fallback · Scope");
 line();
 printSection("HERO", report.hero);
 printSection("EDITORIAL", report.editorial);
@@ -86,6 +121,38 @@ matrix.forEach(([label, resolved]) => {
   const ok = resolved ? resolved.href : null;
   line(pad(label, 30) + pad(ok ?? "—", 30) + (ok ? "resolved" : "UNROUTABLE"));
 });
+line();
+
+/* ------------------------------------------------------------------ */
+/* NO SOURCE MEDIA                                                     */
+/* ------------------------------------------------------------------ */
+
+line("# NO SOURCE MEDIA");
+line();
+line("Surfaces where no relevant Pratikshya photography exists — the premium");
+line("house artwork is the correct answer (never a wrong image).");
+line();
+
+const noSourceCategories = taxonomyRepository
+  .activeCategories()
+  .filter((category) => resolveCategoryCover(category)?.reason === "NO_SOURCE_MEDIA")
+  .map((category) => category.name);
+
+const noSourceCollections = taxonomyRepository
+  .activeCollections()
+  .filter((collection) => resolveCollectionCover(collection)?.reason === "NO_SOURCE_MEDIA")
+  .map((collection) => collection.name);
+
+const noSourceProducts = getLiveStorefrontProducts()
+  .filter((product) => resolveProductCover(product)?.reason === "NO_SOURCE_MEDIA")
+  .map((product) => `${product.name} (${product.id})`);
+
+line(`Categories:  ${noSourceCategories.length ? noSourceCategories.join(", ") : "(none)"}`);
+line(`Collections: ${noSourceCollections.length ? noSourceCollections.join(", ") : "(none)"}`);
+line(`Products:    ${noSourceProducts.length}`);
+if (noSourceProducts.length) {
+  noSourceProducts.forEach((product) => line(`  - ${product}`));
+}
 line();
 
 /* ------------------------------------------------------------------ */

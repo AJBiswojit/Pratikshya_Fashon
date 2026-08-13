@@ -16,10 +16,15 @@
 import {
   AI_MIRROR_ELIGIBLE_CATEGORIES,
   AI_MIRROR_EXCLUDED_CATEGORIES,
+  MEDIA_SCOPES,
   MEDIA_STATUS,
+  MEDIA_TYPES,
+  PRODUCT_MEDIA_ROLES,
   USAGE_ROLES,
 } from "../../config/mediaTypes";
 import { imageRef } from "../../data/pratikshyaImageManifest";
+import { getLiveStorefrontProducts } from "../../data/products";
+import taxonomyRepository from "../taxonomyRepository";
 import { getAll, getById, getProductMedia } from "./mediaRepository";
 import { placementImageSource } from "./marketingMediaSource";
 import { getProductCoverImage } from "./productMediaSource";
@@ -75,6 +80,31 @@ const isHousePlate = (media) =>
   Boolean(media && ((media.tags || []).includes("house") || media.source === "House artwork"));
 
 /**
+ * Phase 21.8 — why a plate was chosen. Every customer-facing cover now
+ * carries a reason so the audit can prove *what* was selected, not just that
+ * a resolver ran. The values describe the fallback chain travelled:
+ *
+ *   DIRECT            a dedicated role asset (CATEGORY_COVER / COLLECTION_COVER /
+ *                     PRODUCT_PRIMARY / HERO / SALE …) from the real library
+ *   PRODUCT_GALLERY   a product's own gallery media, used when it has no COVER
+ *   TAXONOMY_PRODUCT  a member product's primary media standing in for a
+ *                     category / collection that has no dedicated cover
+ *   RELATED_TAXONOMY  library media tagged to the same taxonomy, any role
+ *   HOUSE_FALLBACK    the existing premium house artwork
+ *   NO_SOURCE_MEDIA   no relevant source photography exists — house artwork
+ */
+export const FALLBACK_REASONS = {
+  DIRECT: "DIRECT",
+  PRODUCT_GALLERY: "PRODUCT_GALLERY",
+  TAXONOMY_PRODUCT: "TAXONOMY_PRODUCT",
+  RELATED_TAXONOMY: "RELATED_TAXONOMY",
+  HOUSE_FALLBACK: "HOUSE_FALLBACK",
+  NO_SOURCE_MEDIA: "NO_SOURCE_MEDIA",
+};
+
+const withReason = (source, reason) => (source ? { ...source, reason } : null);
+
+/**
  * Rank a candidate list. Higher is better; ties break on id so the order
  * is stable across renders.
  *
@@ -117,6 +147,7 @@ export const selectMedia = ({
   limit = 1,
   preferPortrait = false,
   allowUnmapped = false,
+  excludeHouse = false,
 } = {}) => {
   const preferredRoles = roles || (role ? [role] : []);
   const used = usedIds instanceof Set ? usedIds : new Set(usedIds || []);
@@ -124,6 +155,7 @@ export const selectMedia = ({
   const pool = getAll()
     .filter(isUsable)
     .filter((item) => (allowUnmapped ? true : item.mappingStatus !== "UNMAPPED"))
+    .filter((item) => (excludeHouse ? !isHousePlate(item) : true))
     .filter((item) => (categoryId ? item.categoryId === categoryId : true))
     .filter((item) => (collectionId ? item.collectionId === collectionId : true))
     .filter((item) => (productId ? item.productId === productId : true))
@@ -166,10 +198,117 @@ export const resolveMedia = ({
     allowUnmapped,
   });
 
+/** The best real-library image a product owns — COVER preferred, never house. */
+const libraryProductImage = (product, usedIds = null) => {
+  if (!product?.id) return null;
+  const images = getProductMedia(product.id, { publicOnly: true, type: MEDIA_TYPES.IMAGE })
+    .filter(isUsable)
+    .filter((item) => !isHousePlate(item))
+    .filter((item) => !(usedIds && usedIds.has(item.id)));
+  if (!images.length) return null;
+  return images.find((item) => item.role === PRODUCT_MEDIA_ROLES.COVER) ?? images[0];
+};
+
 /**
- * Category card / listing hero. Prefer an ACTIVE managed banner, then a
- * CATEGORY_COVER from the ingested library, then the category's authored
- * manifest plate.
+ * Highest-ranked library image across a set of products — the fallback a
+ * category/collection uses when it has no dedicated cover. The image always
+ * belongs to a product inside that category/collection, never an unrelated
+ * one.
+ */
+const bestMemberProductImage = (products = [], usedIds = null) => {
+  const candidates = [];
+  (products || []).forEach((product) => {
+    const media = libraryProductImage(product, usedIds);
+    if (media) candidates.push(media);
+  });
+  if (!candidates.length) return null;
+  candidates.sort((a, b) => compareMedia(a, b, { preferPortrait: true }));
+  const chosen = candidates[0];
+  usedIds?.add(chosen.id);
+  return chosen;
+};
+
+/** One pass over the register → productId → its library media coverage. */
+export const buildProductLibraryIndex = () => {
+  const index = new Map();
+  getAll().forEach((item) => {
+    if (item.scope !== MEDIA_SCOPES.PRODUCT || !item.productId) return;
+    if (!isUsable(item) || isHousePlate(item)) return;
+    const entry = index.get(item.productId) || { hasCover: false, hasAny: false };
+    entry.hasAny = true;
+    if (item.role === PRODUCT_MEDIA_ROLES.COVER) entry.hasCover = true;
+    index.set(item.productId, entry);
+  });
+  return index;
+};
+
+/**
+ * Library coverage tier for one product:
+ *   0 = dedicated library COVER/PRIMARY media
+ *   1 = library gallery media (no COVER)
+ *   2 = authored fallback only
+ * A product never borrows another product's image — only its own published
+ * media is consulted.
+ */
+export const productMediaTier = (product) => {
+  const images = getProductMedia(product?.id, { publicOnly: true, type: MEDIA_TYPES.IMAGE })
+    .filter(isUsable)
+    .filter((item) => !isHousePlate(item));
+  if (!images.length) return 2;
+  return images.some((item) => item.role === PRODUCT_MEDIA_ROLES.COVER) ? 0 : 1;
+};
+
+/**
+ * Ranks candidates so products with real library primary media come first,
+ * then library gallery, then authored — recency breaks ties within a tier.
+ * Single source for the New Arrivals section and the audit, so the report
+ * always mirrors what the customer sees.
+ */
+export const rankNewArrivalProducts = (products = []) => {
+  const index = buildProductLibraryIndex();
+  const tierOf = (product) => {
+    const entry = index.get(String(product?.id));
+    if (!entry) return 2;
+    return entry.hasCover ? 0 : 1;
+  };
+  return [...products]
+    .map((product) => ({ product, tier: tierOf(product) }))
+    .sort(
+      (a, b) =>
+        a.tier - b.tier ||
+        (Number(b.product.addedOrder) || 0) - (Number(a.product.addedOrder) || 0)
+    )
+    .map((entry) => entry.product);
+};
+
+/**
+ * The New Arrivals selection: flagged arrivals first (ranked library-first),
+ * then the newest remaining pieces to fill the rail. Qualification is
+ * unchanged — only the ordering within the new-arrival pool prefers real
+ * product photography.
+ */
+export const selectNewArrivalProducts = (products = [], count = 5) => {
+  const list = products || [];
+  const flagged = rankNewArrivalProducts(list.filter((product) => product.isNew));
+  const rest = list
+    .filter((product) => !product.isNew)
+    .sort((a, b) => (Number(b.addedOrder) || 0) - (Number(a.addedOrder) || 0));
+  return [...flagged, ...rest].slice(0, Math.max(0, count));
+};
+
+/**
+ * Category card / listing hero.
+ *
+ * Fallback chain (Phase 21.8):
+ *   1. ACTIVE managed banner                     → DIRECT
+ *   2. dedicated CATEGORY_COVER library media     → DIRECT
+ *   3. member product library media (same category) → TAXONOMY_PRODUCT
+ *   4. related taxonomy library media (any role)  → RELATED_TAXONOMY
+ *   5. authored house artwork                      → NO_SOURCE_MEDIA
+ *
+ * House re-ingested plates never satisfy tiers 2–4, so a category with no
+ * real photography falls through to its own authored artwork rather than a
+ * mismatched plate.
  */
 export const resolveCategoryCover = (category, usedIds = null) => {
   if (!category) return imageRef("hero-atelier");
@@ -178,18 +317,34 @@ export const resolveCategoryCover = (category, usedIds = null) => {
     const source = asSource(managed, category.id);
     if (source && managed.status === MEDIA_STATUS.ACTIVE) {
       usedIds?.add(managed.id);
-      return source;
+      return withReason(source, FALLBACK_REASONS.DIRECT);
     }
   }
   const selected = selectMedia({
     categoryId: category.id,
-    roles: [USAGE_ROLES.CATEGORY_COVER, USAGE_ROLES.EDITORIAL, USAGE_ROLES.HERO, USAGE_ROLES.PRODUCT_PRIMARY],
+    roles: [USAGE_ROLES.CATEGORY_COVER, USAGE_ROLES.EDITORIAL, USAGE_ROLES.HERO],
     preferPortrait: true,
     usedIds,
     limit: 1,
+    excludeHouse: true,
   })[0];
-  if (selected) return asSource(selected, category.id);
-  return imageRef(category.image || "hero-atelier");
+  if (selected) return withReason(asSource(selected, category.id), FALLBACK_REASONS.DIRECT);
+
+  const member = bestMemberProductImage(
+    getLiveStorefrontProducts().filter((product) => product.category === category.id),
+    usedIds
+  );
+  if (member) return withReason(asSource(member, category.id), FALLBACK_REASONS.TAXONOMY_PRODUCT);
+
+  const related = selectMedia({
+    categoryId: category.id,
+    usedIds,
+    limit: 1,
+    excludeHouse: true,
+  })[0];
+  if (related) return withReason(asSource(related, category.id), FALLBACK_REASONS.RELATED_TAXONOMY);
+
+  return withReason(imageRef(category.image || "hero-atelier"), FALLBACK_REASONS.NO_SOURCE_MEDIA);
 };
 
 export const resolveCollectionCover = (collection, usedIds = null) => {
@@ -200,7 +355,7 @@ export const resolveCollectionCover = (collection, usedIds = null) => {
     const source = asSource(managed, collection.id);
     if (source && managed.status === MEDIA_STATUS.ACTIVE) {
       usedIds?.add(managed.id);
-      return source;
+      return withReason(source, FALLBACK_REASONS.DIRECT);
     }
   }
   const selected = selectMedia({
@@ -208,9 +363,25 @@ export const resolveCollectionCover = (collection, usedIds = null) => {
     roles: [USAGE_ROLES.COLLECTION_COVER, USAGE_ROLES.EDITORIAL, USAGE_ROLES.HERO, USAGE_ROLES.CATEGORY_COVER],
     usedIds,
     limit: 1,
+    excludeHouse: true,
   })[0];
-  if (selected) return asSource(selected, collection.id);
-  return imageRef(collection.image || "hero-atelier");
+  if (selected) return withReason(asSource(selected, collection.id), FALLBACK_REASONS.DIRECT);
+
+  const specific = selectMedia({
+    collectionId: collection.id,
+    usedIds,
+    limit: 1,
+    excludeHouse: true,
+  })[0];
+  if (specific) return withReason(asSource(specific, collection.id), FALLBACK_REASONS.RELATED_TAXONOMY);
+
+  const member = bestMemberProductImage(
+    getLiveStorefrontProducts().filter((product) => taxonomyRepository.isProductInCollection(product, collection.id)),
+    usedIds
+  );
+  if (member) return withReason(asSource(member, collection.id), FALLBACK_REASONS.TAXONOMY_PRODUCT);
+
+  return withReason(imageRef(collection.image || "hero-atelier"), FALLBACK_REASONS.NO_SOURCE_MEDIA);
 };
 
 const HERO_THEMES = {
@@ -254,9 +425,10 @@ export const resolveThemeImage = (theme, usedIds = null) => {
     preferPortrait: true,
     usedIds,
     limit: 1,
+    excludeHouse: true,
   })[0];
-  if (selected) return asSource(selected, config.categoryId);
-  return imageRef(config.fallback);
+  if (selected) return withReason(asSource(selected, config.categoryId), FALLBACK_REASONS.DIRECT);
+  return withReason(imageRef(config.fallback), FALLBACK_REASONS.HOUSE_FALLBACK);
 };
 
 /**
@@ -268,7 +440,7 @@ export const resolveHeroSlideImage = (theme, { heroMedia = null, lead = false, u
     const override = placementImageSource(heroMedia);
     if (override) {
       usedIds?.add(heroMedia.id);
-      return override;
+      return withReason(override, FALLBACK_REASONS.DIRECT);
     }
   }
   return resolveThemeImage(theme, usedIds);
@@ -298,22 +470,40 @@ export const resolveEditorialFrame = (theme, usedIds = null) => resolveThemeImag
  */
 export const resolveSaleBackdrop = (festiveMedia = null, usedIds = null) => {
   const override = placementImageSource(festiveMedia);
-  if (override) return override;
+  if (override) return withReason(override, FALLBACK_REASONS.DIRECT);
   const selected = selectMedia({
     roles: [USAGE_ROLES.SALE, USAGE_ROLES.BANNER, USAGE_ROLES.EDITORIAL],
     categoryId: "lehengas",
     usedIds,
     limit: 1,
+    excludeHouse: true,
   })[0];
-  if (selected) return asSource(selected, "lehengas");
-  return imageRef("lehenga-party");
+  if (selected) return withReason(asSource(selected, "lehengas"), FALLBACK_REASONS.DIRECT);
+  return withReason(imageRef("lehenga-party"), FALLBACK_REASONS.HOUSE_FALLBACK);
 };
 
 /**
- * Product cover for any customer surface. Published repository media
- * wins; otherwise the authored catalogue plate stands.
+ * Product cover for any customer surface.
+ *
+ * Priority (Phase 21.8): the product's own library COVER/PRIMARY media,
+ * then its own library gallery media, then its authored plate. An image is
+ * only ever taken from the product itself — never from another product.
  */
-export const resolveProductCover = (product) => getProductCoverImage(product);
+export const resolveProductCover = (product) => {
+  if (!product) return null;
+  const images = getProductMedia(product.id, { publicOnly: true, type: MEDIA_TYPES.IMAGE })
+    .filter(isUsable)
+    .filter((item) => !isHousePlate(item));
+  if (images.length) {
+    const cover = images.find((item) => item.role === PRODUCT_MEDIA_ROLES.COVER) ?? images[0];
+    return withReason(
+      asSource(cover, product.category),
+      cover.role === PRODUCT_MEDIA_ROLES.COVER ? FALLBACK_REASONS.DIRECT : FALLBACK_REASONS.PRODUCT_GALLERY
+    );
+  }
+  const authored = getProductCoverImage(product);
+  return authored ? withReason(authored, FALLBACK_REASONS.NO_SOURCE_MEDIA) : null;
+};
 
 export const decorateProductWithMedia = (product) => {
   if (!product) return product;
@@ -355,6 +545,7 @@ export const resolveProductGallery = (product) => {
 };
 
 export default {
+  FALLBACK_REASONS,
   selectMedia,
   resolveMedia,
   compareMedia,
@@ -366,6 +557,10 @@ export default {
   resolveEditorialFrame,
   resolveSaleBackdrop,
   resolveProductCover,
+  buildProductLibraryIndex,
+  productMediaTier,
+  rankNewArrivalProducts,
+  selectNewArrivalProducts,
   decorateProductWithMedia,
   decorateProductsWithMedia,
   isAiMirrorSafeMedia,
