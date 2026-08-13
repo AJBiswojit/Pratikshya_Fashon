@@ -106,7 +106,37 @@ test("Saree Edit component contains no hardcoded image URL or image filename lis
   assert.match(source, /useSareeEditProducts\(\)/);
   assert.match(source, /resolveCategoryRoute\("sarees"\)/);
   assert.match(source, /SAREE_EDIT_AUTOPLAY_MS\s*=\s*2500/);
-  assert.match(source, /sareeEditFrom(?:Left|Right)_650ms/);
   assert.match(source, /prefers-reduced-motion:\s*reduce/);
   assert.match(source, /loading="lazy"/);
+});
+
+test("Saree Edit transitions use a layered Framer Motion crossfade, never a remount snap", () => {
+  const source = readFileSync(
+    join(process.cwd(), "src/components/storefront/SareeEditCarousel.jsx"),
+    "utf8"
+  );
+
+  // Layered rendering: outgoing slide stays mounted while the incoming one fades in.
+  assert.match(source, /from "framer-motion"/);
+  assert.match(source, /<AnimatePresence/);
+  assert.match(source, /useIsPresent/); // exiting layers become inert, not unmounted
+
+  // Editorial timing: 700–900ms image crossfade, ≤20px drift, 350–500ms text.
+  assert.match(source, /SAREE_EDIT_TRANSITION_MS\s*=\s*(7\d\d|8\d\d|900)\b/);
+  assert.match(source, /SAREE_EDIT_TRAVEL_PX\s*=\s*(1[2-9]|20)\b/);
+  assert.match(source, /SAREE_EDIT_TEXT_MS\s*=\s*(3[5-9]\d|4\d\d|500)\b/);
+  assert.match(source, /SAREE_EDIT_TEXT_DELAY_MS\s*=\s*\d+/);
+
+  // A single transition system shared by autoplay and Previous/Next, guarded
+  // so a new transition never starts while one is running.
+  assert.match(source, /beginTransition/);
+  assert.match(source, /transitionLock/);
+
+  // Dynamic variants destructure direction/reduced-motion — every layer must
+  // receive the shared custom payload or the variant resolver would throw.
+  assert.ok((source.match(/custom=\{layerCustom\}/g) ?? []).length >= 4);
+
+  // The old instant-remount keyframe mechanism is gone.
+  assert.doesNotMatch(source, /sareeEditFrom(?:Left|Right)/);
+  assert.doesNotMatch(source, /key=\{`active-/);
 });
