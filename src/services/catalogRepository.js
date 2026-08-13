@@ -33,6 +33,10 @@ import { DISCOUNT_TYPES, computePricing } from "../utils/pricing";
 import { formatINR } from "../utils/shopping";
 import { syncProductDraftRecords } from "./productDraftMigration";
 import {
+  syncCatalogueReconciliation,
+  syncCanonicalMediaAssignment,
+} from "./catalogueReconciliation";
+import {
   REVIEW_FLAG_LABELS,
   blockingReviewFlags,
   isPlaceholderProductName,
@@ -239,8 +243,15 @@ const read = () => {
     const synced = raw ? syncKidswearRegister(healed) : healed;
     /* Phase 22 — additive, idempotent Kids draft migration. */
     const migrated = syncProductDraftRecords(synced);
-    readCache = { raw: raw ?? null, parsed: migrated };
-    return migrated;
+    /* Phase 23 — additive, idempotent catalogue reconciliation: every
+       uncatalogued product-media group becomes one reviewable DRAFT. */
+    const reconciled = syncCatalogueReconciliation(migrated);
+    /* Phase 23.2 — assign canonical library media to published products
+       (bangles / jewellery / innerwear) so their cards render the canonical
+       product photography instead of the legacy shared house plates. */
+    syncCanonicalMediaAssignment(reconciled);
+    readCache = { raw: raw ?? null, parsed: reconciled };
+    return reconciled;
   } catch {
     return healRead(null);
   }

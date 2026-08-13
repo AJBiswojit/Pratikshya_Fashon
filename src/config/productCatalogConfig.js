@@ -219,21 +219,11 @@ export const GENDER_OPTIONS = ["Women", "Men", "Kids", "Unisex"];
  * created from media receives a permanent id like `KID-007` — never a
  * random id, never an array index. The id is persisted in the product
  * register and is never derived from the editable product name.
+ *
+ * The values live in the leaf module `./productIdPrefixes` so the catalogue
+ * repository can share them without an import cycle.
  */
-export const PRODUCT_ID_PREFIXES = {
-  kidswear: "KID",
-  menswear: "MEN",
-  sarees: "SAR",
-  lehengas: "LEH",
-  "bridal-couture": "BRD",
-  "kurtis-and-suits": "KUR",
-  innerwear: "INN",
-  dupattas: "DUP",
-  bangles: "BAN",
-  jewellery: "JEW",
-};
-
-export const DEFAULT_PRODUCT_ID_PREFIX = "PRD";
+export { PRODUCT_ID_PREFIXES, DEFAULT_PRODUCT_ID_PREFIX } from "./productIdPrefixes";
 
 /** Names a draft may hold that do not count as real product information. */
 export const PLACEHOLDER_PRODUCT_NAMES = ["untitled", "not yet defined", "undefined"];
