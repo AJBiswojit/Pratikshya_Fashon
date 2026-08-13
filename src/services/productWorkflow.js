@@ -53,6 +53,13 @@ import {
   blockingReviewFlags,
   isPlaceholderProductName,
 } from "./productReviewFlags";
+import {
+  KIDS_MERGE_REFUSED_ERROR,
+  confirmedKidsProductIdsIn,
+  isConfirmedKidsProductId,
+  kidsProductIdForFile,
+  wouldMergeConfirmedKids,
+} from "./kidsProductIdentity";
 
 /* ------------------------------------------------------------------ */
 /* Helpers                                                             */
@@ -173,6 +180,21 @@ export const transferMediaOwnership = (mediaId, targetProductId, actor = null, {
   const media = mediaRepository.getById(mediaId);
   if (!media) return { ok: false, error: "Media not found." };
 
+  /* Phase 22.2 — a confirmed Kids plate belongs to exactly one KID product.
+     kids-002.webp may never become the media of KID-001. */
+  const confirmedOwner = kidsProductIdForFile(mediaFileName(media));
+  if (
+    confirmedOwner &&
+    isConfirmedKidsProductId(targetProductId) &&
+    String(targetProductId).toUpperCase() !== confirmedOwner
+  ) {
+    return {
+      ok: false,
+      error: `${mediaFileName(media)} is the confirmed media of ${confirmedOwner} — it cannot be transferred to ${targetProductId}.`,
+      confirmedOwnerProductId: confirmedOwner,
+    };
+  }
+
   const previousOwnerId = media.productId ? String(media.productId) : null;
   const moving = String(previousOwnerId ?? "") !== String(targetProductId);
 
@@ -278,6 +300,15 @@ export const createProductDraftFromMedia = ({
   const ids = (Array.isArray(mediaIds) ? mediaIds : [mediaIds]).filter(Boolean);
   const mediaItems = ids.map((id) => mediaRepository.getById(id)).filter(Boolean);
   if (!mediaItems.length) return { ok: false, error: "Select at least one media asset." };
+
+  /* Phase 22.2 — never fold two confirmed Kids products into one draft. */
+  if (wouldMergeConfirmedKids(mediaItems.map(mediaFileName))) {
+    return {
+      ok: false,
+      error: KIDS_MERGE_REFUSED_ERROR,
+      confirmedKidsProductIds: confirmedKidsProductIdsIn(mediaItems.map(mediaFileName)),
+    };
+  }
 
   const category = categoryId || mediaItems[0].categoryId || "";
   const id = preferredProductIdForMedia(mediaItems, category);
@@ -417,6 +448,11 @@ export const EMPLOYEE_EDITABLE_FIELDS = [
   "collectionIds",
   "collections",
   "tags",
+  /* Phase 22.2 — the opening inventory state a product must carry before
+     it can publish. The stock LEDGER stays with the inventory module; this
+     is the catalogue's opening quantity, edited on the draft. */
+  "stock",
+  "availability",
 ];
 
 export const pickEmployeeEditableFields = (patch = {}) =>
@@ -664,9 +700,13 @@ export const getPotentialProductGroups = () => {
     });
   });
 
-  /* 3. Stored human decisions still pending. */
+  /* 3. Stored human decisions still pending.
+     Phase 22.2 — a group already CLOSED as SEPARATE_PRODUCTS is a settled
+     identity (the 21 confirmed Kids products live here). It is a record,
+     not a candidate, so it never returns to the similarity queue. */
   const stored = getAllGroups()
     .filter((group) => group.status !== "ARCHIVED")
+    .filter((group) => group.decision !== GROUP_DECISIONS.SEPARATE_PRODUCTS)
     .map((group) => ({
       id: `stored-${group.id}`,
       kind: "MANUAL",
@@ -705,6 +745,16 @@ export const decideProductGroup = ({
   const ids = (Array.isArray(mediaIds) ? mediaIds : []).filter(Boolean);
   const mediaItems = ids.map((id) => mediaRepository.getById(id)).filter(Boolean);
   if (!mediaItems.length) return { ok: false, error: "The group has no media assets." };
+
+  /* Phase 22.2 — the 21 Kids assets are CONFIRMED separate products. No
+     similarity signal, and no group decision, may merge two of them. */
+  if (decision === GROUP_DECISIONS.SAME_PRODUCT && wouldMergeConfirmedKids(mediaItems.map(mediaFileName))) {
+    return {
+      ok: false,
+      error: KIDS_MERGE_REFUSED_ERROR,
+      confirmedKidsProductIds: confirmedKidsProductIdsIn(mediaItems.map(mediaFileName)),
+    };
+  }
 
   let product = null;
   let conflictCount = 0;

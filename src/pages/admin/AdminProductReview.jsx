@@ -26,6 +26,7 @@ import MediaInboxCard from "../../components/admin/MediaInboxCard";
 import ProductDraftReviewPanel from "../../components/admin/ProductDraftReviewPanel";
 import ProductGroupReviewPanel from "../../components/admin/ProductGroupReviewPanel";
 import AdminKidsReviewPanel from "../../components/admin/AdminKidsReviewPanel";
+import AdminKidsFinalizationPanel from "../../components/admin/AdminKidsFinalizationPanel";
 import { AtelierButton } from "../../design-system";
 import catalogRepository, { getPublishIssues } from "../../services/catalogRepository";
 import inventoryRepository from "../../services/inventory/inventoryRepository";
@@ -172,20 +173,38 @@ export default function AdminProductReview() {
       </AdminPanel>
 
       {/* ------------------------------------------------------------ */}
-      {/* KIDS RECONCILIATION (Phase 22.1)                              */}
+      {/* KIDS FINALIZATION (Phase 22.2) — the 21 confirmed products    */}
       {/* ------------------------------------------------------------ */}
       <div className="mt-8">
         <AdminPanel
-          eyebrow={`Kids reconciliation · ${kidsDrafts.length} drafts`}
+          eyebrow="Kids finalization · 21 confirmed products"
           title="Kids products"
         >
-          <AdminKidsReviewPanel
+          <AdminKidsFinalizationPanel
             actor={actor}
             onNotice={setNotice}
             focusId={focusedDraftId && /^KID-\d{3}$/.test(focusedDraftId) ? focusedDraftId : null}
           />
         </AdminPanel>
       </div>
+
+      {/* ------------------------------------------------------------ */}
+      {/* KIDS RECONCILIATION (Phase 22.1) — ownership decisions desk   */}
+      {/* ------------------------------------------------------------ */}
+      {kidsDrafts.length ? (
+        <div className="mt-8">
+          <AdminPanel
+            eyebrow={`Kids reconciliation · ${kidsDrafts.length} open drafts`}
+            title="Ownership reconciliation"
+          >
+            <AdminKidsReviewPanel
+              actor={actor}
+              onNotice={setNotice}
+              focusId={focusedDraftId && /^KID-\d{3}$/.test(focusedDraftId) ? focusedDraftId : null}
+            />
+          </AdminPanel>
+        </div>
+      ) : null}
 
       {/* ------------------------------------------------------------ */}
       {/* OTHER PRODUCT DRAFTS                                          */}
