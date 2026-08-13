@@ -65,9 +65,10 @@ export const blockingReviewFlags = (flags = []) =>
 
 /**
  * Names that do not count as real product information. Draft names derived
- * from catalogue metadata never land here; the safe fallback
- * "Kids Piece · KID-001" does, so a draft with it stays blocked until a
- * human names the product.
+ * from catalogue metadata never land here; the safe fallbacks
+ * "Kids Piece · KID-001" (Phase 22.1) and "Kids Product · KID-001"
+ * (Phase 22.2) do, so a draft with one stays blocked until a human names
+ * the product.
  */
 export const isPlaceholderProductName = (name) => {
   const clean = String(name ?? "")
@@ -78,6 +79,7 @@ export const isPlaceholderProductName = (name) => {
   if (clean.startsWith("untitled")) return true;
   if (clean === "not yet defined" || clean === "undefined") return true;
   if (clean.startsWith("kids piece")) return true;
+  if (clean.startsWith("kids product")) return true;
   return false;
 };
 

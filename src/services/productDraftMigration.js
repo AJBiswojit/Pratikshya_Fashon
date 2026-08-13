@@ -28,21 +28,24 @@ import {
   REVIEW_FLAGS,
   isPlaceholderProductName,
 } from "./productReviewFlags";
+import {
+  KIDS_MEDIA_FILENAMES,
+  KIDS_PRODUCT_IDS,
+  kidsNameLooksForeign,
+} from "./kidsProductIdentity";
 
-export const PRODUCT_DRAFT_SYNC_VERSION = 2;
+export const PRODUCT_DRAFT_SYNC_VERSION = 4;
 export const PRODUCT_DRAFT_SYNC_KEY = "pratikshya_product_drafts_sync_version";
 
 export const KIDS_DRAFT_MIGRATED_AT = "2026-08-13T00:00:00.000Z";
 export const KIDS_DRAFT_AUTHOR = "Product draft migration";
 
-/** kids-001.webp … kids-021.webp — the 21 plates of the Kids library. */
-export const KIDS_MEDIA_FILENAMES = Array.from({ length: 21 }, (_, index) =>
-  `kids-${String(index + 1).padStart(3, "0")}.webp`
-);
-
-export const KIDS_PRODUCT_IDS = KIDS_MEDIA_FILENAMES.map((_, index) =>
-  `KID-${String(index + 1).padStart(3, "0")}`
-);
+/**
+ * Phase 22.2 — the confirmed identity table is the single source of truth
+ * for which plate belongs to which permanent Product ID. Re-exported so
+ * every existing importer of this module keeps working unchanged.
+ */
+export { KIDS_MEDIA_FILENAMES, KIDS_PRODUCT_IDS };
 
 const fileNameOf = (media) =>
   String(
@@ -69,7 +72,9 @@ const hydrateFromOwner = (owner, media, id) => {
     String(owner.status) === "PUBLISHED";
 
   const flags = [];
-  let name = `Kids Piece · ${id}`;
+  /* Phase 22.2 — the safe initial name. Never an invented, highly specific
+     product name guessed from the image; the employee/admin edits it. */
+  let name = `Kids Product · ${id}`;
   let subcategory = "";
   let price = 0;
   let compareAtPrice = null;
@@ -83,8 +88,15 @@ const hydrateFromOwner = (owner, media, id) => {
   let occasion = [];
 
   if (usable) {
-    if (owner.name?.trim()) name = owner.name;
-    else flags.push(REVIEW_FLAGS.NAME_REVIEW_REQUIRED);
+    /* Phase 22.2 — carry over the verified catalogue name only when it
+       genuinely describes a Kids product. An unrelated Women's / Men's /
+       Bridal name is never inherited: the draft keeps its safe name and
+       asks for NAME REVIEW instead. */
+    if (owner.name?.trim() && !kidsNameLooksForeign(owner.name)) {
+      name = owner.name;
+    } else {
+      flags.push(REVIEW_FLAGS.NAME_REVIEW_REQUIRED);
+    }
 
     subcategory = owner.subcategory ?? "";
     if (!subcategory) flags.push(REVIEW_FLAGS.TAXONOMY_REVIEW_REQUIRED);
@@ -123,6 +135,11 @@ const hydrateFromOwner = (owner, media, id) => {
     id,
     productId: id,
     name,
+    /* Phase 22.2 — the storefront route is keyed on the permanent Product ID,
+       never on the image filename and never on the editable name. Two Kids
+       products that happen to share a name still resolve to two distinct
+       URLs, and renaming a product never breaks or steals a link. */
+    slug: String(id).toLowerCase(),
     sku: `KID-${String(id).replace(/\D/g, "") || "001"}-SKU`,
     category: "kidswear",
     subcategory,
@@ -273,7 +290,32 @@ export const ensureKidsDraftRecords = (items) => {
   });
 
   const missing = templates.filter((template) => !present.has(template.id));
-  return missing.length ? [...upgraded, ...missing] : upgraded;
+  const merged = missing.length ? [...upgraded, ...missing] : upgraded;
+
+  /* Phase 22.2 — a Kids draft must never share a storefront route with the
+     published product it was migrated from. A KID row whose slug is claimed
+     by another record falls back to its permanent Product ID, which is the
+     stable route key for these 21 products. */
+  const claimedByOthers = new Set(
+    merged
+      .filter((row) => !byId.has(String(row?.id ?? "")))
+      .map((row) => String(row?.slug ?? ""))
+      .filter(Boolean)
+  );
+  const seenKidSlugs = new Set();
+
+  return merged.map((row) => {
+    const id = String(row?.id ?? "");
+    if (!byId.has(id)) return row;
+    const slug = String(row?.slug ?? "");
+    const idSlug = id.toLowerCase();
+    if (slug && !claimedByOthers.has(slug) && !seenKidSlugs.has(slug)) {
+      seenKidSlugs.add(slug);
+      return row;
+    }
+    seenKidSlugs.add(idSlug);
+    return { ...row, slug: idSlug };
+  });
 };
 
 /**

@@ -157,7 +157,10 @@ test("v1 placeholder drafts are upgraded by the v2 migration — human edits sur
 
   /* No owner metadata → safe fallback name + review flags, never a guess. */
   const fallback = kidsDraftRecords([]).find((record) => record.id === "KID-001");
-  assert.equal(fallback.name, "Kids Piece · KID-001");
+  /* Phase 22.2 renamed the safe fallback; both spellings stay placeholders. */
+  assert.equal(fallback.name, "Kids Product · KID-001");
+  assert.ok(isPlaceholderProductName(fallback.name));
+  assert.ok(isPlaceholderProductName("Kids Piece · KID-001"));
   assert.ok(fallback.reviewFlags.includes(REVIEW_FLAGS.NAME_REVIEW_REQUIRED));
   assert.ok(fallback.reviewFlags.includes(REVIEW_FLAGS.PRICE_REVIEW_REQUIRED));
   assert.ok(fallback.reviewFlags.includes(REVIEW_FLAGS.TAXONOMY_REVIEW_REQUIRED));

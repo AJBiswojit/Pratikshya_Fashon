@@ -35,6 +35,17 @@ import { getPublishIssues } from "../../services/catalogRepository";
 import { CATEGORY_OPTIONS, getProductStatusLabel } from "../../config/productCatalogConfig";
 import taxonomyRepository from "../../services/taxonomyRepository";
 import { formatINR } from "../../utils/shopping";
+import {
+  getKidsPublishBlockers,
+  kidsHoverState,
+} from "../../services/kidsProductFinalization";
+import {
+  isConfirmedKidsProductId,
+  kidsFileNameOf,
+  kidsMediaFileForProductId,
+  kidsNameLooksForeign,
+} from "../../services/kidsProductIdentity";
+import { reviewFlagLabel } from "../../services/productReviewFlags";
 
 const fieldClass =
   "w-full border border-mist bg-canvas px-3 py-2 font-ui text-sm outline-none focus:border-accent";
@@ -92,6 +103,7 @@ export default function EmployeeProductReview() {
                   ? String(activeProduct.compareAtPrice ?? activeProduct.originalPrice)
                   : "",
               description: activeProduct.description ?? "",
+              stock: activeProduct.stock > 0 ? String(activeProduct.stock) : "",
             }
           : null,
     [form, formKey, activeProduct]
@@ -109,6 +121,7 @@ export default function EmployeeProductReview() {
       price: draft.price === "" ? 0 : Number(draft.price) || 0,
       compareAtPrice: draft.compareAtPrice === "" ? null : Number(draft.compareAtPrice) || null,
       description: draft.description,
+      stock: draft.stock === "" ? 0 : Math.max(0, Number(draft.stock) || 0),
     };
     const result = saveEmployeeDraft(selected.id, patch, employee, actor);
     setBusy(false);
@@ -133,7 +146,22 @@ export default function EmployeeProductReview() {
   };
 
   const view = selected ? getProductWorkflowView(selected) : null;
-  const issues = selected ? getPublishIssues(selected) : [];
+  /* Phase 22.2 — a confirmed Kids product is validated by the Kids rules
+     (own media, Kids Wear category, valid subcategory, inventory state)
+     on top of the shared publish validation. */
+  const isConfirmedKid = selected ? isConfirmedKidsProductId(selected.id) : false;
+  const issues = selected
+    ? isConfirmedKid
+      ? getKidsPublishBlockers(selected)
+      : getPublishIssues(selected)
+    : [];
+  const hover = selected && isConfirmedKid ? kidsHoverState(selected) : null;
+  const mediaFileName =
+    kidsFileNameOf(view?.mediaSet?.primary) ||
+    (selected ? kidsMediaFileForProductId(selected.id) : null) ||
+    kidsFileNameOf(view?.conflicts?.[0]?.file) ||
+    null;
+  const nameNeedsReview = selected ? kidsNameLooksForeign(draft?.name ?? selected.name) : false;
 
   const discountPercent = (() => {
     if (!selected) return null;
@@ -249,8 +277,49 @@ export default function EmployeeProductReview() {
                     {viewChips.length ? (
                       <StatusBadge label={viewChips.join(" · ")} tone="quiet" />
                     ) : null}
+                    <StatusBadge label={`Inventory · ${Number(selected.stock ?? 0)}`} tone="quiet" />
                   </div>
                 </div>
+
+                {/* Media, taxonomy & hover facts ---------------------- */}
+                <dl className="grid gap-x-6 gap-y-1 border border-mist bg-canvas px-4 py-3 font-ui text-[11px] text-taupe sm:grid-cols-2 lg:grid-cols-3">
+                  <div className="flex gap-2">
+                    <dt className="uppercase tracking-[.14em] text-taupe/70">Media file</dt>
+                    <dd className="text-ink">{mediaFileName ?? "—"}</dd>
+                  </div>
+                  <div className="flex gap-2">
+                    <dt className="uppercase tracking-[.14em] text-taupe/70">Category</dt>
+                    <dd className="text-ink">{selected.category || "—"}</dd>
+                  </div>
+                  <div className="flex gap-2">
+                    <dt className="uppercase tracking-[.14em] text-taupe/70">Subcategory</dt>
+                    <dd className={selected.subcategory ? "text-ink" : "text-accent"}>
+                      {selected.subcategory || "SUBCATEGORY REVIEW REQUIRED"}
+                    </dd>
+                  </div>
+                  <div className="flex gap-2">
+                    <dt className="uppercase tracking-[.14em] text-taupe/70">Assignment</dt>
+                    <dd className="text-ink">
+                      {selected.assignedEmployeeId ?? "—"}
+                    </dd>
+                  </div>
+                  {hover ? (
+                    <div className="flex gap-2">
+                      <dt className="uppercase tracking-[.14em] text-taupe/70">Hover</dt>
+                      <dd className="text-ink">
+                        {hover.changesOnHover ? hover.hoverFile : "no change (single image)"}
+                      </dd>
+                    </div>
+                  ) : null}
+                  {selected.reviewFlags?.length ? (
+                    <div className="flex gap-2 sm:col-span-2 lg:col-span-3">
+                      <dt className="uppercase tracking-[.14em] text-taupe/70">Review flags</dt>
+                      <dd className="text-accent">
+                        {selected.reviewFlags.map((flag) => reviewFlagLabel(flag)).join(" · ")}
+                      </dd>
+                    </div>
+                  ) : null}
+                </dl>
 
                 {/* Mandatory visual preview -------------------------- */}
                 <ProductPreview
@@ -273,6 +342,12 @@ export default function EmployeeProductReview() {
                         placeholder="Boys Cotton Casual Set in Yellow"
                         className={fieldClass}
                       />
+                      {nameNeedsReview ? (
+                        <p className="mt-1 font-ui text-[10px] uppercase tracking-[.12em] text-accent">
+                          Name review required — this name reads like another department's product.
+                          Describe the actual Kids product.
+                        </p>
+                      ) : null}
                     </div>
 
                     <div className="grid gap-4 sm:grid-cols-2">
@@ -349,6 +424,23 @@ export default function EmployeeProductReview() {
                           value={draft.compareAtPrice}
                           onChange={(event) => update("compareAtPrice", event.target.value)}
                           placeholder="1690"
+                          className={fieldClass}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <div>
+                        <label htmlFor={`emp-stock-${selected.id}`} className={labelClass}>
+                          Inventory (units)
+                        </label>
+                        <input
+                          id={`emp-stock-${selected.id}`}
+                          type="number"
+                          min="0"
+                          value={draft.stock}
+                          onChange={(event) => update("stock", event.target.value)}
+                          placeholder="12"
                           className={fieldClass}
                         />
                       </div>
