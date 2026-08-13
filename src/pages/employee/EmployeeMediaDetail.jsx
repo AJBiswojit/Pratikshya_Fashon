@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { Link, useParams } from "react-router-dom";
-import { ArrowLeft, Clock, FileText, Package, ShieldCheck, Tag } from "lucide-react";
+import { ArrowLeft, Package } from "lucide-react";
 import EmployeePage from "../../components/employee/EmployeePage";
 import MediaVideo from "../../components/media/MediaVideo";
 import MediaThumb, { mediaImageSource } from "../../components/media/MediaThumb";

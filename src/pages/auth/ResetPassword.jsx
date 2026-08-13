@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { Eye, EyeOff, ArrowRight, AlertCircle, CheckCircle2 } from "lucide-react";
 import {
   AtelierButton,
@@ -9,7 +9,6 @@ import {
 } from "../../design-system";
 import { useAuth } from "../../context/AuthContext";
 import { validatePassword, validatePasswordMatch } from "../../utils/validation";
-import { cn } from "../../utils/cn";
 
 /**
  * Reset Password — /reset-password
@@ -19,7 +18,6 @@ import { cn } from "../../utils/cn";
  */
 export default function ResetPassword() {
   const { resetPassword } = useAuth();
-  const navigate = useNavigate();
 
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");

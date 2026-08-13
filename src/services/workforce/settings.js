@@ -4,11 +4,7 @@
  * Stored separately so Phase 20 Settings can own this namespace later.
  */
 
-import {
-  ATTENDANCE_DEFAULTS,
-  ATTENDANCE_SETTINGS_KEY,
-  HOUSE_HOLIDAYS,
-} from "../../config/attendanceConfig";
+import { ATTENDANCE_DEFAULTS, HOUSE_HOLIDAYS } from "../../config/attendanceConfig";
 import { getSection, updateSection } from "../settingsRepository";
 
 const normaliseSettings = (raw) => {

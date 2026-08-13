@@ -29,5 +29,4 @@ export const updateSection = (section, values) => { if (!SETTINGS_DEFAULTS[secti
 export const updateSetting = (section, key, value) => updateSection(section, { [key]: value });
 export const resetSection = (section) => updateSection(section, clone(SETTINGS_DEFAULTS[section]));
 export const resetToDefaults = () => { const value = clone(SETTINGS_DEFAULTS); writeStorage(SETTINGS_KEY, value); return value; };
-export const getShippingRules = () => getSection("shipping");
 export default { getSettings, getSection, updateSection, updateSetting, resetSection, resetToDefaults };

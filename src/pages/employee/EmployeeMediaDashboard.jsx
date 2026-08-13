@@ -1,20 +1,6 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import {
-  AlertCircle,
-  CheckCircle2,
-  Clock,
-  ExternalLink,
-  Eye,
-  Film,
-  Image as ImageIcon,
-  Layers,
-  Plus,
-  Search,
-  ShieldCheck,
-  Sparkles,
-  XCircle,
-} from "lucide-react";
+import { CheckCircle2, Clock, Eye, Layers, Plus, Search, XCircle } from "lucide-react";
 import EmployeePage from "../../components/employee/EmployeePage";
 import MetricCard from "../../components/employee/MetricCard";
 import StatusBadge from "../../components/employee/StatusBadge";
@@ -23,7 +9,6 @@ import { AtelierButton } from "../../design-system";
 import { useEmployeeAuth } from "../../context/EmployeeAuthContext";
 import { useMediaLibrary } from "../../hooks/useMedia";
 import {
-  MEDIA_SCOPES,
   MEDIA_STATUS,
   MEDIA_TYPES,
   getMediaStatusLabel,

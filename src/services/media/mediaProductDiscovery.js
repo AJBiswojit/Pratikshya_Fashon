@@ -51,7 +51,6 @@ import mediaRepository from "./mediaRepository";
 import { getIngestedRecords } from "./ingestedMedia";
 import { buildMediaGroups } from "./mediaGroups";
 import { parseMediaFilename } from "./mediaNaming";
-import { DEFAULT_PRODUCT_ID_PREFIX, PRODUCT_ID_PREFIXES } from "../../config/productIdPrefixes";
 import { MEDIA_SCOPES } from "../../config/mediaTypes";
 import {
   assignReconciliationIds,
@@ -191,6 +190,21 @@ const isMarketingMedia = (media) =>
 const isProductMediaCandidate = (media) =>
   Boolean(media && !isHouseMedia(media) && !isMarketingMedia(media));
 
+const buildMediaClaimMap = (products = []) => {
+  const claims = new Map();
+  products.forEach((product) => {
+    const productId = String(product?.id ?? "");
+    if (!productId) return;
+    const claim = (mediaId) => {
+      if (mediaId && !claims.has(String(mediaId))) claims.set(String(mediaId), productId);
+    };
+    (product.mediaIds ?? []).forEach(claim);
+    (product.galleryMediaIds ?? []).forEach(claim);
+    claim(product.primaryMediaId);
+  });
+  return claims;
+};
+
 /**
  * Complete inventory of the media library, one row per FILE.
  *
@@ -229,17 +243,7 @@ export const buildLibraryInventory = ({ products = [], diskFiles = null } = {}) 
   /* Product claims: a record may own media through the register OR through
      its own mediaIds / primaryMediaId / galleryMediaIds. Both are ownership
      signals and both are read here (rule 10). */
-  const claimByMediaId = new Map();
-  (Array.isArray(products) ? products : []).forEach((product) => {
-    const id = String(product?.id ?? "");
-    if (!id) return;
-    const claim = (mediaId) => {
-      if (mediaId && !claimByMediaId.has(String(mediaId))) claimByMediaId.set(String(mediaId), id);
-    };
-    (product.mediaIds ?? []).forEach(claim);
-    (product.galleryMediaIds ?? []).forEach(claim);
-    claim(product.primaryMediaId);
-  });
+  const claimByMediaId = buildMediaClaimMap(Array.isArray(products) ? products : []);
 
   return [...byName.values()]
     .map(({ fileName, register: registerMedia, manifest: manifestMedia }) => {
@@ -372,7 +376,7 @@ export const discoverySubtypeForGroup = (group) => {
  * where a new DRAFT is warranted.
  */
 export const resolveGroupOwnership = (group, context) => {
-  const { productById, claimByMediaId, bySourceGroupKey, assignment } = context;
+  const { claimByMediaId, bySourceGroupKey, assignment } = context;
 
   const registerOwners = [
     ...new Set(
@@ -426,18 +430,7 @@ export const resolveGroupOwnership = (group, context) => {
 export const getMediaProductDiscovery = ({ products = [], diskFiles = null } = {}) => {
   const list = Array.isArray(products) ? products : [];
   const productById = new Map(list.map((product) => [String(product.id), product]));
-
-  const claimByMediaId = new Map();
-  list.forEach((product) => {
-    const id = String(product?.id ?? "");
-    if (!id) return;
-    const claim = (mediaId) => {
-      if (mediaId && !claimByMediaId.has(String(mediaId))) claimByMediaId.set(String(mediaId), id);
-    };
-    (product.mediaIds ?? []).forEach(claim);
-    (product.galleryMediaIds ?? []).forEach(claim);
-    claim(product.primaryMediaId);
-  });
+  const claimByMediaId = buildMediaClaimMap(list);
 
   const bySourceGroupKey = new Map();
   list.forEach((product) => {
@@ -622,10 +615,6 @@ export const filenameDerivedDiscovery = (discovery) =>
     action: row.action,
   }));
 
-/** Prefix a category's minted Product IDs actually use. */
-export const productIdPrefixForCategory = (categoryId) =>
-  PRODUCT_ID_PREFIXES[categoryId] ?? DEFAULT_PRODUCT_ID_PREFIX;
-
 export default {
   FILENAME_FAMILY_RULES,
   deriveIdentityFromFilename,
@@ -640,5 +629,4 @@ export default {
   getMediaProductDiscovery,
   uncoveredProductGroups,
   filenameDerivedDiscovery,
-  productIdPrefixForCategory,
 };

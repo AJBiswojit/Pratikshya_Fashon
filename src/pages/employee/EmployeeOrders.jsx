@@ -8,8 +8,7 @@
 
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { motion } from "framer-motion";
-import { Search, Boxes, Package, Truck, AlertTriangle, Clock, Eye } from "lucide-react";
+import { Search, Eye } from "lucide-react";
 import EmployeePage from "../../components/employee/EmployeePage";
 import OrderStatusBadge from "../../components/orders/OrderStatusBadge";
 import { useOrder } from "../../context/OrderContext";
@@ -30,7 +29,7 @@ function Metric({ label, value, hint }) {
 
 export default function EmployeeOrders() {
   const { allOrders } = useOrder();
-  const { employee, hasPermission } = useEmployeeAuth();
+  const { employee } = useEmployeeAuth();
   const role = employee?.role;
 
   const [search, setSearch] = useState("");

@@ -1,14 +1,12 @@
 import { useState, useEffect } from "react";
-import { Eye, EyeOff, Shield, Smartphone, Laptop, CheckCircle2, AlertCircle, LogOut } from "lucide-react";
+import { Eye, EyeOff, Smartphone, Laptop, CheckCircle2, AlertCircle } from "lucide-react";
 import AccountShell from "../../components/account/AccountShell";
-import { useAuth } from "../../context/AuthContext";
 import { useAccount } from "../../context/AccountContext";
-import { AtelierButton, EditorialHeading, Rule } from "../../design-system";
+import { AtelierButton, EditorialHeading } from "../../design-system";
 import { validatePassword, validatePasswordMatch } from "../../utils/validation";
 import { cn } from "../../utils/cn";
 
 export default function AccountSecurity() {
-  const { signOut } = useAuth();
   const { security, signOutOtherSessions } = useAccount();
 
   const [currentPwd, setCurrentPwd] = useState("");

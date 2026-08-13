@@ -10,7 +10,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { Check, Edit3, Eye, AlertTriangle, Package, Layers, Search, ArrowUp, ArrowDown, Star } from "lucide-react";
+import { Check, Eye, AlertTriangle, Package, Search, ArrowUp, ArrowDown, Star } from "lucide-react";
 import AdminPage from "../../../components/admin/AdminPage";
 import AdminPanel from "../../../components/admin/AdminPanel";
 import MediaThumb from "../../../components/media/MediaThumb";
@@ -21,7 +21,6 @@ import { useMediaLibrary } from "../../../hooks/useMedia";
 import useMediaActions from "../../../hooks/useMediaActions";
 import catalogRepository from "../../../services/catalogRepository";
 import { buildMediaGroups } from "../../../services/media/mediaGroups";
-import { parseMediaFilename } from "../../../services/media/mediaNaming";
 import { cn } from "../../../utils/cn";
 
 const VIEW_LABELS = {
@@ -105,7 +104,7 @@ export default function AdminMediaProductMapping() {
   const handleApprove = () => {
     if (!selectedGroup || !selectedProductId) return;
     // Assign each file to selected product
-    orderedImageIds.forEach((mediaId, index) => {
+    orderedImageIds.forEach((mediaId) => {
       const file = selectedGroup.files.find((f) => f.id === mediaId);
       if (!file) return;
       // role: cover for primary else gallery
@@ -116,14 +115,6 @@ export default function AdminMediaProductMapping() {
     if (primaryImageId) {
       actions.setCover(selectedProductId, primaryImageId);
     }
-    // Reorder to match selected order (excluding cover which must stay first)
-    // The repository reorder keeps cover first regardless, so we pass full order
-    // but move cover to front if not already
-    const coverFirst = primaryImageId ? [primaryImageId, ...orderedImageIds.filter((i) => i !== primaryImageId)] : orderedImageIds;
-    // Note: reorder expects productId and orderedIds; we need to ensure cover leads
-    // We'll call via mediaRepository directly through actions? Use assign order via custom
-    // For now rely on sortOrder already, but we can trigger reorder if available
-    // actions.reorder is not exposed directly but move handles it; we skip for simplicity
   };
 
   const handleMarkUnmapped = () => {

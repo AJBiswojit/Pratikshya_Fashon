@@ -16,12 +16,7 @@
  * so the numbers always reflect what a customer would actually see.
  */
 
-import {
-  MEDIA_SCOPES,
-  MEDIA_STATUS,
-  PRODUCT_MEDIA_ROLES,
-  USAGE_ROLES,
-} from "../../config/mediaTypes";
+import { MEDIA_SCOPES, MEDIA_STATUS, PRODUCT_MEDIA_ROLES } from "../../config/mediaTypes";
 import { getLiveStorefrontProducts } from "../../data/products";
 import taxonomyRepository from "../taxonomyRepository";
 import { isIngestedPhotographyUrl } from "./mediaPaths";

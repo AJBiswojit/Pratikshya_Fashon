@@ -23,7 +23,7 @@ import taxonomyRepository from "../../services/taxonomyRepository";
 import { countBand, countFacet } from "./query";
 
 /** Options for the facets whose values come from the catalogue itself. */
-const derivedOptions = (facetId, counts) =>
+const derivedOptions = (counts) =>
   Object.keys(counts)
     .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }))
     .map((value) => ({ id: value, label: value, count: counts[value] }));
@@ -75,18 +75,18 @@ export function buildFacets(scoped, filters = {}, locked = {}) {
             .sort((a, b) => a.label.localeCompare(b.label));
         } else if (facet.id === "collection") {
           const activeNames = new Set(taxonomyRepository.activeCollections().map((collection) => collection.name));
-          options = derivedOptions(facet.id, counts).filter((option) => activeNames.has(option.label));
+          options = derivedOptions(counts).filter((option) => activeNames.has(option.label));
         } else if (facet.id === "availability") {
           options = availabilityOptions
             .map((option) => ({ ...option, count: counts[option.id] ?? 0 }))
             .filter((option) => option.count > 0);
         } else if (facet.id === "color") {
-          options = derivedOptions(facet.id, counts).map((option) => ({
+          options = derivedOptions(counts).map((option) => ({
             ...option,
             swatch: colorSwatches[option.id] ?? "#d8d2c8",
           }));
         } else {
-          options = derivedOptions(facet.id, counts);
+          options = derivedOptions(counts);
         }
       }
 

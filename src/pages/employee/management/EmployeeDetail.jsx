@@ -154,7 +154,7 @@ export default function EmployeeDetail() {
               </Link>
             ) : null}
           </section>
-          <PerformancePanel employeeId={person.employeeId} compact to={`/employee/performance/${person.employeeId}`} />
+          <PerformancePanel employeeId={person.employeeId} compact />
         </div>
       </div>
 

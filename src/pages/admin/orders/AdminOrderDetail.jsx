@@ -9,21 +9,8 @@
  */
 
 import { useMemo, useState } from "react";
-import { Link, useParams, useNavigate } from "react-router-dom";
-import { motion } from "framer-motion";
-import {
-  ArrowLeft,
-  Package,
-  User,
-  CreditCard,
-  MapPin,
-  Truck,
-  ClipboardList,
-  StickyNote,
-  AlertTriangle,
-  Check,
-  Boxes,
-} from "lucide-react";
+import { Link, useParams } from "react-router-dom";
+import { ArrowLeft, Package, User, MapPin, AlertTriangle, Check } from "lucide-react";
 import AdminPage from "../../../components/admin/AdminPage";
 import AdminPanel from "../../../components/admin/AdminPanel";
 import OrderStatusBadge from "../../../components/orders/OrderStatusBadge";
@@ -31,19 +18,13 @@ import OrderTimeline from "../../../components/orders/OrderTimeline";
 import { useOrder } from "../../../context/OrderContext";
 import { useInventory } from "../../../context/InventoryContext";
 import { useEmployeeManagement } from "../../../context/EmployeeManagementContext";
-import {
-  ORDER_STATUS,
-  ORDER_PAYMENT_STATUS,
-  CANCELLATION_REASONS,
-  CARRIERS,
-} from "../../../config/orderConfig";
+import { ORDER_STATUS, CANCELLATION_REASONS, CARRIERS } from "../../../config/orderConfig";
 import { formatINR } from "../../../utils/shopping";
 import { formatOrderDate, formatEventTime } from "../../../utils/orders";
 import { AtelierButton } from "../../../design-system";
 
 export default function AdminOrderDetail() {
   const { orderId } = useParams();
-  const navigate = useNavigate();
   const { getOrderByIdAdmin, allocateOrder, assignFulfillment, markItemPicked, markPacked, markReadyToDispatch, dispatchOrder, markOutForDelivery, markDelivered, addInternalNote, cancelOrderAdmin } = useOrder();
   const inventory = useInventory();
   const { employees } = useEmployeeManagement();
@@ -52,7 +33,7 @@ export default function AdminOrderDetail() {
 
   const [carrier, setCarrier] = useState("Delhivery");
   const [tracking, setTracking] = useState("");
-  const [packCount, setPackCount] = useState(1);
+  const packCount = 1;
   const [packNotes, setPackNotes] = useState("");
   const [internalNote, setInternalNote] = useState("");
   const [cancelReason, setCancelReason] = useState("customer_request");

@@ -1,8 +1,4 @@
-import {
-  getAttendanceStatus,
-  getLeaveStatus,
-  getLeaveTypeLabel,
-} from "../../config/attendanceConfig";
+import { getAttendanceStatus, getLeaveStatus } from "../../config/attendanceConfig";
 import { getPerformanceStatus } from "../../config/performanceConfig";
 import StatusBadge from "../employee/StatusBadge";
 
@@ -19,10 +15,6 @@ export function LeaveStatusBadge({ status, className = "" }) {
 export function PerformanceStatusBadge({ status, className = "" }) {
   const definition = getPerformanceStatus(status);
   return <StatusBadge label={definition.label} tone={definition.tone} className={className} />;
-}
-
-export function LeaveTypeLabel({ type }) {
-  return getLeaveTypeLabel(type);
 }
 
 export default AttendanceStatusBadge;

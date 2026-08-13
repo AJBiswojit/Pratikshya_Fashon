@@ -1,28 +1,9 @@
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { body, duration, eyebrow, transition } from "../../design-system";
-import {
-  PRODUCT_ELIGIBILITY,
-  describeEligibility,
-  formatOfferDiscount,
-} from "../../services/offers/offerRepository";
-import taxonomyRepository from "../../services/taxonomyRepository";
+import { describeEligibility, formatOfferDiscount } from "../../services/offers/offerRepository";
 import { FREE_SHIPPING_THRESHOLD } from "../../utils/shopping";
 import { cn } from "../../utils/cn";
-
-const offerHref = (offer) => {
-  if (!offer) return "/explore";
-  if (offer.productEligibility === PRODUCT_ELIGIBILITY.CATEGORY && offer.includedCategories?.[0]) {
-    return `/explore?category=${encodeURIComponent(offer.includedCategories[0])}`;
-  }
-  if (offer.productEligibility === PRODUCT_ELIGIBILITY.COLLECTION && offer.includedCollections?.[0]) {
-    const collection = taxonomyRepository.findCollection(offer.includedCollections[0]);
-    const label = collection?.name || offer.includedCollections[0];
-    return `/explore?collection=${encodeURIComponent(label)}`;
-  }
-  if (offer.customerEligibility === "NEW_CUSTOMERS") return "/explore?merch=new";
-  return "/explore";
-};
 
 /**
  * Compact offer rail for Explore.

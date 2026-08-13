@@ -24,7 +24,6 @@ import {
 import { getMockPreviewTemplate } from "../../services/aiMirror/aiMirrorMockData";
 import { generateTryOnPreview } from "../../services/aiMirror/virtualTryOnService";
 import { defaultSelection } from "../../utils/shopping";
-import { cn } from "../../utils/cn";
 
 const INITIAL_PRODUCT_COUNT = 8;
 

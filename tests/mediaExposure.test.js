@@ -13,7 +13,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import mediaRepository from "../src/services/media/mediaRepository.js";
-import mediaResolver, {
+import {
   isAiMirrorSafeMedia,
   resolveAiMirrorImage,
   resolveAiShoppingImage,

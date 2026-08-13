@@ -458,10 +458,6 @@ export const getProductMediaIndex = () => {
   return byProductId;
 };
 
-export const invalidateProductMediaIndex = () => {
-  indexCache = { fingerprint: null, byProductId: null };
-};
-
 /**
  * Canonical helper. `product` is optional but required for authored/legacy
  * fallback — the register alone cannot invent an owned plate.

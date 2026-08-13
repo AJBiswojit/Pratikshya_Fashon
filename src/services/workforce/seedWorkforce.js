@@ -349,7 +349,7 @@ const buildPerformance = (employees, today) => {
     const persona = PERSONA[employee.employeeId] || { band: "average" };
     const template = targetOverrides[employee.employeeId] || targetsForRole(employee.role);
     const makeTargets = (periodKey, createdAt) =>
-      template.map((item, index) => ({
+      template.map((item) => ({
         targetId: `tgt-${employee.employeeId}-${periodKey}-${item.metric}`,
         employeeId: employee.employeeId,
         period: periodKey,

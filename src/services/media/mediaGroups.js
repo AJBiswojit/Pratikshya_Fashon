@@ -101,25 +101,8 @@ export const buildMediaGroups = (fileList = []) => {
   return groups;
 };
 
-export const getGroupsByCategory = (groups = []) => {
-  const map = new Map();
-  groups.forEach((g) => {
-    // infer department/category from groupKey prefix
-    const prefix = g.groupKey.split("-").slice(0, 2).join("-");
-    if (!map.has(prefix)) map.set(prefix, []);
-    map.get(prefix).push(g);
-  });
-  return map;
-};
-
 export const getStandaloneGroups = (groups = []) => groups.filter((g) => g.isStandalone);
 export const getMultiViewGroups = (groups = []) => groups.filter((g) => g.isGrouped);
-
-export const findGroupForFile = (groups = [], fileName) => {
-  const parsed = parseMediaFilename(fileName);
-  if (!parsed) return null;
-  return groups.find((g) => g.groupKey === parsed.groupKey) || null;
-};
 
 export default {
   buildMediaGroups,

@@ -1,5 +1,4 @@
 import fs from "fs";
-import path from "path";
 const manifestPath = "src/data/media/ingestedManifest.json";
 const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf-8"));
 
@@ -17,7 +16,7 @@ manifest.assets.forEach((a) => {
 });
 
 // For each category, assign HERO/EDITORIAL to first few front views
-for (const [cat, assets] of byCategory.entries()) {
+for (const assets of byCategory.values()) {
   // sort by groupKey and viewScore
   const sorted = assets
     .filter((a) => a.optimizedPath?.startsWith("library/"))

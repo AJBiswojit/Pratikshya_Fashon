@@ -8,21 +8,6 @@
  * without changing the Product Detail UI.
  */
 
-const galleryByCategory = {
-  sarees: ["saree-traditional", "fabric-silk", "fabric-embroidered", "saree-printed"],
-  lehengas: ["lehenga-designer", "lehenga-party", "women-bridal-wear", "fabric-embroidered"],
-  "bridal-couture": ["women-bridal-wear", "lehenga-bridal", "lehenga-designer", "fabric-embroidered"],
-  "kurtis-and-suits": ["women-contemporary", "fabric-cotton", "fabric-silk", "fabric-printed"],
-  innerwear: ["fabric-cotton", "fabric-silk", "women-contemporary"],
-  dupattas: ["accessory-dupattas", "fabric-embroidered", "fabric-silk", "fabric-printed"],
-  bangles: ["bridal-bangles", "bridal-jewellery", "fabric-embroidered"],
-  jewellery: ["bridal-jewellery", "bridal-bangles", "women-bridal-wear"],
-  menswear: ["men-kurta", "groom-sherwani", "men-sherwani", "fabric-embroidered"],
-  /* Kidswear deliberately has no category-wide gallery pad: every kids
-     product owns exactly one library plate and must never inherit another
-     product's or another category's imagery. */
-};
-
 const descriptions = {
   sarees: (product) =>
     `${product.name} is an ode to the enduring poetry of the Indian drape. Articulated in ${product.fabric} with ${product.material.toLowerCase()} detailing, the piece moves between quiet lustre and ceremonial richness. Its considered border and fluid fall make it a beautiful companion for ${product.occasion.slice(0, 2).join(" and ").toLowerCase()} dressing.`,
@@ -124,9 +109,6 @@ const categorySpecifications = (product) => {
       return { Fit: "Regular fit" };
   }
 };
-
-/** Manifest ids added after the authored primary and hover images. */
-export const getGalleryImageIds = (product) => galleryByCategory[product.category] ?? ["hero-atelier"];
 
 export const getProductDescription = (product) =>
   product.description ??

@@ -22,11 +22,7 @@ import ingestedManifest from "../src/data/media/ingestedManifest.json";
 import { MARKETING_PLACEMENTS, USAGE_ROLES } from "../src/config/mediaTypes.js";
 import { readMedia } from "../src/services/media/mediaStore.js";
 import mediaRepository from "../src/services/media/mediaRepository.js";
-import {
-  HOMEPAGE_HERO_THEMES,
-  resolveHeroSlideImages,
-  resolveHomepageHeroMedia,
-} from "../src/services/media/mediaResolver.js";
+import { resolveHeroSlideImages, resolveHomepageHeroMedia } from "../src/services/media/mediaResolver.js";
 
 const EXPECTED = [
   "hero001.avif",

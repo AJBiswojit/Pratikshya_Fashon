@@ -49,7 +49,6 @@ import { loadLeave } from "../workforce/leaveRepository";
 import { loadAttendanceSettings } from "../workforce/settings";
 import { eachDateInRange, formatMinutes, todayKey } from "../workforce/dateUtils";
 import {
-  ANALYTICS_PRESETS,
   bucketKeyFor,
   bucketLabel,
   bucketShortLabel,
@@ -445,7 +444,7 @@ const inventoryByProduct = () => {
   return map;
 };
 
-const buildProductPerformance = (periodOrders, allOrders, filters = {}) => {
+const buildProductPerformance = (periodOrders, filters = {}) => {
   const products = productLookup();
   const stock = inventoryByProduct();
   const rows = new Map();
@@ -1129,7 +1128,7 @@ export const getAnalyticsSnapshot = ({
 
   const currentOrders = buildOrderSummary(scoped);
   const previousSummary = buildOrderSummary(previousOrders);
-  const products = buildProductPerformance(scoped, allOrders, filters);
+  const products = buildProductPerformance(scoped, filters);
   const categories = buildCategoryPerformance(products);
   const collections = buildCollectionPerformance(products);
   const customers = buildCustomerRows(allOrders, scoped, period);

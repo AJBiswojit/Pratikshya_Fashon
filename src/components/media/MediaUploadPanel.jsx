@@ -11,6 +11,7 @@ import {
   rolesForType,
 } from "../../config/mediaTypes";
 import { cn } from "../../utils/cn";
+import { extensionOf, typeOfFile } from "./MediaUploadDropzone";
 
 /**
  * PRATIKSHYA FASHON — Demo media upload.
@@ -30,20 +31,6 @@ import { cn } from "../../utils/cn";
  * Object URLs are revoked when an item leaves the queue and when the panel
  * unmounts, so a long session does not leak them.
  */
-
-const extensionOf = (name = "") => {
-  const dot = name.lastIndexOf(".");
-  return dot < 0 ? "" : name.slice(dot).toLowerCase();
-};
-
-/** IMAGE or VIDEO, from the MIME type first and the extension second. */
-const typeOfFile = (file) => {
-  if (file.type?.startsWith("video/")) return MEDIA_TYPES.VIDEO;
-  if (file.type?.startsWith("image/")) return MEDIA_TYPES.IMAGE;
-  return UPLOAD_RULES[MEDIA_TYPES.VIDEO].extensions.includes(extensionOf(file.name))
-    ? MEDIA_TYPES.VIDEO
-    : MEDIA_TYPES.IMAGE;
-};
 
 /** The house rules, applied before a file is allowed into the queue. */
 const validate = (file) => {

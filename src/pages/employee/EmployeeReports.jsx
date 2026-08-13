@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Navigate, useLocation } from "react-router-dom";
+import { Navigate } from "react-router-dom";
 import EmployeePage from "../../components/employee/EmployeePage";
 import AnalyticsWorkspace from "../../components/analytics/AnalyticsWorkspace";
 import { ANALYTICS_TABS } from "../../components/analytics/AnalyticsNav";
@@ -23,7 +23,6 @@ const SECTION_PERMISSION = {
 };
 
 export default function EmployeeReports() {
-  const { pathname } = useLocation();
   const { employee, hasPermission } = useEmployeeAuth();
   const { allOrders } = useOrder();
   const inventory = useInventory();

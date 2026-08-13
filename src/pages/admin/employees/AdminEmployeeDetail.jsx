@@ -193,7 +193,7 @@ export default function AdminEmployeeDetail() {
               </p>
             </div>
           </AdminPanel>
-          <PerformancePanel employeeId={person.employeeId} compact to={`/admin/performance/${person.employeeId}`} />
+          <PerformancePanel employeeId={person.employeeId} compact />
         </div>
       </div>
 

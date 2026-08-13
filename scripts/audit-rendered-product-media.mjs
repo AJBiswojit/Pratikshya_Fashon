@@ -30,7 +30,6 @@
 
 import { readFileSync, existsSync } from "node:fs";
 import { join } from "node:path";
-import catalogRepository from "../src/services/catalogRepository.js";
 import { getLiveStorefrontProducts } from "../src/data/products/index.js";
 import { getProductCardMedia } from "../src/services/media/productMediaSet.js";
 import mediaRepository from "../src/services/media/mediaRepository.js";
@@ -77,7 +76,6 @@ let houseShared = new Map(); // house file -> [product ids]
 products.forEach((product) => {
   const card = getProductCardMedia(product);
   const primary = card.image;
-  const hover = card.hoverImage;
   const source = classifySource(primary);
   const file = fileOf(primary);
 

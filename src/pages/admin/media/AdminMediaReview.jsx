@@ -1,31 +1,11 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import {
-  AlertCircle,
-  ArrowLeft,
-  Check,
-  CheckCircle2,
-  Clock,
-  ExternalLink,
-  Film,
-  Image as ImageIcon,
-  MessageSquare,
-  Package,
-  Sparkles,
-  Tag,
-  X,
-} from "lucide-react";
+import { ArrowLeft, Check, CheckCircle2, Clock, Film, Image as ImageIcon, Package, X } from "lucide-react";
 import AdminPage from "../../../components/admin/AdminPage";
 import AdminPanel from "../../../components/admin/AdminPanel";
 import MediaThumb from "../../../components/media/MediaThumb";
 import { AtelierButton } from "../../../design-system";
-import {
-  MEDIA_SCOPES,
-  MEDIA_TYPES,
-  REJECTION_REASONS,
-  getPlacementLabel,
-  getProductRoleLabel,
-} from "../../../config/mediaTypes";
+import { MEDIA_TYPES, REJECTION_REASONS, getPlacementLabel, getProductRoleLabel } from "../../../config/mediaTypes";
 import { usePendingReviewMedia } from "../../../hooks/useMedia";
 import useMediaActions from "../../../hooks/useMediaActions";
 import catalogRepository from "../../../services/catalogRepository";

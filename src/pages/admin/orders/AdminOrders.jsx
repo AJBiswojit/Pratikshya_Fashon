@@ -9,27 +9,13 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import {
-  Search,
-  Package,
-  Clock,
-  CheckCircle2,
-  Truck,
-  AlertTriangle,
-  RotateCcw,
-  Boxes,
-  Store,
-  Warehouse,
-  Filter,
-  X,
-  Eye,
-} from "lucide-react";
+import { Search, Package, Clock, CheckCircle2, Truck, RotateCcw, Boxes, Filter, X, Eye } from "lucide-react";
 import AdminPage from "../../../components/admin/AdminPage";
 import AdminPanel from "../../../components/admin/AdminPanel";
 import OrderStatusBadge from "../../../components/orders/OrderStatusBadge";
 import { useOrder } from "../../../context/OrderContext";
 import { useInventory } from "../../../context/InventoryContext";
-import { ORDER_STATUS, ORDER_PAYMENT_STATUS, FULFILLMENT_STATUS, CARRIERS } from "../../../config/orderConfig";
+import { ORDER_STATUS, ORDER_PAYMENT_STATUS, FULFILLMENT_STATUS } from "../../../config/orderConfig";
 import { formatINR } from "../../../utils/shopping";
 import { formatOrderDate } from "../../../utils/orders";
 import { cn } from "../../../utils/cn";

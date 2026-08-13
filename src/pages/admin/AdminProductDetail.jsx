@@ -9,7 +9,7 @@
 
 import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { ClipboardCheck, Copy, ExternalLink, Images, Pencil } from "lucide-react";
+import { Copy, ExternalLink, Images, Pencil } from "lucide-react";
 import AdminPage from "../../components/admin/AdminPage";
 import AdminPanel from "../../components/admin/AdminPanel";
 import StatusBadge from "../../components/employee/StatusBadge";

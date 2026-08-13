@@ -8,7 +8,7 @@ import TargetCard from "../workforce/TargetCard";
 import { formatPercent } from "../workforce/format";
 import { PerformanceStatusBadge } from "../workforce/WorkforceBadges";
 
-export default function PerformancePanel({ employeeId, compact = false, to = "/employee/performance" }) {
+export default function PerformancePanel({ employeeId, compact = false }) {
   const { revision } = useWorkforce();
   void revision;
   const period = periodFromDate();

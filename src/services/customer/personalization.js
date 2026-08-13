@@ -31,7 +31,6 @@ export const deriveStyleSignals = ({
   const collections = [];
   const fabrics = [];
   const occasions = [];
-  const colours = [];
 
   const consider = (product, weight = 1) => {
     if (!product) return;
@@ -40,7 +39,6 @@ export const deriveStyleSignals = ({
       if (product.collection) collections.push(product.collection);
       if (product.fabric) fabrics.push(product.fabric);
       (product.occasion ?? []).forEach((entry) => occasions.push(entry));
-      (product.colors ?? []).forEach((entry) => colours.push(entry));
     }
   };
 
@@ -56,13 +54,11 @@ export const deriveStyleSignals = ({
   (preferences?.categories ?? []).forEach((id) => categories.push(id));
   (preferences?.fabrics ?? []).forEach((id) => fabrics.push(id));
   (preferences?.occasions ?? []).forEach((id) => occasions.push(id));
-  (preferences?.colours ?? []).forEach((id) => colours.push(id));
 
   const categoryCounts = countMap(categories);
   const collectionCounts = countMap(collections);
   const fabricCounts = countMap(fabrics);
   const occasionCounts = countMap(occasions);
-  const colourCounts = countMap(colours);
 
   const favouriteCategories = topKeys(categoryCounts, 4)
     .map((id) => ({ id, label: taxonomyRepository.getCategoryLabel(id) }))

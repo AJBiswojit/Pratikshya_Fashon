@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from "framer-motion";
-import { Camera, CameraOff, CheckCircle2, RefreshCw, ShieldCheck, Sparkles } from "lucide-react";
+import { Camera, CameraOff, RefreshCw, ShieldCheck, Sparkles } from "lucide-react";
 import PratikshyaImage from "../PratikshyaImage";
 import { imageRef } from "../../data/pratikshyaImageManifest";
 import { cn } from "../../utils/cn";

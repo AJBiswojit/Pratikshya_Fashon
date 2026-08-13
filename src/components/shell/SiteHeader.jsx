@@ -289,9 +289,6 @@ export default function SiteHeader({ counts = {}, onOpenCart }) {
                       aria-label={accountLabel}
                       aria-haspopup="menu"
                       aria-expanded={accountOpen}
-                      onClick={(e) => {
-                        // On click, if on mobile or if needed, can toggle
-                      }}
                       className={cn(
                         shared,
                         isAuthenticated && "text-ink font-medium",

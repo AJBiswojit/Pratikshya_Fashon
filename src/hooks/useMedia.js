@@ -66,10 +66,6 @@ export const useMarketingMedia = (placement = null) =>
 export const usePendingReviewMedia = () =>
   useMediaSelector(() => mediaRepository.getPendingReview(), []);
 
-/** Media submitted by a specific employee. */
-export const useEmployeeMedia = (employeeId) =>
-  useMediaSelector(() => mediaRepository.getByEmployee(employeeId), [employeeId]);
-
 /**
  * The ACTIVE record a live storefront placement should show, or null when
  * the house artwork should stand. This is the only hook the landing page
@@ -104,11 +100,6 @@ export const useProductMediaSummaries = (products) => {
 
 /** Library-wide counts for the dashboard and library tiles. */
 export const useMediaMetrics = () => useMediaSelector(() => mediaRepository.getMediaMetrics(), []);
-
-/** Ingested / unmapped / duplicate slices for the admin library. */
-export const useUnmappedMedia = () => useMediaSelector(() => mediaRepository.getUnmappedMedia(), []);
-export const useDuplicateMedia = () => useMediaSelector(() => mediaRepository.getDuplicateMedia(), []);
-export const useNeedsReviewMedia = () => useMediaSelector(() => mediaRepository.getNeedsReviewMedia(), []);
 
 /** The slides a product page should render, published media first. */
 export const useProductSlides = (product) =>

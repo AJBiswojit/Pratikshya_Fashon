@@ -34,7 +34,7 @@ import { formatINR } from "../../utils/shopping";
 import { categoryLabels } from "../../data/products/taxonomy";
 import { employeeFullName } from "../../utils/employee";
 import { getEmployee, loadEmployees } from "../../services/employees/employeeService";
-import { REVIEW_FLAG_LABELS, reviewFlagLabel } from "../../services/productReviewFlags";
+import { reviewFlagLabel } from "../../services/productReviewFlags";
 
 const FILTERS = [
   { id: "ALL", label: "All" },

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Plus, MapPin, CheckCircle2, AlertCircle, Trash2, Edit3, Check } from "lucide-react";
+import { Plus, CheckCircle2, AlertCircle, Trash2, Edit3, Check } from "lucide-react";
 import AccountShell from "../../components/account/AccountShell";
 import AddressModal from "../../components/account/AddressModal";
 import { useAccount } from "../../context/AccountContext";

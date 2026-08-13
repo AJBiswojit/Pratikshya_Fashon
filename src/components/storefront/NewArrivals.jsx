@@ -1,15 +1,7 @@
 import { motion } from "framer-motion";
 import { ArrowRight, Heart } from "lucide-react";
 import { Link } from "react-router-dom";
-import {
-  Accent,
-  AtelierSection,
-  EditorialHeading,
-  ProductCard,
-  eyebrow,
-  gap,
-  useReveal,
-} from "../../design-system";
+import { Accent, AtelierSection, EditorialHeading, ProductCard, gap, useReveal } from "../../design-system";
 import { getLiveStorefrontProducts, productHref } from "../../data/products";
 import { selectNewArrivalProducts } from "../../services/media/mediaResolver";
 import { useProductCovers } from "../../hooks/useMedia";

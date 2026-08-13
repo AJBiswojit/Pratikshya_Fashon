@@ -55,8 +55,7 @@ export const appendTimeline = (timeline = [], event) => {
 /** Build customer-safe timeline from order.statusHistory + timeline */
 export const getCustomerTimeline = (order) => {
   const history = order.statusHistory || [];
-  const timeline = order.timeline || [];
-  // Merge but keep status history as base for customer
+  // Keep status history as the customer-safe base
   const events = history.map((h) => ({
     status: h.status,
     at: h.at,

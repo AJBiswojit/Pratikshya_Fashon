@@ -6,7 +6,7 @@ import AdminPanel from "../../../components/admin/AdminPanel";
 import StatusBadge from "../../../components/employee/StatusBadge";
 import { AtelierButton } from "../../../design-system";
 import catalogRepository from "../../../services/catalogRepository";
-import taxonomyRepository, { COLLECTION_STATUS } from "../../../services/taxonomyRepository";
+import taxonomyRepository from "../../../services/taxonomyRepository";
 import { getById as getMediaById } from "../../../services/media/mediaRepository";
 import { imageRef } from "../../../data/pratikshyaImageManifest";
 import { formatINR } from "../../../utils/shopping";
