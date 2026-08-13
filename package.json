@@ -12,6 +12,7 @@
     "audit:explore": "node --import ./scripts/node-loader/register.mjs scripts/audit-explore.mjs",
     "audit:homepage": "node --import ./scripts/node-loader/register.mjs scripts/audit-homepage.mjs",
     "audit:product-media": "node --import ./scripts/node-loader/register.mjs scripts/audit-product-media.mjs",
+    "audit:media-product-discovery": "node --import ./scripts/node-loader/register.mjs scripts/audit-media-product-discovery.mjs",
     "audit:media-products": "node --import ./scripts/node-loader/register.mjs scripts/audit-media-products.mjs",
     "audit:catalog-completeness": "node --import ./scripts/node-loader/register.mjs scripts/audit-catalog-completeness.mjs",
     "audit:storefront-coverage": "node --import ./scripts/node-loader/register.mjs scripts/audit-storefront-coverage.mjs",
