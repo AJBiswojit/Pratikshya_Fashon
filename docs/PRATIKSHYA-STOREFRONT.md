@@ -41,7 +41,8 @@ fabric, occasion, imagery, ratings, flags. Everything else is **derived once
 at module load** so it cannot drift:
 
 - `id` (`pf-001`…), `slug`, `discount`, `currency`
-- `image` / `hoverImage` resolved through the image manifest — never raw URLs
+- `image` resolved through the image manifest; `hoverImage` is filled by the
+  product media set (same product only) and omitted when there is no alternate
 - `label` (first badge), `inStock`, `availabilityLabel`
 - `tags` and `searchText` (the pre-built, punctuation-stripped search haystack)
 - `score` (the Recommended ordering) and `addedOrder` (the Newest ordering)

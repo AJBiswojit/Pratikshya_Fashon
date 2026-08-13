@@ -26,7 +26,6 @@ import catalogRepository, { productsRegisterRaw, slugify } from "../../services/
 import {
   getCareInstructions,
   getDeliveryInfo,
-  getGalleryImageIds,
   getProductDescription,
   getProductDetails,
   getProductSpecifications,
@@ -136,13 +135,11 @@ export const toStorefrontProduct = (product, index = 0) => {
 
   const discount = percentOff(product.price, product.originalPrice);
   const badges = product.badges ?? [];
-  const galleryIds = [
-    product.image,
-    product.hoverImage,
-    ...(product.additionalImages ?? []),
-    ...getGalleryImageIds(product),
-  ].filter(Boolean);
-  const images = [...new Set(galleryIds)].slice(0, 5).map((entry) => resolveImage(entry, product.name));
+  /* Product-owned plates only. Authored hoverImage and category-wide
+     gallery pads are not owned by this product and must not appear here —
+     the canonical media set decides hover and gallery later. */
+  const galleryIds = [product.image, ...(product.additionalImages ?? [])].filter(Boolean);
+  const images = [...new Set(galleryIds)].map((entry) => resolveImage(entry, product.name));
 
   const collection = product.collection ?? product.collections?.[0] ?? "";
   const productCollections = taxonomyRepository.collectionsForProduct(product);

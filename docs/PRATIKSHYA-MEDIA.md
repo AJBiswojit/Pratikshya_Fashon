@@ -184,13 +184,13 @@ action rather than remembered separately.
 
 ## 7. The customer side
 
-`src/services/media/productMediaSource.js` decides what a product page shows:
+`src/services/media/productMediaSet.js` is the product-owned source of truth.
+`productMediaSource.js` turns that set into gallery slides and a cover:
 
-- Published (`ACTIVE`) images **replace** the authored plates when the product
-  has any; otherwise `product.images ?? [product.image]` stands. There is no
-  half-state where a shoot is partly live.
+- Only media with `productId === product.id`, plus the product's authored
+  primary / `additionalImages`, may appear on a card or PDP gallery.
 - Published videos are appended after the images.
-- `getProductCoverImage` returns the published cover for card surfaces.
+- `getProductCoverImage` returns the set's primary plate.
 
 The Phase 5 `ProductGallery` was **extended, not rebuilt**: the same layout,
 thumbnails and motion, now taking slides that may include a video.
@@ -198,8 +198,10 @@ thumbnails and motion, now taking slides that may include a video.
 `playsInline`, `controlsList="nodownload"`, poster fallback, and no autoplay
 anywhere, so two films can never talk over each other.
 
-Cards, grids, search and collections use `useProductCovers` and show the
-cover still only. `ProductCard` itself was not touched.
+Cards, grids, search and collections use `useProductCovers`, which applies
+the Phase 21.9 product media set (`image` + product-owned `hoverImage`).
+`ProductCard` also resolves through `getProductCardMedia` so a listing that
+forgets to decorate still cannot hover to another product.
 
 `marketingMediaSource.js` resolves a placement to an image source (a video
 resolves to its poster) and returns `null` when no ACTIVE record exists — the
@@ -338,7 +340,30 @@ tabs and Category / Usage filters. Duplicates are reported, never deleted.
 
 ---
 
-## 12. Deliberately not built
+## 12. Phase 21.9 — Product-scoped cards and hover
+
+`services/media/productMediaSet.js` is the single product-owned media index.
+
+```
+PRODUCT
+  ├── authored primary / additionalImages
+  └── register media where media.productId === product.id
+        └── grouped by groupKey + view (front / side / back / …)
+              ↓
+        getProductMediaSet(productId)
+              ↓
+        ProductCard  (primary + hover)
+        Product Detail gallery
+```
+
+Hover is deterministic: BACK → SIDE → LEFT/RIGHT → DETAIL → other owned gallery.
+If the product has only one owned plate, hover is disabled. Category covers,
+`kids-015.webp`-style dump files, and authored `hoverImage` house plates are
+never borrowed. Audit: `npm run audit:product-media`.
+
+---
+
+## 13. Deliberately not built
 
 Real or cloud upload (S3, Cloudinary, Firebase, Supabase), transcoding,
 thumbnails generated from video, CDN delivery, scheduled campaign activation,

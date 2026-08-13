@@ -1,3 +1,4 @@
+import { getProductCardMedia } from "../../services/media/productMediaSet";
 import { cn } from "../../utils/cn";
 import { heading, price as priceType } from "../typography";
 import AtelierBadge from "./AtelierBadge";
@@ -49,11 +50,13 @@ export default function ProductCard({
     price,
     originalPrice,
     label,
-    image,
-    hoverImage,
     inStock = true,
     availabilityText = "",
   } = product;
+
+  /* Canonical product-owned plates only. Hover is omitted when the product
+     has no alternate of its own — the frame then stays on the primary. */
+  const { image, hoverImage } = getProductCardMedia(product);
 
   const discount = showDiscount ? discountPercent(price, originalPrice) : null;
 

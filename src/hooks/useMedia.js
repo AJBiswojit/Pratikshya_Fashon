@@ -12,7 +12,8 @@
 
 import { useCallback, useEffect, useState } from "react";
 import mediaRepository, { MEDIA_CHANGED_EVENT } from "../services/media/mediaRepository";
-import { getProductCoverImage, getProductSlides } from "../services/media/productMediaSource";
+import { getProductSlides } from "../services/media/productMediaSource";
+import { applyProductMediaSet } from "../services/media/productMediaSet";
 
 /**
  * Re-runs `select` whenever the register changes.
@@ -113,22 +114,16 @@ export const useProductSlides = (product) =>
   useMediaSelector(() => getProductSlides(product), [product?.id]);
 
 /**
- * The same product rows, with `image` resolved to the published cover.
- *
- * Cards, grids, search results and collections all show one plate and never
- * video, so they take this rather than reading the register themselves. A
- * product with no published cover comes back untouched.
+ * The same product rows, with `image` and `hoverImage` resolved from the
+ * canonical product media set. Hover is another view of the same product,
+ * or omitted entirely when no product-owned alternate exists.
  */
 export const useProductCovers = (products) => {
   /* Keyed on the ids rather than the array so a caller that rebuilds its
      list on every render does not resubscribe on every render. */
   const key = (products ?? []).map((product) => product.id).join("|");
   return useMediaSelector(
-    () =>
-      (products ?? []).map((product) => {
-        const cover = getProductCoverImage(product);
-        return cover && cover !== product.image ? { ...product, image: cover } : product;
-      }),
+    () => (products ?? []).map((product) => applyProductMediaSet(product)),
     [key] // eslint-disable-line react-hooks/exhaustive-deps
   );
 };

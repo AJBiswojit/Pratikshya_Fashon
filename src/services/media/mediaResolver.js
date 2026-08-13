@@ -28,6 +28,7 @@ import taxonomyRepository from "../taxonomyRepository";
 import { getAll, getById, getProductMedia } from "./mediaRepository";
 import { placementImageSource } from "./marketingMediaSource";
 import { getProductCoverImage } from "./productMediaSource";
+import { applyProductMediaSet, getProductMediaSet } from "./productMediaSet";
 
 const asSource = (media, fallbackCategory = "default") => {
   if (!media) return null;
@@ -505,11 +506,7 @@ export const resolveProductCover = (product) => {
   return authored ? withReason(authored, FALLBACK_REASONS.NO_SOURCE_MEDIA) : null;
 };
 
-export const decorateProductWithMedia = (product) => {
-  if (!product) return product;
-  const cover = getProductCoverImage(product);
-  return cover && cover !== product.image ? { ...product, image: cover } : product;
-};
+export const decorateProductWithMedia = (product) => applyProductMediaSet(product);
 
 export const decorateProductsWithMedia = (products = []) =>
   (products || []).map(decorateProductWithMedia);
@@ -536,12 +533,10 @@ export const resolveAiMirrorImage = (product) => {
 
 export const resolveAiShoppingImage = (product) => decorateProductWithMedia(product)?.image ?? null;
 
-/** Gallery plates for a product page — published media, else nothing extra. */
+/** Gallery plates for a product page — the same product-owned set the card uses. */
 export const resolveProductGallery = (product) => {
   if (!product?.id) return [];
-  return getProductMedia(product.id, { publicOnly: true, type: "IMAGE" }).map((item) =>
-    asSource(item, product.category)
-  );
+  return getProductMediaSet(product).gallery;
 };
 
 export default {
