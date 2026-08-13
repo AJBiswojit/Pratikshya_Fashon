@@ -199,8 +199,6 @@ export const isGroupedFile = (fileName) => {
   return parsed ? !parsed.isStandalone : false;
 };
 
-export const normalizeFileName = (name) => String(name || "").toLowerCase().trim();
-
 export default {
   parseMediaFilename,
   getGroupKey,

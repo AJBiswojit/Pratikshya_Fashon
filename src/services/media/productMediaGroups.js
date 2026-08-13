@@ -179,7 +179,6 @@ export const splitGroup = (groupId, mediaIds = [], actorLabel = null) => {
   const remaining = group.mediaIds.filter((id) => !moving.has(id));
   if (!remaining.length) return null;
   updateGroup(groupId, { mediaIds: remaining }, actorLabel);
-  const at = nowIso();
   return createGroup(
     {
       groupKey: group.groupKey ? `${group.groupKey}-split-${Date.now().toString(36)}` : null,
@@ -211,12 +210,6 @@ export const setGroupDecision = (groupId, decision, actorLabel = null) => {
 export const setGroupProduct = (groupId, productId, actorLabel = null) =>
   updateGroup(groupId, { productId: productId || null }, actorLabel);
 
-export const setVariantReviewRequired = (groupId, required, actorLabel = null) =>
-  updateGroup(groupId, { variantReviewRequired: Boolean(required) }, actorLabel);
-
-export const archiveGroup = (groupId, actorLabel = null) =>
-  updateGroup(groupId, { status: GROUP_STATUS.ARCHIVED }, actorLabel);
-
 /**
  * Phase 22.1 — groups whose identity decision is still open for the given
  * media. A group blocks publication until a human decides SAME_PRODUCT or
@@ -231,13 +224,6 @@ export const unresolvedGroupConflictsFor = (mediaIds = []) => {
     if (group.decision === GROUP_DECISIONS.SEPARATE_PRODUCTS) return false;
     return group.mediaIds.some((id) => set.has(String(id)));
   });
-};
-
-export const removeGroup = (groupId) => {
-  const groups = read();
-  if (!groups.some((entry) => entry.id === groupId)) return null;
-  write(groups.filter((entry) => entry.id !== groupId));
-  return true;
 };
 
 export const resetGroups = () => {
@@ -267,8 +253,5 @@ export default {
   splitGroup,
   setGroupDecision,
   setGroupProduct,
-  setVariantReviewRequired,
-  archiveGroup,
-  removeGroup,
   resetGroups,
 };

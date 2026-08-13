@@ -11,7 +11,7 @@
  */
 
 import { getPriceBand, filterFacets, sortOptions, defaultSort } from "./taxonomy";
-import { normaliseSearchText, getLiveStorefrontProducts, products as defaultProducts } from "./index";
+import { normaliseSearchText, getLiveStorefrontProducts } from "./index";
 import taxonomyRepository from "../../services/taxonomyRepository";
 
 /* ------------------------------------------------------------------ */

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { X, Check } from "lucide-react";
+import { X } from "lucide-react";
 import { AtelierButton } from "../../design-system";
 import { isValidPhone, isValidPincode } from "../../utils/validation";
 import { cn } from "../../utils/cn";

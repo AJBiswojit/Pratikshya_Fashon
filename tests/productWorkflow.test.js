@@ -37,7 +37,6 @@ import {
   employeeCanEditProduct,
   getMediaInbox,
   getPotentialProductGroups,
-  getProductWorkflowView,
   getWorkflowMetrics,
   nextStableProductId,
   preferredProductIdForMedia,
@@ -62,7 +61,6 @@ import {
 import { getLiveStorefrontProducts } from "../src/data/products/index.js";
 import { loadActivity } from "../src/services/employees/activityService.js";
 import { getEmployee, loadEmployees } from "../src/services/employees/employeeService.js";
-import { PERMISSIONS } from "../src/config/employeePermissions.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -266,9 +264,11 @@ test("transferMediaOwnership moves ownership and strips stale references", () =>
 
 test("unassignProductMedia returns media to the library and flags the owner", () => {
   const scratchMedia = mediaRepository.create({ url: "/library/women-saree-silk-006-front.webp" });
-  const created = catalogRepository.createDraftProduct(
-    { id: "SAR-903", name: "Unassign Scratch", category: "sarees", image: scratchMedia.url },
-    ADMIN
+  assert.ok(
+    catalogRepository.createDraftProduct(
+      { id: "SAR-903", name: "Unassign Scratch", category: "sarees", image: scratchMedia.url },
+      ADMIN
+    ).ok
   );
   mediaRepository.assignToProduct(scratchMedia.id, "SAR-903", null);
 
@@ -609,9 +609,11 @@ test("history captures who changed what, when — price, name, media, status", (
 
 test("admin can change a Product ID; the media register follows", () => {
   const media = mediaRepository.create({ url: "/library/jewellery-earring-014.webp" });
-  const created = catalogRepository.createDraftProduct(
-    { id: "JEW-901", name: "ID change scratch", category: "jewellery" },
-    ADMIN
+  assert.ok(
+    catalogRepository.createDraftProduct(
+      { id: "JEW-901", name: "ID change scratch", category: "jewellery" },
+      ADMIN
+    ).ok
   );
   mediaRepository.assignToProduct(media.id, "JEW-901", null);
 

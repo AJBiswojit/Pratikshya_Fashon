@@ -11,7 +11,6 @@ import {
   getAttendanceStatusLabel,
   isExcludedFromAttendancePercent,
 } from "../../config/attendanceConfig";
-import { PERMISSIONS } from "../../config/employeePermissions";
 import { employeeFullName } from "../../utils/employee";
 import { getDepartmentLabel, getStoreLabel } from "../../config/employeeDepartments";
 import { getRoleLabel } from "../../config/employeeRoles";
@@ -22,14 +21,7 @@ import {
   recordActivity,
 } from "../employees/activityService";
 import { getEmployee, loadEmployees } from "../employees/employeeService";
-import {
-  attendanceForEmployee,
-  attendanceOnDate,
-  createBlankAttendance,
-  findAttendance,
-  loadAttendance,
-  upsertAttendance,
-} from "./attendanceRepository";
+import { createBlankAttendance, findAttendance, loadAttendance, upsertAttendance } from "./attendanceRepository";
 import { approvedLeaveOn, loadLeave } from "./leaveRepository";
 import {
   calendarMark,

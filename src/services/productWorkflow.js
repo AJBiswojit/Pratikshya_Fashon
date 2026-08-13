@@ -23,7 +23,6 @@
 import catalogRepository, { PRODUCT_STATUS, getPublishIssues } from "./catalogRepository";
 import mediaRepository from "./media/mediaRepository";
 import { getProductMediaSet, resolveProductMediaClaims } from "./media/productMediaSet";
-import { parseMediaFilename } from "./media/mediaNaming";
 import { buildMediaGroups } from "./media/mediaGroups";
 import {
   GROUP_DECISIONS,
@@ -32,7 +31,6 @@ import {
   createGroup,
   setGroupDecision,
   setGroupProduct,
-  setVariantReviewRequired,
 } from "./media/productMediaGroups";
 import { MEDIA_SCOPES, MEDIA_STATUS, MAPPING_STATUS, DUPLICATE_STATUS } from "../config/mediaTypes";
 import { DEFAULT_PRODUCT_ID_PREFIX, PRODUCT_ID_PREFIXES } from "../config/productCatalogConfig";
@@ -40,7 +38,7 @@ import { PERMISSIONS } from "../config/employeePermissions";
 import { ROLES } from "../config/employeeRoles";
 import { canEmployeeLogin } from "../config/employeeStatus";
 import { hasPermission } from "./employees/authorization";
-import { getEmployee, getEmployees, loadEmployees } from "./employees/employeeService";
+import { getEmployee, loadEmployees } from "./employees/employeeService";
 import {
   ACTIVITY_ACTIONS,
   describeActor,
@@ -82,6 +80,12 @@ export const mediaFileName = (media) =>
       media?.id ||
       ""
   );
+
+const identityMatcher = (identityKeys) => (value) => {
+  if (!value) return false;
+  const id = typeof value === "string" ? value : value?.id ?? value?.src ?? "";
+  return identityKeys.has(String(id));
+};
 
 const numberFromGroupKey = (groupKey) => {
   const match = String(groupKey || "").match(/(\d+)$/);
@@ -210,11 +214,7 @@ export const transferMediaOwnership = (mediaId, targetProductId, actor = null, {
           .filter(Boolean)
           .map((value) => String(value))
       );
-      const matches = (value) => {
-        if (!value) return false;
-        const id = typeof value === "string" ? value : value?.id ?? value?.src ?? "";
-        return identityKeys.has(String(id));
-      };
+      const matches = identityMatcher(identityKeys);
       const patch = {};
       if (owner.image != null && matches(owner.image)) patch.image = undefined;
       if (owner.hoverImage != null && matches(owner.hoverImage)) patch.hoverImage = undefined;
@@ -251,11 +251,7 @@ export const unassignProductMedia = (mediaId, actor = null) => {
           .filter(Boolean)
           .map((value) => String(value))
       );
-      const matches = (value) => {
-        if (!value) return false;
-        const id = typeof value === "string" ? value : value?.id ?? value?.src ?? "";
-        return identityKeys.has(String(id));
-      };
+      const matches = identityMatcher(identityKeys);
       const patch = {};
       if (owner.image != null && matches(owner.image)) patch.image = undefined;
       if (owner.hoverImage != null && matches(owner.hoverImage)) patch.hoverImage = undefined;
@@ -508,7 +504,7 @@ export const saveEmployeeDraft = (productId, patch, employee = null, actor = nul
 export const getProductWorkflowView = (product) => {
   if (!product) return null;
   const mediaSet = getProductMediaSet(product);
-  const { claims, conflicts } = resolveProductMediaClaims(product, product.id);
+  const { conflicts } = resolveProductMediaClaims(product, product.id);
   return {
     product,
     mediaSet,
@@ -800,14 +796,6 @@ export const decideProductGroup = ({
 
   return { ok: true, decision, product, conflicts: conflictCount };
 };
-
-/** Variant flag — when media may be one design in several colourways. */
-export const markVariantReviewRequired = (groupId, required = true, actor = null) =>
-  setVariantReviewRequired(
-    groupId,
-    required,
-    typeof actor === "string" ? actor : actor?.label ?? actor?.name ?? null
-  );
 
 /* ------------------------------------------------------------------ */
 /* Phase 22.1 — Kids reconciliation                                    */

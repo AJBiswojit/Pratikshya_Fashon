@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from "framer-motion";
-import { ChevronDown, X, LogOut, LogIn, User, ShoppingBag, MapPin, Sliders, Heart } from "lucide-react";
+import { ChevronDown, X, LogOut, User, ShoppingBag, MapPin, Sliders } from "lucide-react";
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {

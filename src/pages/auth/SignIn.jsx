@@ -1,17 +1,10 @@
 import { useState, useEffect } from "react";
-import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { Eye, EyeOff, Sparkles, ArrowRight, AlertCircle, CheckCircle2 } from "lucide-react";
-import {
-  AtelierButton,
-  AtelierSection,
-  Breadcrumb,
-  EditorialHeading,
-  Rule,
-} from "../../design-system";
+import { AtelierButton, AtelierSection, Breadcrumb, Rule } from "../../design-system";
 import { useAuth } from "../../context/AuthContext";
 import { DEMO_CREDENTIALS } from "../../data/mockCustomers";
 import { sanitizeReturnUrl } from "../../utils/validation";
-import { cn } from "../../utils/cn";
 
 /**
  * Customer Sign In — /signin
@@ -24,7 +17,6 @@ export default function SignIn() {
   const { signIn, isAuthenticated } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const location = useLocation();
 
   const rawReturnTo = searchParams.get("returnTo") || "/account";
   const returnTo = sanitizeReturnUrl(rawReturnTo);

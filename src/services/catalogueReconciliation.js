@@ -34,7 +34,6 @@
 import mediaRepository from "./media/mediaRepository";
 import { getIngestedRecords } from "./media/ingestedMedia";
 import { buildMediaGroups } from "./media/mediaGroups";
-import { parseMediaFilename } from "./media/mediaNaming";
 import {
   MEDIA_SCOPES,
   MAPPING_STATUS,
@@ -442,14 +441,6 @@ export const reconciliationDraftRecords = (products = []) => {
 /* ------------------------------------------------------------------ */
 /* Idempotent sync                                                     */
 /* ------------------------------------------------------------------ */
-
-const isReconciliationPlaceholder = (row) =>
-  Boolean(
-    row &&
-      typeof row === "object" &&
-      String(row.status ?? "") === "DRAFT" &&
-      isPlaceholderProductName(row.name)
-  );
 
 /**
  * Fill only the placeholder-state fields of an existing reconciliation draft.

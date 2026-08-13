@@ -14,13 +14,7 @@ import { fileURLToPath } from "node:url";
 
 import catalogRepository from "../src/services/catalogRepository.js";
 import { getLiveStorefrontProducts, productHref } from "../src/data/products/index.js";
-import {
-  queryCatalogue,
-  resolveCategoryFilter,
-  resolveSort,
-  sortProducts,
-  SORT_ALIASES,
-} from "../src/data/products/query.js";
+import { queryCatalogue, resolveCategoryFilter, sortProducts, SORT_ALIASES } from "../src/data/products/query.js";
 import {
   EXPLORE_PAGE_SIZE,
   buildExploreStream,

@@ -1,6 +1,6 @@
 import { Search, SlidersHorizontal } from "lucide-react";
 import { AnimatePresence } from "framer-motion";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   AtelierButton,

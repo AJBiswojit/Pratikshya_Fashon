@@ -10,15 +10,9 @@
  * Only used when localStorage has no orders — never overwrites real orders.
  */
 
-import { getProductById } from "../../data/products";
 import catalogRepository from "../catalogRepository";
-import {
-  ORDER_STATUS,
-  ORDER_PAYMENT_STATUS,
-  FULFILLMENT_STATUS,
-  CARRIERS,
-} from "../../config/orderConfig";
-import { buildTrackingId, buildInvoiceNumber, pickCarrier } from "../../utils/orders";
+import { ORDER_STATUS, ORDER_PAYMENT_STATUS, FULFILLMENT_STATUS } from "../../config/orderConfig";
+import { buildTrackingId, buildInvoiceNumber } from "../../utils/orders";
 import { buildFulfillmentRecord } from "./fulfillmentService";
 import { buildTimelineEvent } from "./orderTimelineService";
 import { ORDER_ACTIVITY_TYPES } from "../../config/orderConfig";

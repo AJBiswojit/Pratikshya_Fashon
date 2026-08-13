@@ -12,7 +12,7 @@
 
 import { useCallback, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
-import { filterFacets, defaultSort, sortOptions } from "../data/products/taxonomy";
+import { filterFacets, defaultSort } from "../data/products/taxonomy";
 import { queryCatalogue, resolveCategoryFilter, resolveSort, SORT_ALIASES } from "../data/products/query";
 
 const multiFacets = new Set(
@@ -20,7 +20,6 @@ const multiFacets = new Set(
 );
 
 const facetIds = filterFacets.map((facet) => facet.id);
-const sortIds = new Set(sortOptions.map((option) => option.id));
 
 export { SORT_ALIASES };
 

@@ -23,13 +23,7 @@ export const MEDIA_TYPES = {
   VIDEO: "VIDEO",
 };
 
-export const MEDIA_TYPE_OPTIONS = [
-  { id: MEDIA_TYPES.IMAGE, label: "Image" },
-  { id: MEDIA_TYPES.VIDEO, label: "Video" },
-];
-
 export const isVideo = (media) => media?.type === MEDIA_TYPES.VIDEO;
-export const isImage = (media) => media?.type !== MEDIA_TYPES.VIDEO;
 
 /* ------------------------------------------------------------------ */
 /* Ownership                                                           */
@@ -85,8 +79,6 @@ export const getMediaStatusLabel = (status) =>
 
 export const getMediaStatusTone = (status) =>
   MEDIA_STATUS_OPTIONS.find((option) => option.id === status)?.tone ?? "quiet";
-
-export const isPubliclyVisible = (media) => media?.status === MEDIA_STATUS.ACTIVE;
 
 /* ------------------------------------------------------------------ */
 /* Product media roles                                                 */
@@ -238,9 +230,6 @@ export const USAGE_ROLE_OPTIONS = [
   { id: USAGE_ROLES.AI_MIRROR, label: "AI Mirror" },
 ];
 
-export const getUsageRoleLabel = (roleId) =>
-  USAGE_ROLE_OPTIONS.find((role) => role.id === roleId)?.label ?? roleId;
-
 /** Apparel categories the AI Mirror may receive. Jewellery and innerwear never qualify. */
 export const AI_MIRROR_ELIGIBLE_CATEGORIES = [
   "sarees",
@@ -268,23 +257,11 @@ export const MAPPING_STATUS = {
   NEEDS_REVIEW: "NEEDS_REVIEW",
 };
 
-export const MAPPING_STATUS_OPTIONS = [
-  { id: MAPPING_STATUS.MAPPED, label: "Mapped", tone: "ink" },
-  { id: MAPPING_STATUS.UNMAPPED, label: "Unmapped", tone: "alert" },
-  { id: MAPPING_STATUS.NEEDS_REVIEW, label: "Needs review", tone: "brass" },
-];
-
 export const DUPLICATE_STATUS = {
   UNIQUE: "UNIQUE",
   DUPLICATE: "DUPLICATE",
   POSSIBLE_DUPLICATE: "POSSIBLE_DUPLICATE",
 };
-
-export const DUPLICATE_STATUS_OPTIONS = [
-  { id: DUPLICATE_STATUS.UNIQUE, label: "Unique" },
-  { id: DUPLICATE_STATUS.DUPLICATE, label: "Duplicate" },
-  { id: DUPLICATE_STATUS.POSSIBLE_DUPLICATE, label: "Possible duplicate" },
-];
 
 export const isValidUsageRole = (role) => Object.values(USAGE_ROLES).includes(role);
 
@@ -397,8 +374,6 @@ export const MARKETING_PLACEMENT_OPTIONS = [
     live: true,
   },
 ];
-
-export const LIVE_PLACEMENTS = MARKETING_PLACEMENT_OPTIONS.filter((item) => item.live);
 
 export const getPlacement = (id) =>
   MARKETING_PLACEMENT_OPTIONS.find((item) => item.id === id) ?? null;

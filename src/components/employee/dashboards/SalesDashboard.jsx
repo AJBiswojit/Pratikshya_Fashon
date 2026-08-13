@@ -1,5 +1,4 @@
 import { Link } from "react-router-dom";
-import { getDepartmentLabel } from "../../../config/employeeDepartments";
 import { useEmployeeAuth } from "../../../context/EmployeeAuthContext";
 import {
   getAssistedOrders,

@@ -9,7 +9,7 @@ import {
 } from "../../config/mediaTypes";
 import { cn } from "../../utils/cn";
 
-const extensionOf = (name = "") => {
+export const extensionOf = (name = "") => {
   const dot = name.lastIndexOf(".");
   return dot < 0 ? "" : name.slice(dot).toLowerCase();
 };

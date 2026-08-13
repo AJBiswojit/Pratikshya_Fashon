@@ -51,7 +51,6 @@ categories.forEach((category) => {
     .map((product) => String(product.id))
     .sort();
 
-  const expectedSet = new Set(expected);
   const actualSet = new Set(actual);
 
   const missing = expected.filter((id) => !actualSet.has(id));

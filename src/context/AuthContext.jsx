@@ -16,10 +16,7 @@ import {
   useMemo,
   useState,
 } from "react";
-import {
-  DEMO_CREDENTIALS,
-  INITIAL_DEMO_CUSTOMERS,
-} from "../data/mockCustomers";
+import { INITIAL_DEMO_CUSTOMERS } from "../data/mockCustomers";
 import { readStorage, writeStorage } from "../utils/shopping";
 import { isValidEmail, isValidPhone, validatePassword } from "../utils/validation";
 

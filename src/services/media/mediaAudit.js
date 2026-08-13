@@ -21,7 +21,7 @@ import {
   isLegacyImagesUrl,
 } from "./mediaPaths";
 import { validateMedia } from "./mediaValidation";
-import { getProductMediaSet, PRODUCT_MEDIA_STATUS } from "./productMediaSet";
+import { getProductMediaSet } from "./productMediaSet";
 
 const publicFileOf = (url) => {
   const clean = String(url || "").split("?")[0];

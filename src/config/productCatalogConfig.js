@@ -225,9 +225,6 @@ export const GENDER_OPTIONS = ["Women", "Men", "Kids", "Unisex"];
  */
 export { PRODUCT_ID_PREFIXES, DEFAULT_PRODUCT_ID_PREFIX } from "./productIdPrefixes";
 
-/** Names a draft may hold that do not count as real product information. */
-export const PLACEHOLDER_PRODUCT_NAMES = ["untitled", "not yet defined", "undefined"];
-
 /* ------------------------------------------------------------------ */
 /* Fabric & material — taxonomy list extended, never contradicted      */
 /* ------------------------------------------------------------------ */

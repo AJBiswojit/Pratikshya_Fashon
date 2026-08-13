@@ -1,22 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import {
-  AlertCircle,
-  CheckCircle2,
-  FileCheck,
-  Film,
-  Image as ImageIcon,
-  Layers,
-  Loader2,
-  RefreshCw,
-  Sparkles,
-} from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { AlertCircle, CheckCircle2, Film, Image as ImageIcon, Loader2, Sparkles } from "lucide-react";
 import { AtelierButton } from "../../design-system";
-import MediaUploadDropzone, {
-  titleFromFileName,
-  typeOfFile,
-  validateFile,
-} from "./MediaUploadDropzone";
+import MediaUploadDropzone, { titleFromFileName, validateFile } from "./MediaUploadDropzone";
 import MediaUploadQueue from "./MediaUploadQueue";
 import MediaProductSelector from "./MediaProductSelector";
 import MediaPlacementSelector from "./MediaPlacementSelector";

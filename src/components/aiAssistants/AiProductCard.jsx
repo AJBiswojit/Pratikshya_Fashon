@@ -30,7 +30,6 @@ export default function AiProductCard({
   if (!product) return null;
 
   const discount = discountPercent(product.price, product.originalPrice);
-  const { image, hoverImage } = getProductCardMedia(product);
   const purchasable = product.inStock !== false && product.availability !== "made-to-order";
   const availabilityText =
     product.availability === "made-to-order"

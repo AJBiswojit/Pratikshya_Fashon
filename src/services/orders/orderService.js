@@ -27,7 +27,7 @@ import {
 } from "../../utils/orders";
 import { readStorage, writeStorage } from "../../utils/shopping";
 import { buildFulfillmentRecord, normaliseFulfillment, mapOrderStatusToFulfillmentStatus } from "./fulfillmentService";
-import { buildTimelineEvent, normaliseTimeline, appendTimeline } from "./orderTimelineService";
+import { buildTimelineEvent, appendTimeline } from "./orderTimelineService";
 import { generateDemoOrders } from "./demoOrders";
 
 export const ORDERS_STORAGE_KEY = "pratikshya_orders";

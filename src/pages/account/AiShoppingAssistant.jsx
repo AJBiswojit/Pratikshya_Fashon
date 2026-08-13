@@ -30,7 +30,6 @@ import {
 } from "../../services/ai/shopping/aiShoppingMockData";
 import { PRODUCTS_CHANGED_EVENT } from "../../services/catalogRepository";
 import { MEDIA_CHANGED_EVENT } from "../../services/media/mediaRepository";
-import { decorateProductsWithMedia } from "../../services/media/mediaResolver";
 import { TAXONOMY_CHANGED_EVENT } from "../../services/taxonomyRepository";
 import { getStylePreferences } from "../../services/customer/stylePreferences";
 import {

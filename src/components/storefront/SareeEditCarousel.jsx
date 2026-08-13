@@ -119,7 +119,7 @@ const productTextVariants = {
 
 /** Side previews dissolve quietly — pure opacity, same cadence as the main card. */
 const previewLayerVariants = {
-  enter: ({ rm = false } = {}) => ({ opacity: 0 }),
+  enter: () => ({ opacity: 0 }),
   center: ({ rm = false } = {}) => ({
     opacity: 1,
     transition: {

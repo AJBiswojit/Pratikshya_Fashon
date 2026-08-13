@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef } from "react";
-import { Camera, CheckCircle2, AlertCircle, RefreshCw } from "lucide-react";
+import { Camera, CheckCircle2, AlertCircle } from "lucide-react";
 import AccountShell from "../../components/account/AccountShell";
 import { useAccount } from "../../context/AccountContext";
-import { AtelierButton, EditorialHeading, Rule } from "../../design-system";
+import { AtelierButton, EditorialHeading } from "../../design-system";
 import { isValidEmail, isValidPhone } from "../../utils/validation";
 import { cn } from "../../utils/cn";
 

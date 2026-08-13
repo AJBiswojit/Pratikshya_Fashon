@@ -461,7 +461,7 @@ export const findCompanionPieces = (products, main, limit = 3, maxRatio = 0.6) =
 /* Reason phrasing                                                     */
 /* ------------------------------------------------------------------ */
 
-const phraseReason = (entry, intent) => {
+const phraseReason = (entry) => {
   const parts = (entry.reasons ?? []).slice(0, 3);
   if (!parts.length) return "A house favourite from the current edit.";
   const first = parts[0];
@@ -475,7 +475,7 @@ const phraseReason = (entry, intent) => {
 
 const productEntry = (product, reasons) => ({
   product,
-  reason: phraseReason({ reasons }, null),
+  reason: phraseReason({ reasons }),
 });
 
 const recommendIntentResponse = (products, intent, boosts) => {

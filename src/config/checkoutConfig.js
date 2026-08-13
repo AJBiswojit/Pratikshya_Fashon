@@ -12,10 +12,7 @@
  * so checkout and bag can never disagree.
  */
 
-import {
-  FLAT_SHIPPING_FEE,
-  FREE_SHIPPING_THRESHOLD,
-} from "../utils/shopping";
+import { FLAT_SHIPPING_FEE } from "../utils/shopping";
 
 /* ------------------------------------------------------------------ */
 /* Delivery                                                            */

@@ -90,7 +90,7 @@ export default function ProductGroupReviewPanel({ actor, onNotice }) {
       onNotice?.({ tone: "warn", text: "A group needs at least two media assets to split." });
       return;
     }
-    const [keep, ...rest] = group.mediaIds;
+    const [keep] = group.mediaIds;
     if (confirmAction !== `split-${groupId}`) {
       setConfirmAction(`split-${groupId}`);
       return;

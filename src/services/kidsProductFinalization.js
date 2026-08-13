@@ -28,11 +28,7 @@ import catalogRepository, {
 import mediaRepository from "./media/mediaRepository";
 import { getProductMediaSet } from "./media/productMediaSet";
 import taxonomyRepository from "./taxonomyRepository";
-import {
-  blockingReviewFlags,
-  isPlaceholderProductName,
-  REVIEW_FLAGS,
-} from "./productReviewFlags";
+import { blockingReviewFlags, isPlaceholderProductName } from "./productReviewFlags";
 import {
   GROUP_DECISIONS,
   createGroup,

@@ -1,9 +1,8 @@
 import { useState, useEffect } from "react";
-import { CheckCircle2, Sliders, Bell, Mail, MessageSquare } from "lucide-react";
+import { CheckCircle2, Bell, Mail } from "lucide-react";
 import AccountShell from "../../components/account/AccountShell";
 import { useAccount } from "../../context/AccountContext";
-import { AtelierButton, EditorialHeading, Rule } from "../../design-system";
-import { cn } from "../../utils/cn";
+import { AtelierButton, EditorialHeading } from "../../design-system";
 
 export default function AccountSettings() {
   const { preferences, updatePreferences } = useAccount();

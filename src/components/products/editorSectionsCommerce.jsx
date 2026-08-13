@@ -4,7 +4,7 @@
  * file only renders it.
  */
 
-import { Plus, Trash2, X } from "lucide-react";
+import { Plus, Trash2 } from "lucide-react";
 import {
   COLOR_OPTIONS,
   GST_RATES,
@@ -16,7 +16,7 @@ import { DISCOUNT_TYPE_OPTIONS, computePricing, resolveVariantPrice } from "../.
 import { formatINR } from "../../utils/shopping";
 import catalogRepository from "../../services/catalogRepository";
 import { cn } from "../../utils/cn";
-import { Field, NumberInput, Select, TextInput, inputClass, labelClass } from "./editorFields";
+import { Field, NumberInput, Select, TextInput } from "./editorFields";
 
 /* ------------------------------------------------------------------ */
 /* 3 · Pricing                                                         */

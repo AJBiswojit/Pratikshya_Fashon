@@ -12,7 +12,6 @@ import {
 } from "../../config/performanceConfig";
 import { makeId } from "./ids";
 import { readList, writeList } from "./store";
-import { ensureWorkforceSeeded } from "./bootstrap";
 
 const VALID_STATUS = new Set(Object.values(PERFORMANCE_STATUS));
 

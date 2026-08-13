@@ -311,37 +311,6 @@ export const isCustomerEligible = (offer, { customerId = null, customerEmail = n
 /* Discount                                                            */
 /* ------------------------------------------------------------------ */
 
-export const calculateEligibleSubtotal = (items, offer) =>
-  (items ?? []).reduce((total, item) => {
-    const product = item.product ?? item;
-    if (!isProductEligible(offer, product)) return total;
-    const price = Number(product.price ?? item.price) || 0;
-    const quantity = Number(item.quantity) || 1;
-    return total + price * quantity;
-  }, 0);
-
-/**
- * The discount an offer would give a bag. Caps at eligible subtotal and
- * at `maximumDiscount` when configured. Mirrors the Phase 6 order:
- * product prices (already net of product discount) → coupon.
- */
-export const calculateOfferDiscount = (offer, items) => {
-  if (!offer) return 0;
-  const eligible = calculateEligibleSubtotal(items, offer);
-  if (eligible <= 0) return 0;
-
-  let discount = 0;
-  if (offer.type === OFFER_TYPES.FIXED_AMOUNT) {
-    discount = Math.round(asNumber(offer.discountValue, 0));
-  } else {
-    discount = Math.round((eligible * asNumber(offer.discountValue, 0)) / 100);
-  }
-
-  const maximum = asNumber(offer.maximumDiscount, 0);
-  if (maximum > 0) discount = Math.min(discount, maximum);
-  return Math.min(Math.max(0, discount), eligible);
-};
-
 export const previewOfferDiscount = (offer, sampleAmount = 10000) => {
   const amount = Math.max(0, asNumber(sampleAmount, 0));
   const minimum = asNumber(offer?.minimumOrderValue, 0);
@@ -1045,9 +1014,6 @@ export const offerRepository = {
     } catch {
       /* ignore */
     }
-    items.forEach((offer) => {
-      totalRedemptions = Math.max(totalRedemptions, 0);
-    });
     const seededUsage = items.reduce((sum, offer) => sum + asNumber(offer.usageCount, 0), 0);
     return {
       total: items.length,

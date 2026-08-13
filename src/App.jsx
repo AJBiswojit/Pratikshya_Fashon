@@ -47,7 +47,6 @@ const OrderTracking = lazy(() => import("./pages/account/OrderTracking"));
 const OrderReturn = lazy(() => import("./pages/account/OrderReturn"));
 const AccountSettings = lazy(() => import("./pages/account/AccountSettings"));
 const AccountSecurity = lazy(() => import("./pages/account/AccountSecurity"));
-const AccountPreferences = lazy(() => import("./pages/account/AccountPreferences"));
 const AiMirror = lazy(() => import("./pages/account/AiMirror"));
 const AiShoppingAssistant = lazy(() => import("./pages/account/AiShoppingAssistant"));
 
@@ -90,7 +89,6 @@ const AdminRoles = lazy(() => import("./pages/admin/AdminRoles"));
 const AdminRoleDetail = lazy(() => import("./pages/admin/AdminRoleDetail"));
 const AdminActivity = lazy(() => import("./pages/admin/AdminActivity"));
 const AdminProfile = lazy(() => import("./pages/admin/AdminProfile"));
-const AdminModulePlaceholder = lazy(() => import("./pages/admin/AdminModulePlaceholder"));
 const AdminSettings = lazy(() => import("./pages/admin/AdminSettings"));
 const AdminAttendance = lazy(() => import("./pages/admin/attendance/AdminAttendance"));
 const AdminAttendanceDetail = lazy(() => import("./pages/admin/attendance/AdminAttendanceDetail"));
@@ -131,7 +129,6 @@ const AdminCollectionForm = lazy(() => import("./pages/admin/taxonomy/AdminColle
 const AdminCollectionDetail = lazy(() => import("./pages/admin/taxonomy/AdminCollectionDetail"));
 const AdminAnalytics = lazy(() => import("./pages/admin/analytics/AdminAnalytics"));
 const AiBusinessAssistant = lazy(() => import("./pages/admin/AiBusinessAssistant"));
-const EmployeeReports = lazy(() => import("./pages/employee/EmployeeReports"));
 
 const dedicatedPaths = new Set([
   "/explore",

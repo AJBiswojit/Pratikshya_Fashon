@@ -17,7 +17,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import catalogRepository, { getPublishIssues } from "../src/services/catalogRepository.js";
+import catalogRepository from "../src/services/catalogRepository.js";
 import mediaRepository from "../src/services/media/mediaRepository.js";
 import { getProductMediaSet } from "../src/services/media/productMediaSet.js";
 import { buildMediaGroups } from "../src/services/media/mediaGroups.js";
@@ -30,7 +30,6 @@ import {
   isReadyToPublish,
   publishProduct,
   reconcileKidsConflict,
-  validateMediaAssignment,
 } from "../src/services/productWorkflow.js";
 import {
   KIDS_MEDIA_FILENAMES,

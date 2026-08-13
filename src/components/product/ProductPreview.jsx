@@ -62,8 +62,6 @@ export default function ProductPreview({
   }, [set, availableTabs]);
 
   const gallery = set?.gallery ?? [];
-  const [activeIndex, setActiveIndex] = useState(0);
-  useEffect(() => setActiveIndex(0), [set]);
 
   const activeItem = useMemo(() => {
     if (activeTab === "gallery") return set?.primary ?? gallery[0] ?? null;

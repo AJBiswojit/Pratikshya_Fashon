@@ -1,18 +1,6 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import {
-  CheckCircle2,
-  Clock,
-  Film,
-  Image as ImageIcon,
-  Layers,
-  Plus,
-  Search,
-  ShieldAlert,
-  Sparkles,
-  Star,
-  Tag,
-} from "lucide-react";
+import { Clock, Film, Image as ImageIcon, Layers, Plus, Search, Sparkles, Star, Tag } from "lucide-react";
 import AdminPage from "../../../components/admin/AdminPage";
 import AdminPanel from "../../../components/admin/AdminPanel";
 import AdminMetricCard from "../../../components/admin/AdminMetricCard";

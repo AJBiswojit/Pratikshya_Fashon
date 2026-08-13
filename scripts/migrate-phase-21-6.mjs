@@ -204,7 +204,7 @@ function main() {
 
   // Now build mapping for new groups per prefix
   const newGroupsByPrefix = new Map();
-  for (const [groupKey, files] of groupsMap.entries()) {
+  for (const groupKey of groupsMap.keys()) {
     const prefix = namePrefixFromGroupKey(groupKey);
     if (!newGroupsByPrefix.has(prefix)) newGroupsByPrefix.set(prefix, []);
     newGroupsByPrefix.get(prefix).push(groupKey);
@@ -238,10 +238,7 @@ function main() {
     oldAssetByFileName.set(fn, a);
   });
 
-  // Set of old file names for ALREADY_CURRENT detection
-  const oldFileSet = new Set(libOldAssets.map((a) => (a.currentFilename || "").toLowerCase()));
-
-  // For tracking IDs reused
+  // Track IDs reused from existing manifest records.
   const usedIds = new Set(houseAssets.map((a) => a.id));
 
   // For each new file, determine productId via group mapping
@@ -275,7 +272,6 @@ function main() {
       // Determine if this file already existed (ALREADY_CURRENT)
       const oldExact = oldAssetByFileName.get(fileName.toLowerCase());
       let assetId;
-      let sortOrder = idx;
       let role = idx === 0 && parsed.view && parsed.view.includes("front") ? "COVER" : "GALLERY";
       if (idx === 0) {
         const hasFront = sortedFiles.some((f) => f.parsed.view === "front");
@@ -302,7 +298,6 @@ function main() {
         else productId = productIdForGroup || null;
         role = oldExact.role && oldExact.productId ? oldExact.role : role;
         if (!oldExact.productId) role = null;
-        sortOrder = oldExact.sortOrder ?? idx;
         mappingMethod = oldExact.mappingMethod || "FOLDER";
         mappingNote = oldExact.mappingNote || "";
         status = oldExact.mappingStatus || "MAPPED";
@@ -341,7 +336,6 @@ function main() {
       const isDumpPrefix = ["kids", "jewellery-bangle", "jewellery-earring", "women-innerwear", "jewellery-anklet"].includes(classification.namePrefix);
       if (isDumpPrefix) {
         role = null;
-        sortOrder = 0;
         productId = null;
       }
 
@@ -445,16 +439,7 @@ function main() {
           candidates: candidates.map((c) => `library/${c.toLowerCase()}`),
         });
       } else {
-        // maybe group mapping
-        // try to map via productId -> new group
-        const prefix = (() => {
-          const parts = oldBase.split("-");
-          const last = parts[parts.length - 1];
-          if (/^\d+$/.test(last)) return parts.slice(0, -1).join("-");
-          return oldBase;
-        })();
-        const newGroupsForPrefix = newGroupsByPrefix.get(prefix) || [];
-        // find product id mapping
+        // Try to map via productId -> new group.
         const pid = oldAsset.productId;
         if (pid && productToNewGroup.has(pid)) {
           const newGroup = productToNewGroup.get(pid);

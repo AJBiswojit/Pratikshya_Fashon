@@ -26,7 +26,6 @@ import mediaRepository from "../src/services/media/mediaRepository.js";
 import {
   categoryForGroup,
   getCatalogueReconciliationSummary,
-  groupNeedsReview,
   reconciliationMediaGroups,
   uncataloguedGroups,
 } from "../src/services/catalogueReconciliation.js";

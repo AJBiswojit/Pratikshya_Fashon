@@ -24,7 +24,6 @@ import {
 } from "../src/services/taxonomyRouting.js";
 import {
   resolveCategoryCover,
-  resolveCollectionCover,
   resolveEditorialFrame,
   resolveHeroSlideImage,
   resolveProductCover,
