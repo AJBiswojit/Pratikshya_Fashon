@@ -12,6 +12,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import mediaRepository, { MEDIA_CHANGED_EVENT } from "../services/media/mediaRepository";
+import { selectSareeEditProducts } from "../services/media/mediaResolver";
 import { getProductSlides } from "../services/media/productMediaSource";
 import { applyProductMediaSet } from "../services/media/productMediaSet";
 
@@ -124,6 +125,20 @@ export const useProductCovers = (products) => {
   const key = (products ?? []).map((product) => product.id).join("|");
   return useMediaSelector(
     () => (products ?? []).map((product) => applyProductMediaSet(product)),
+    [key] // eslint-disable-line react-hooks/exhaustive-deps
+  );
+};
+
+/**
+ * Homepage Saree Edit rows from the canonical deterministic selector.
+ * Re-running after a media-store write means an unpublished or remapped
+ * product image disappears from the carousel immediately rather than leaving
+ * the homepage with a stale cross-product plate.
+ */
+export const useSareeEditProducts = (products = null) => {
+  const key = products ? products.map((product) => product.id).join("|") : "live-catalogue";
+  return useMediaSelector(
+    () => selectSareeEditProducts(products ?? undefined),
     [key] // eslint-disable-line react-hooks/exhaustive-deps
   );
 };

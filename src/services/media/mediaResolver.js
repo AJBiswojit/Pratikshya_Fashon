@@ -23,12 +23,16 @@ import {
   USAGE_ROLES,
 } from "../../config/mediaTypes";
 import { imageRef } from "../../data/pratikshyaImageManifest";
-import { getLiveStorefrontProducts } from "../../data/products";
+import { getLiveStorefrontProducts, productHref } from "../../data/products";
 import taxonomyRepository from "../taxonomyRepository";
 import { getAll, getById, getProductMedia } from "./mediaRepository";
 import { placementImageSource } from "./marketingMediaSource";
 import { getProductCoverImage } from "./productMediaSource";
-import { applyProductMediaSet, getProductMediaSet } from "./productMediaSet";
+import {
+  applyProductMediaSet,
+  getProductMediaSet,
+  PRODUCT_MEDIA_STATUS,
+} from "./productMediaSet";
 
 const asSource = (media, fallbackCategory = "default") => {
   if (!media) return null;
@@ -297,6 +301,129 @@ export const selectNewArrivalProducts = (products = [], count = 5) => {
   return [...flagged, ...rest].slice(0, Math.max(0, count));
 };
 
+/* ------------------------------------------------------------------ */
+/* Homepage Saree Edit                                                 */
+/* ------------------------------------------------------------------ */
+
+/** A deliberately edited rail rather than an unbounded catalogue dump. */
+export const SAREE_EDIT_PRODUCT_COUNT = 8;
+
+const sourcePath = (source) => source?.src || source?.url || source?.thumbnail || "";
+
+const sourceFilename = (source) =>
+  source?.fileName ||
+  source?.currentFilename ||
+  sourcePath(source).split("?")[0].split("/").pop() ||
+  null;
+
+/**
+ * Explain which product-owned rung supplied a Saree Edit cover. This is
+ * audit metadata only; the image itself always comes from getProductMediaSet.
+ */
+const sareeEditMediaSource = (primary, registered) => {
+  const isLibraryAsset = sourcePath(primary).includes("/library/");
+  const role = registered?.role || primary?.role;
+  if (isLibraryAsset && role === PRODUCT_MEDIA_ROLES.COVER) return "PRODUCT_LIBRARY_COVER";
+  if (isLibraryAsset) return "PRODUCT_LIBRARY_GALLERY";
+  if (registered && role === PRODUCT_MEDIA_ROLES.COVER) return "PRODUCT_OWNED_COVER";
+  if (registered) return "PRODUCT_OWNED_GALLERY";
+  return "AUTHORED_PRODUCT_IMAGE";
+};
+
+/**
+ * Deterministic homepage edit:
+ *
+ *   ACTIVE Sarees taxonomy → PUBLISHED Saree products → exact product media
+ *   set → primary/cover → stable editorial ranking.
+ *
+ * Ownership is checked twice. The canonical set must mark the primary with
+ * the same product id and, when the primary is a repository record, that
+ * record must also name the same owner. Category media and another product's
+ * gallery can therefore never enter the carousel. Generic category/editorial
+ * manifest plates are ineligible; a dedicated library asset or genuinely
+ * product-authored source is required. Repeated source files are dropped as
+ * well, preserving the visual variety of the edit.
+ */
+export const selectSareeEditProducts = (
+  products = getLiveStorefrontProducts(),
+  count = SAREE_EDIT_PRODUCT_COUNT
+) => {
+  const category = taxonomyRepository.findCategory("sarees");
+  if (!category || category.status !== "ACTIVE") return [];
+
+  const candidates = (products || [])
+    .filter(
+      (product) =>
+        product?.category === category.id &&
+        product.status === "PUBLISHED" &&
+        Boolean(product.slug)
+    )
+    .map((product) => {
+      const mediaSet = getProductMediaSet(product);
+      const image = mediaSet.primary;
+      const registered = image?.id ? getById(image.id) : null;
+      const imageOwner = image?.productId == null ? null : String(image.productId);
+      const registeredOwner = registered?.productId == null ? null : String(registered.productId);
+      const ownsImage = imageOwner === String(product.id);
+      const registeredOwnershipIsValid = !registered || registeredOwner === String(product.id);
+      const path = sourcePath(image);
+      const dedicatedLibrary = path.includes("/library/");
+      const sourceLabel = String(registered?.source || "").toLowerCase();
+      const isGenericEditorial =
+        !dedicatedLibrary &&
+        (Boolean(image?.purpose) ||
+          sourceLabel.includes("house") ||
+          (registered?.tags || []).includes("house"));
+
+      if (
+        !image ||
+        !path ||
+        !ownsImage ||
+        !registeredOwnershipIsValid ||
+        isGenericEditorial ||
+        mediaSet.status === PRODUCT_MEDIA_STATUS.CROSS_PRODUCT_REFERENCE
+      ) {
+        return null;
+      }
+
+      const rankingTier = product.isFeatured ? 0 : dedicatedLibrary ? 1 : product.isNew ? 2 : 3;
+
+      return {
+        product,
+        image,
+        mediaSet,
+        mediaId: image.id || null,
+        filename: sourceFilename(image),
+        fallbackSource: sareeEditMediaSource(image, registered),
+        route: productHref(product),
+        rankingTier,
+      };
+    })
+    .filter(Boolean)
+    .sort(
+      (a, b) =>
+        a.rankingTier - b.rankingTier ||
+        String(a.product.id).localeCompare(String(b.product.id))
+    );
+
+  const seenProducts = new Set();
+  const seenImages = new Set();
+  const selected = [];
+  const limit = Math.max(0, Number(count) || 0);
+
+  for (const candidate of candidates) {
+    const productKey = String(candidate.product.id);
+    const imageKey = sourcePath(candidate.image).split("?")[0];
+    if (seenProducts.has(productKey) || !imageKey || seenImages.has(imageKey)) continue;
+    seenProducts.add(productKey);
+    seenImages.add(imageKey);
+    selected.push(candidate);
+    if (selected.length >= limit) break;
+  }
+
+  return selected;
+};
+
 /**
  * Category card / listing hero.
  *
@@ -556,6 +683,7 @@ export default {
   productMediaTier,
   rankNewArrivalProducts,
   selectNewArrivalProducts,
+  selectSareeEditProducts,
   decorateProductWithMedia,
   decorateProductsWithMedia,
   isAiMirrorSafeMedia,

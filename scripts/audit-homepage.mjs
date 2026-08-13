@@ -1,5 +1,5 @@
 /**
- * PRATIKSHYA FASHON — Homepage data-flow audit (Phase 21.7 / 21.8).
+ * PRATIKSHYA FASHON — Homepage data-flow audit (Phase 21.7 / 21.8 / 21.10).
  *
  * Proves that the homepage consumes the canonical taxonomy + media
  * architecture: it resolves every category/collection route from the managed
@@ -18,13 +18,17 @@
  *   npm run audit:homepage
  */
 
+import { existsSync, readFileSync } from "node:fs";
+import { join } from "node:path";
 import { auditHomepageSections } from "../src/services/media/mediaExposure.js";
-import { getLiveStorefrontProducts } from "../src/data/products/index.js";
+import { getLiveStorefrontProducts, productHref } from "../src/data/products/index.js";
 import {
   resolveCategoryCover,
   resolveCollectionCover,
   resolveProductCover,
+  selectSareeEditProducts,
 } from "../src/services/media/mediaResolver.js";
+import mediaRepository from "../src/services/media/mediaRepository.js";
 import taxonomyRepository from "../src/services/taxonomyRepository.js";
 import {
   resolveCategoryRoute,
@@ -97,6 +101,119 @@ printSection("SHOP BY CATEGORY", report.shopByCategory, (row) => `${row.group} �
 printSection("COLLECTIONS", report.collections);
 printSection("NEW ARRIVALS", report.newArrivals, (row) => row.name);
 printSection("SALE", [report.sale]);
+
+/* ------------------------------------------------------------------ */
+/* SAREE EDIT — product/media ownership                                */
+/* ------------------------------------------------------------------ */
+
+const sareeEdit = selectSareeEditProducts();
+const sourceOf = (entry) => entry?.src || entry?.url || entry?.thumbnail || "";
+const localFileExists = (source) => {
+  const value = sourceOf(source).split("?")[0];
+  if (!value || !value.startsWith("/")) return Boolean(value);
+  return existsSync(join(process.cwd(), "public", value.replace(/^\//, "")));
+};
+
+const duplicateProducts = sareeEdit.length - new Set(sareeEdit.map((row) => row.product.id)).size;
+const duplicateImages = sareeEdit.length - new Set(sareeEdit.map((row) => sourceOf(row.image).split("?")[0])).size;
+const crossProduct = [];
+const brokenImages = [];
+const invalidRoutes = [];
+const invalidProducts = [];
+const unrelatedMedia = [];
+const genericEditorial = [];
+
+sareeEdit.forEach((row) => {
+  if (row.product.category !== "sarees" || row.product.status !== "PUBLISHED") {
+    invalidProducts.push(row.product.id);
+  }
+  if (row.route !== productHref(row.product)) invalidRoutes.push(row.product.id);
+  if (!localFileExists(row.image)) brokenImages.push(row.product.id);
+
+  const primaryRecord = row.mediaId ? mediaRepository.getById(row.mediaId) : null;
+  if (primaryRecord?.categoryId && primaryRecord.categoryId !== row.product.category) {
+    unrelatedMedia.push(row.product.id);
+  }
+  if (
+    row.image?.purpose ||
+    String(primaryRecord?.source || "").toLowerCase().includes("house") ||
+    (primaryRecord?.tags || []).includes("house")
+  ) {
+    genericEditorial.push(row.product.id);
+  }
+
+  row.mediaSet.gallery.forEach((item) => {
+    const record = item.id ? mediaRepository.getById(item.id) : null;
+    if (String(item.productId) !== String(row.product.id)) {
+      crossProduct.push(`${row.product.id}:${item.id || sourceOf(item)}`);
+    }
+    if (record?.productId && String(record.productId) !== String(row.product.id)) {
+      crossProduct.push(`${row.product.id}:${record.id}`);
+    }
+  });
+});
+
+const sareeEditComponent = readFileSync(
+  join(process.cwd(), "src/components/storefront/SareeEditCarousel.jsx"),
+  "utf8"
+);
+const hardcodedImagePattern = /(?:src|image)\s*=\s*["'](?:https?:|\/(?:images|library)\/)/g;
+const hardcodedImages = sareeEditComponent.match(hardcodedImagePattern)?.length ?? 0;
+
+line("## SAREE EDIT");
+if (!sareeEdit.length) {
+  line("(none)");
+} else {
+  line(
+    pad("Order", 8) +
+      pad("Product ID", 12) +
+      pad("Product name", 39) +
+      pad("Image filename", 43) +
+      pad("Media ID", 24) +
+      pad("Fallback source", 27) +
+      "Route"
+  );
+  sareeEdit.forEach((row, index) => {
+    line(
+      pad(index + 1, 8) +
+        pad(row.product.id, 12) +
+        pad(row.product.name, 39) +
+        pad(row.filename, 43) +
+        pad(row.mediaId, 24) +
+        pad(row.fallbackSource, 27) +
+        row.route
+    );
+  });
+}
+line();
+line(`Products: ${sareeEdit.length}`);
+line(`Product IDs: ${sareeEdit.map((row) => row.product.id).join(", ") || "(none)"}`);
+line(`Valid media: ${sareeEdit.length - brokenImages.length}`);
+line(`Cross-product images: ${crossProduct.length}`);
+line(`Duplicate products: ${duplicateProducts}`);
+line(`Duplicate images: ${duplicateImages}`);
+line(`Broken images: ${brokenImages.length}`);
+line(`Hardcoded images: ${hardcodedImages}`);
+line(`Generic editorial images: ${genericEditorial.length}`);
+line(`Unrelated category images: ${unrelatedMedia.length}`);
+line(`Invalid products: ${invalidProducts.length}`);
+line(`Invalid routes: ${invalidRoutes.length}`);
+line();
+
+if (
+  !sareeEdit.length ||
+  duplicateProducts ||
+  duplicateImages ||
+  crossProduct.length ||
+  brokenImages.length ||
+  hardcodedImages ||
+  genericEditorial.length ||
+  unrelatedMedia.length ||
+  invalidProducts.length ||
+  invalidRoutes.length
+) {
+  process.exitCode = 1;
+}
 
 /* ------------------------------------------------------------------ */
 /* HOMEPAGE REDIRECTION MATRIX                                         */

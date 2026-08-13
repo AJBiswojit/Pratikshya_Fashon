@@ -1,41 +1,27 @@
-import { motion } from "framer-motion";
-import { useMemo, useState } from "react";
-import { imageRef } from "../data/pratikshyaImageManifest";
+import { useMemo } from "react";
 import { MARKETING_PLACEMENTS } from "../config/mediaTypes";
 import { useActivePlacementMedia } from "../hooks/useMedia";
 import { resolvePlacementImage } from "../services/media/marketingMediaSource";
 import { resolveHeroImageIds } from "../services/media/mediaResolver";
 import HeroCarousel from "../components/storefront/HeroCarousel";
+import SareeEditCarousel from "../components/storefront/SareeEditCarousel";
 import ShopByCategory from "../components/storefront/ShopByCategory";
 import NewArrivals from "../components/storefront/NewArrivals";
 import SaleBanner from "../components/storefront/SaleBanner";
 import CelebrationEdit from "../components/storefront/CelebrationEdit";
 import {
   Accent,
-  AtelierButton,
   AtelierSection,
   EditorialHeading,
   MediaFrame,
-  Rule,
   body,
-  distance,
   eyebrow,
   gap,
   grid,
   heading,
-  useReveal,
 } from "../design-system";
 
-const fabricDetails = {
-  Silk: { desc: "Lustrous · Ceremonial · Refined", products: ["Pato Sarees", "Banarasi Silk", "Bridal Sarees"] },
-  Cotton: { desc: "Breathable · Handwoven · Everyday", products: ["Cotton Sarees", "Soft Drapes", "Summer Edit"] },
-  Designer: { desc: "Expressive · Detailed · Festive", products: ["Designer Sarees", "Party Lehengas", "Wedding Edit"] },
-};
-
 export default function AtelierDesign() {
-  const [selectedFabric, setSelectedFabric] = useState("Silk");
-  const tileReveal = useReveal(distance.short);
-
   /* Phase 12 seams. Each of these is the *same* frame the page has always
      had — only the picture inside it can now be replaced from the Admin
      Portal. With no ACTIVE marketing record the house artwork stands, so
@@ -51,80 +37,11 @@ export default function AtelierDesign() {
      shows the same photograph in several sections at once. */
   const heroImageIds = useMemo(() => resolveHeroImageIds(heroMedia), [heroMedia]);
 
-  const materials = [
-    { name: "Silk", desc: fabricDetails.Silk.desc, img: imageRef("fabric-silk") },
-    { name: "Cotton", desc: fabricDetails.Cotton.desc, img: imageRef("fabric-cotton") },
-    { name: "Designer", desc: fabricDetails.Designer.desc, img: imageRef("fabric-embroidered") },
-  ];
-
   return (
     <main id="top">
       <HeroCarousel heroMedia={heroMedia} />
 
-      <AtelierSection id="women" rhythm="spacious">
-        <EditorialHeading
-          eyebrow="Women's Collection"
-          rule
-          spacing={{ eyebrow: "mb-4", title: "mb-2", rule: "mb-16" }}
-        >
-          The <Accent>Saree</Accent> Edit
-        </EditorialHeading>
-        <div className={`${grid.tiles} ${gap.tile}`}>
-          {materials.map((material) => (
-            <MediaFrame
-              as={motion.div}
-              key={material.name}
-              {...tileReveal}
-              image={material.img}
-              alt={`${material.name} saree and textile detail`}
-              aspect="portrait"
-              zoom="strong"
-              overlay="imageBottom"
-              className="group"
-            >
-              <div className="absolute bottom-6 left-6 md:bottom-8 md:left-8">
-                <h3 className={`${heading.md} text-white mb-2`}>{material.name}</h3>
-                <p className={`text-[10px] md:text-xs text-pearl font-ui tracking-wider`}>{material.desc}</p>
-              </div>
-              <AtelierButton
-                variant="toggle"
-                size="micro"
-                active={selectedFabric === material.name}
-                onClick={() => setSelectedFabric(material.name)}
-                className="absolute top-4 right-4"
-              >
-                Explore
-              </AtelierButton>
-            </MediaFrame>
-          ))}
-        </div>
-      </AtelierSection>
-
-      <AtelierSection
-        tone="fade"
-        rhythm="compact"
-        width="content"
-        innerClassName={`${grid.pair} ${gap.editorial} items-center`}
-      >
-        <div>
-          <h3 className={`${heading.xl} mb-4`}>{selectedFabric} <Accent>Stories</Accent></h3>
-          <p className={`${body.base} text-taupe mb-8`}>{fabricDetails[selectedFabric].desc}</p>
-          <Rule width="w-12" className="mb-6" />
-          <p className={`${body.serif} text-graphite mb-6`}>At PRATIKSHYA FASHON, every {selectedFabric.toLowerCase()} piece is selected for its drape, detail and the occasion it will become part of.</p>
-          <h4 className={`${eyebrow.labelDisplay} text-taupe mb-3`}>Discover the edit</h4>
-          <div className={`flex flex-wrap ${gap.chip}`}>
-            {fabricDetails[selectedFabric].products.map((product) => (
-              <AtelierButton key={product} href="#collections" variant="outline" size="chip">{product}</AtelierButton>
-            ))}
-          </div>
-        </div>
-        <MediaFrame
-          image={materials.find((item) => item.name === selectedFabric).img}
-          alt={`${selectedFabric} textile detail`}
-          aspect="portrait"
-          elevated
-        />
-      </AtelierSection>
+      <SareeEditCarousel />
 
       <AtelierSection id="collections" tone="ink">
         <EditorialHeading

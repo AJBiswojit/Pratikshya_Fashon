@@ -66,6 +66,29 @@ body {
   to { opacity: 1; }
 }
 
+/* The Saree Edit changes products with a restrained lateral dissolve. */
+@keyframes sareeEditFromRight {
+  from {
+    opacity: 0.5;
+    transform: translateX(18px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes sareeEditFromLeft {
+  from {
+    opacity: 0.5;
+    transform: translateX(-18px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;
