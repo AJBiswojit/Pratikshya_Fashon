@@ -11,9 +11,7 @@ import {
   RotateCcw,
   ShoppingBag,
   Timer,
-  UserPlus,
   Users,
-  UsersRound,
 } from "lucide-react";
 import { AtelierButton } from "../../design-system";
 import AdminPage from "../../components/admin/AdminPage";
@@ -22,22 +20,14 @@ import AdminMetricCard from "../../components/admin/AdminMetricCard";
 import SalesOverviewChart from "../../components/admin/SalesOverviewChart";
 import CategorySalesBars from "../../components/admin/CategorySalesBars";
 import DataTable from "../../components/employee/DataTable";
-import StatusBadge from "../../components/employee/StatusBadge";
 import OrderStatusBadge from "../../components/orders/OrderStatusBadge";
 import { useAdminAuth } from "../../context/AdminAuthContext";
-import { useEmployeeManagement } from "../../context/EmployeeManagementContext";
-import { useWorkforce } from "../../context/WorkforceContext";
-import { todayHouseSummary } from "../../services/workforce/attendanceService";
-import { housePerformanceSummary } from "../../services/workforce/performanceService";
-import { pendingLeaveCount } from "../../services/workforce/leaveService";
 import { useOrder } from "../../context/OrderContext";
 import { useMediaMetrics } from "../../hooks/useMedia";
 import { useInventory } from "../../context/InventoryContext";
 import {
   getBusinessMetrics,
   getDepartmentPerformance,
-  getEmployeeOverview,
-  getEmployeesNeedingAttention,
   getMetricTrends,
   getRecentOrders,
   getSalesByCategory,
@@ -50,25 +40,22 @@ import { formatINR } from "../../utils/shopping";
 /**
  * BUSINESS OVERVIEW — the Admin Portal's front page.
  *
- * Every figure is either read from live shared state (employees, orders) or
- * from the centralised admin mock data. Nothing randomises per render.
+ * Every figure is either read from live shared state (orders, inventory,
+ * media) or from the centralised admin mock data. Nothing randomises per
+ * render. Employee administration lives in the Employee Portal only —
+ * this desk is business administration.
  */
 export default function AdminDashboard() {
   const { admin } = useAdminAuth();
-  const { employees } = useEmployeeManagement();
-  const { revision } = useWorkforce();
   const { getOrders, allOrders } = useOrder();
-  const attendanceToday = useMemo(() => todayHouseSummary(admin), [admin, revision]);
-  const performanceToday = useMemo(() => housePerformanceSummary(admin), [admin, revision]);
-  const leavePending = useMemo(() => pendingLeaveCount(admin), [admin, revision]);
   /* One line of media health, read from the same register the Media
      Library uses. */
   const media = useMediaMetrics();
   const inventory = useInventory();
 
   const metrics = useMemo(
-    () => getBusinessMetrics(employees, attendanceToday, allOrders),
-    [employees, attendanceToday, allOrders]
+    () => getBusinessMetrics([], null, allOrders),
+    [allOrders]
   );
   const trends = getMetricTrends();
   const series = getSalesSeries();
@@ -86,8 +73,6 @@ export default function AdminDashboard() {
       level: row.status === "OUT_OF_STOCK" ? "OUT" : "LOW",
       remaining: row.quantity.available,
     }));
-  const overview = useMemo(() => getEmployeeOverview(employees), [employees]);
-  const attention = useMemo(() => getEmployeesNeedingAttention(employees), [employees]);
   const orders = useMemo(() => getRecentOrders(getOrders()), [getOrders]);
   const ordersAreDemo = orders.some((order) => order.isDemo);
 
@@ -100,7 +85,6 @@ export default function AdminDashboard() {
     { label: "Out of stock", value: formatAdminNumber(inventory.metrics.outOfStock), hint: "Live inventory ledger", icon: PackageX, tone: "alert" },
     { label: "Pending orders", value: formatAdminNumber(metrics.pendingOrders), hint: trends.pendingOrders, icon: Timer },
     { label: "Returns", value: formatAdminNumber(metrics.returns), hint: trends.returns, icon: RotateCcw },
-    { label: "Employees present", value: formatAdminNumber(metrics.employeesPresent), hint: `${attendanceToday.lateToday} late · ${attendanceToday.onLeave} on leave`, icon: UsersRound },
     {
       label: "Media library",
       value: formatAdminNumber(media.total),
@@ -133,11 +117,11 @@ export default function AdminDashboard() {
           <AtelierButton as={Link} to="/admin/analytics" size="chip">
             View analytics
           </AtelierButton>
-          <AtelierButton as={Link} to="/admin/employees/new" size="chip" variant="outline">
-            <UserPlus size={12} aria-hidden="true" /> Add employee
+          <AtelierButton as={Link} to="/admin/products" size="chip" variant="outline">
+            Manage products
           </AtelierButton>
-          <AtelierButton as={Link} to="/admin/employees" variant="outline" size="chip">
-            Manage employees
+          <AtelierButton as={Link} to="/admin/media/review" variant="outline" size="chip">
+            Media review
           </AtelierButton>
         </>
       }
@@ -279,65 +263,8 @@ export default function AdminDashboard() {
         </AdminPanel>
       </div>
 
-      {/* People + departments */}
-      <div className="mb-6 grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.45fr)]">
-        <AdminPanel
-          eyebrow="People"
-          title="Employee overview"
-          action={
-            <AtelierButton as={Link} to="/admin/attendance" variant="outline" size="chip">
-              Attendance
-            </AtelierButton>
-          }
-        >
-          <dl className="grid grid-cols-2 gap-4">
-            {[
-              ["Total employees", overview.total],
-              ["Present today", attendanceToday.presentToday],
-              ["On leave", attendanceToday.onLeave],
-              ["Late today", attendanceToday.lateToday],
-              ["Pending reviews", performanceToday.pending],
-              ["Leave requests", leavePending],
-            ].map(([label, value]) => (
-              <div key={label} className="border border-mist/70 bg-canvas/70 p-4">
-                <dt className="font-ui text-[10px] uppercase tracking-[.16em] text-taupe">{label}</dt>
-                <dd className="mt-1 font-display text-2xl font-light text-ink">
-                  {formatAdminNumber(value)}
-                </dd>
-              </div>
-            ))}
-          </dl>
-
-          <h3 className="mt-6 mb-3 font-ui text-[10px] uppercase tracking-[.2em] text-brass">
-            Needing attention
-          </h3>
-          {attention.length ? (
-            <ul className="divide-y divide-mist/70 border border-mist/70 bg-canvas/60">
-              {attention.map((person) => (
-                <li key={person.employeeId} className="px-4 py-3">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <Link
-                        to={`/admin/employees/${person.employeeId}`}
-                        className="truncate font-ui text-sm text-ink underline-offset-4 hover:text-accent hover:underline"
-                      >
-                        {person.name}
-                      </Link>
-                      <p className="font-ui text-[11px] text-taupe">
-                        {person.employeeId} · {person.role}
-                      </p>
-                    </div>
-                    <StatusBadge status={person.status} />
-                  </div>
-                  <p className="mt-1.5 font-ui text-[11px] text-taupe">{person.reason}</p>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="font-ui text-sm text-taupe">Every account is in good standing.</p>
-          )}
-        </AdminPanel>
-
+      {/* Departments */}
+      <div className="mb-6 grid gap-6">
         <AdminPanel eyebrow="This month" title="Department performance">
           <ul className="space-y-4">
             {departments.map((department) => (
@@ -370,11 +297,11 @@ export default function AdminDashboard() {
       {/* Quick actions */}
       <AdminPanel eyebrow="Shortcuts" title="Quick actions">
         <div className="flex flex-wrap gap-3">
-          <AtelierButton as={Link} to="/admin/employees/new" size="chip">
-            <UserPlus size={12} aria-hidden="true" /> Add employee
+          <AtelierButton as={Link} to="/admin/products/new" size="chip">
+            Add product
           </AtelierButton>
-          <AtelierButton as={Link} to="/admin/employees" variant="outline" size="chip">
-            Manage employees <ArrowRight size={12} aria-hidden="true" />
+          <AtelierButton as={Link} to="/admin/products/review" variant="outline" size="chip">
+            Product review <ArrowRight size={12} aria-hidden="true" />
           </AtelierButton>
           <AtelierButton as={Link} to="/admin/media" variant="outline" size="chip">
             Media library <ArrowRight size={12} aria-hidden="true" />
@@ -382,9 +309,9 @@ export default function AdminDashboard() {
           {[
             { label: "View orders", to: "/admin/orders", ready: true },
             { label: "View inventory", to: "/admin/inventory", ready: true },
-            { label: "Attendance", to: "/admin/attendance", ready: true },
-            { label: "Performance", to: "/admin/performance", ready: true },
-            { label: "Add product", to: "/admin/products", ready: true },
+            { label: "Offers", to: "/admin/offers", ready: true },
+            { label: "Categories", to: "/admin/categories", ready: true },
+            { label: "Collections", to: "/admin/collections", ready: true },
           ].map((action) => (
             <Link
               key={action.label}

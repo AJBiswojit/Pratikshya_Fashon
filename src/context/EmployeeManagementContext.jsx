@@ -1,9 +1,12 @@
 /**
  * PRATIKSHYA FASHON — Employee management context.
  *
- * The people-administration surface the future Admin Portal will reuse.
- * Methods are thin wrappers around employeeService so Phase 11 can move
- * the UI to /admin/employees without rewriting the service layer.
+ * The people-administration surface of the Employee Portal
+ * (/employee/management). Methods are thin wrappers around
+ * employeeService. Employee management lives exclusively in the
+ * Employee Portal — the Admin Portal reads this state only where a
+ * business flow needs an employee selector (e.g. order fulfillment
+ * assignment) and never exposes management UI.
  */
 
 import {

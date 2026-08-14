@@ -99,6 +99,18 @@ export const toPublicEmployee = (record) => {
   };
 };
 
+/**
+ * Admin/Employee boundary — the employee repository holds employees only.
+ * Admin identities (SUPER_ADMIN, PF-ADM-…) live in the isolated admin
+ * account store and authenticate at /admin/login. Any admin record found
+ * in employee storage (e.g. from an older seed) is dropped on read, so an
+ * admin can never appear in the Employee Directory, demo logins or any
+ * employee selector.
+ */
+const isAdminIdentity = (employee) =>
+  employee?.role === ROLES.SUPER_ADMIN ||
+  String(employee?.employeeId || "").startsWith("PF-ADM-");
+
 export const normaliseEmployees = (raw) => {
   if (!Array.isArray(raw)) return [];
   const seen = new Set();
@@ -106,6 +118,7 @@ export const normaliseEmployees = (raw) => {
   raw.forEach((entry) => {
     const employee = toPublicEmployee(entry);
     if (!employee || seen.has(employee.employeeId)) return;
+    if (isAdminIdentity(employee)) return;
     if ("password" in (entry || {}) || "temporaryPassword" in (entry || {})) {
       // Drop any leaked credential fields from corrupt storage.
     }
@@ -205,6 +218,10 @@ export const validateEmployeeDraft = (draft, employees, { isCreate = false } = {
   else if (!isValidEmail(email)) errors.email = "Please enter a valid email address.";
   if (phone && !isValidPhone(phone)) errors.phone = "Please enter a valid 10-digit mobile number.";
   if (!draft.role || !isKnownRole(draft.role)) errors.role = "Please choose a role.";
+  else if (draft.role === ROLES.SUPER_ADMIN) {
+    // Admin identities live in the admin account store only.
+    errors.role = "Admin identities are not employee accounts.";
+  }
   if (!draft.department) errors.department = "Please choose a department.";
   if (!draft.store) errors.store = "Please choose a store or floor.";
   if (!draft.joiningDate) errors.joiningDate = "Joining date is required.";

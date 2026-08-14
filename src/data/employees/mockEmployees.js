@@ -13,28 +13,13 @@ import { EMPLOYEE_STATUS } from "../../config/employeeStatus";
 
 const perms = (role) => getDefaultPermissions(role);
 
+/*
+ * NOTE — Admin/Employee boundary:
+ * Kavya Menon (PF-ADM-00001, SUPER_ADMIN) is an ADMIN identity only. She
+ * lives in src/data/admin/adminAccounts.js and signs in at /admin/login.
+ * Admin identities are never seeded into the employee repository.
+ */
 export const INITIAL_EMPLOYEES = [
-  {
-    id: "emp-adm-01",
-    employeeId: "PF-ADM-00001",
-    firstName: "Kavya",
-    lastName: "Menon",
-    email: "kavya.menon@pratikshyafashon.in",
-    phone: "+91 98100 11001",
-    avatar: null,
-    role: ROLES.SUPER_ADMIN,
-    department: DEPARTMENTS.MANAGEMENT,
-    section: "OPERATIONS",
-    store: "MAIN_FLOOR",
-    joiningDate: "2022-04-04",
-    status: EMPLOYEE_STATUS.ACTIVE,
-    permissions: perms(ROLES.SUPER_ADMIN),
-    permissionMode: "role",
-    mustChangePassword: false,
-    lastLogin: "2026-08-11T08:10:00.000Z",
-    createdAt: "2022-04-04T09:00:00.000Z",
-    shift: "Full day · 10:00 – 19:00",
-  },
   {
     id: "emp-mgr-01",
     employeeId: "PF-MGR-00008",

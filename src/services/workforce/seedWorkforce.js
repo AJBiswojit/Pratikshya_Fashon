@@ -46,12 +46,10 @@ const PERSONA = {
   "PF-CS-00044": { lateEvery: 12, absentEvery: 18, halfEvery: 0, band: "average" },
   "PF-STY-00012": { lateEvery: 15, absentEvery: 0, halfEvery: 21, band: "strong" },
   "PF-MGR-00008": { lateEvery: 18, absentEvery: 0, halfEvery: 0, band: "strong" },
-  "PF-ADM-00001": { lateEvery: 20, absentEvery: 0, halfEvery: 0, band: "strong" },
   "PF-SLS-00140": { lateEvery: 4, absentEvery: 6, halfEvery: 0, band: "improve" },
 };
 
 const TODAY_PRESET = {
-  "PF-ADM-00001": ATTENDANCE_STATUS.PRESENT,
   "PF-MGR-00008": ATTENDANCE_STATUS.PRESENT,
   "PF-SLS-00131": ATTENDANCE_STATUS.LATE,
   "PF-INV-00031": ATTENDANCE_STATUS.PRESENT,

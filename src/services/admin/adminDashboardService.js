@@ -23,9 +23,6 @@ import {
   TOP_DEPARTMENTS,
 } from "../../data/admin/dashboardData";
 import { EMPLOYEE_STATUS } from "../../config/employeeStatus";
-import { getDepartmentLabel } from "../../config/employeeDepartments";
-import { getRoleLabel } from "../../config/employeeRoles";
-import { employeeFullName } from "../../utils/employee";
 import { ANALYTICS_PRESETS } from "../analytics/dateRange";
 import { getAnalyticsSnapshot, loadCustomerRegistry } from "../analytics/analyticsService";
 import { getReturnMetrics } from "../orders/returnService";
@@ -141,49 +138,8 @@ export const getRecentOrders = (orders = [], limit = 5) => {
   return DEMO_RECENT_ORDERS.slice(0, limit).map((order) => ({ ...order, isDemo: true }));
 };
 
-/* ------------------------------------------------------------------ */
-/* People                                                              */
-/* ------------------------------------------------------------------ */
-
-/** Employee counts read straight off the shared Phase 10 register. */
-export const getEmployeeOverview = (employees = []) => {
-  const count = (status) => employees.filter((person) => person.status === status).length;
-  return {
-    total: employees.length,
-    active: count(EMPLOYEE_STATUS.ACTIVE),
-    onLeave: count(EMPLOYEE_STATUS.ON_LEAVE),
-    suspended: count(EMPLOYEE_STATUS.SUSPENDED),
-    inactive: count(EMPLOYEE_STATUS.INACTIVE),
-    pending: count(EMPLOYEE_STATUS.PENDING),
-  };
-};
-
-/**
- * Colleagues an administrator should look at today: blocked accounts and
- * anyone still holding a temporary password.
- */
-export const getEmployeesNeedingAttention = (employees = [], limit = 5) =>
-  employees
-    .filter(
-      (person) =>
-        person.status === EMPLOYEE_STATUS.SUSPENDED ||
-        person.status === EMPLOYEE_STATUS.INACTIVE ||
-        person.mustChangePassword
-    )
-    .slice(0, limit)
-    .map((person) => ({
-      employeeId: person.employeeId,
-      name: employeeFullName(person),
-      role: getRoleLabel(person.role),
-      department: getDepartmentLabel(person.department),
-      status: person.status,
-      reason:
-        person.status === EMPLOYEE_STATUS.SUSPENDED
-          ? "Suspended — login blocked"
-          : person.status === EMPLOYEE_STATUS.INACTIVE
-            ? "Inactive — login blocked"
-            : "Temporary password not yet changed",
-    }));
+/* People administration is an Employee Portal concern — the Admin
+   dashboard no longer surfaces employee-management widgets. */
 
 export default {
   getBusinessMetrics,
@@ -194,6 +150,4 @@ export default {
   getDepartmentPerformance,
   getTopDepartments,
   getRecentOrders,
-  getEmployeeOverview,
-  getEmployeesNeedingAttention,
 };

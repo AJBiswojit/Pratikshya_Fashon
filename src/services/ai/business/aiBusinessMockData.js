@@ -52,9 +52,6 @@ export const AI_BUSINESS_ACTIONS = {
   customers: { label: "View Customers", to: "/admin/customers" },
   offers: { label: "View Offers", to: "/admin/offers" },
   analytics: { label: "View Analytics", to: "/admin/analytics" },
-  employees: { label: "View Employees", to: "/admin/employees" },
-  attendance: { label: "View Attendance", to: "/admin/attendance" },
-  performance: { label: "View Performance", to: "/admin/performance" },
   products: { label: "View Products", to: "/admin/products" },
 };
 

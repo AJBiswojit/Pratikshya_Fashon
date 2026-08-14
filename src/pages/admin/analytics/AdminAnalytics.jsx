@@ -1,12 +1,17 @@
 import { useMemo, useState } from "react";
 import AdminPage from "../../../components/admin/AdminPage";
 import AnalyticsWorkspace from "../../../components/analytics/AnalyticsWorkspace";
+import { ANALYTICS_TABS } from "../../../components/analytics/AnalyticsNav";
 import { useAdminAuth } from "../../../context/AdminAuthContext";
 import { useOrder } from "../../../context/OrderContext";
 import { useInventory } from "../../../context/InventoryContext";
 import { useWorkforce } from "../../../context/WorkforceContext";
 import { ANALYTICS_PRESETS } from "../../../services/analytics/dateRange";
 import { getAnalyticsSnapshot } from "../../../services/analytics/analyticsService";
+
+/* Workforce analytics belong to the Employee Portal reports desk —
+   the Admin Portal reads business sections only. */
+const ADMIN_ANALYTICS_TABS = ANALYTICS_TABS.filter((tab) => tab.section !== "employees");
 
 export default function AdminAnalytics() {
   const { admin } = useAdminAuth();
@@ -47,6 +52,7 @@ export default function AdminAnalytics() {
         filters={filters}
         onFiltersChange={setFilters}
         portal="admin"
+        allowedTabs={ADMIN_ANALYTICS_TABS}
         actor={admin}
       />
     </AdminPage>
