@@ -499,7 +499,7 @@ export default function EmployeeDesk() {
         </>
       ),
       description: "People on the floor. Credential management stays with Super Admin.",
-      rows: employees.filter((person) => person.role !== "SUPER_ADMIN"),
+      rows: employees,
       columns: [
         { id: "employeeId", label: "ID" },
         { id: "name", label: "Name", render: (row) => employeeFullName(row) },

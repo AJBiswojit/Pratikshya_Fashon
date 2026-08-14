@@ -9,14 +9,19 @@
  */
 
 import { canEmployeeLogin } from "../../config/employeeStatus";
-import { ROLES, isKnownRole } from "../../config/employeeRoles";
-import { PERMISSIONS } from "../../config/employeePermissions";
+import { isKnownRole } from "../../config/employeeRoles";
+import {
+  PERMISSIONS,
+  isEmployeeAccountPermission,
+} from "../../config/employeePermissions";
 import { requiredPermissionForPath } from "../../config/employeeNavigation";
 
 export const hasPermission = (employee, permission) => {
   if (!employee || !permission) return false;
   if (!canEmployeeLogin(employee.status)) return false;
-  if (employee.role === ROLES.SUPER_ADMIN) return true;
+  /* Employee-account administration is Admin-domain authority. No employee
+     role or custom operational grant may ever imply it. */
+  if (isEmployeeAccountPermission(permission)) return false;
   if (!Array.isArray(employee.permissions)) return false;
   if (employee.permissions.includes(permission)) return true;
   /* offers.manage is the house-wide offer desk and implies every offer key. */

@@ -12,7 +12,7 @@
  */
 
 import { createContext, useCallback, useContext, useMemo, useState } from "react";
-import { ADMIN_ROLES } from "../config/adminAccess";
+import { ADMIN_ROLES, hasAdminPermission } from "../config/adminAccess";
 import {
   refreshAdminSession,
   restoreAdminSession,
@@ -64,6 +64,10 @@ export function AdminAuthProvider({ children }) {
   );
 
   const isSuperAdmin = Boolean(admin && admin.role === ADMIN_ROLES.SUPER_ADMIN);
+  const hasPermission = useCallback(
+    (permission) => hasAdminPermission(admin, permission),
+    [admin]
+  );
 
   const value = useMemo(
     () => ({
@@ -71,12 +75,13 @@ export function AdminAuthProvider({ children }) {
       isAuthenticated,
       isLoading,
       isSuperAdmin,
+      hasPermission,
       signIn,
       signOut,
       refreshSession,
       updateProfile,
     }),
-    [admin, isAuthenticated, isLoading, isSuperAdmin, signIn, signOut, refreshSession, updateProfile]
+    [admin, isAuthenticated, isLoading, isSuperAdmin, hasPermission, signIn, signOut, refreshSession, updateProfile]
   );
 
   return <AdminAuthContext.Provider value={value}>{children}</AdminAuthContext.Provider>;
@@ -88,6 +93,7 @@ const inertAdminAuth = {
   isAuthenticated: false,
   isLoading: false,
   isSuperAdmin: false,
+  hasPermission: () => false,
   signIn: async () => ({ ok: false, error: "" }),
   signOut: () => {},
   refreshSession: () => ({ admin: null, isAuthenticated: false }),

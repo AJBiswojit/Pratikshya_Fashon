@@ -11,6 +11,7 @@ import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
   useState,
 } from "react";
@@ -28,6 +29,7 @@ import {
   loadActivity,
   recordActivity,
 } from "../services/employees/activityService";
+import { EMPLOYEES_CHANGED_EVENT } from "../services/employees/employeeService";
 import {
   checkIn as punchIn,
   checkOut as punchOut,
@@ -42,6 +44,18 @@ export function EmployeeAuthProvider({ children }) {
 
   const employee = session.employee;
   const isAuthenticated = Boolean(session.isAuthenticated && employee);
+
+  /* Account status changes made by Super Admin invalidate an Employee
+     session immediately in this frontend seam, including another tab. */
+  useEffect(() => {
+    const refreshForAccountChange = () => setSession(refreshEmployeeSession());
+    window.addEventListener(EMPLOYEES_CHANGED_EVENT, refreshForAccountChange);
+    window.addEventListener("storage", refreshForAccountChange);
+    return () => {
+      window.removeEventListener(EMPLOYEES_CHANGED_EVENT, refreshForAccountChange);
+      window.removeEventListener("storage", refreshForAccountChange);
+    };
+  }, []);
 
   const refreshSession = useCallback(() => {
     const next = refreshEmployeeSession();

@@ -1,12 +1,10 @@
 /**
  * PRATIKSHYA FASHON — Employee management context.
  *
- * The people-administration surface of the Employee Portal
- * (/employee/management). Methods are thin wrappers around
- * employeeService. Employee management lives exclusively in the
- * Employee Portal — the Admin Portal reads this state only where a
- * business flow needs an employee selector (e.g. order fulfillment
- * assignment) and never exposes management UI.
+ * Shared employee repository state. Super Admin account-management actions
+ * are thin wrappers around employeeService and carry the signed-in Admin
+ * actor into its authorization gate. Employee surfaces receive read-only
+ * operational data plus the deliberately narrow own-profile action.
  */
 
 import {
@@ -18,6 +16,8 @@ import {
   useState,
 } from "react";
 import { useEmployeeAuth } from "./EmployeeAuthContext";
+import { useAdminAuth } from "./AdminAuthContext";
+import { canManageEmployeeAccounts } from "../config/adminAccess";
 import { getRoleLabel } from "../config/employeeRoles";
 import { getDepartmentLabel, getSectionLabel, getStoreLabel } from "../config/employeeDepartments";
 import { getStatusLabel } from "../config/employeeStatus";
@@ -40,6 +40,7 @@ import {
   resetEmployeePassword as resetRecord,
   suspendEmployee as suspendRecord,
   updateEmployee as updateRecord,
+  updateOwnEmployeeProfile as updateOwnProfileRecord,
   updateEmployeeDepartment as updateDepartmentRecord,
   updateEmployeePermissions as updatePermissionsRecord,
   updateEmployeeRole as updateRoleRecord,
@@ -48,7 +49,8 @@ import {
 const EmployeeManagementContext = createContext(null);
 
 export function EmployeeManagementProvider({ children }) {
-  const { employee: actor, refreshSession } = useEmployeeAuth();
+  const { employee: employeeActor, refreshSession } = useEmployeeAuth();
+  const { admin } = useAdminAuth();
   const [employees, setEmployees] = useState(() => ensureSeeded());
   const [activity, setActivity] = useState(() => loadActivity());
   const [isWorking, setIsWorking] = useState(false);
@@ -70,25 +72,25 @@ export function EmployeeManagementProvider({ children }) {
 
   const syncIfCurrent = useCallback(
     (updated) => {
-      if (updated && actor && updated.employeeId === actor.employeeId) {
+      if (updated && employeeActor && updated.employeeId === employeeActor.employeeId) {
         refreshSession();
       }
     },
-    [actor, refreshSession]
+    [employeeActor, refreshSession]
   );
 
   const note = useCallback(
     (action, target, summary) => {
       setActivity((current) =>
         recordActivity(current, {
-          ...describeActor(actor),
+          ...describeActor(admin),
           targetEmployeeId: target?.employeeId || null,
           action,
           summary,
         })
       );
     },
-    [actor]
+    [admin]
   );
 
   /**
@@ -102,14 +104,14 @@ export function EmployeeManagementProvider({ children }) {
     (action, summary, actorOverride = null) => {
       setActivity((current) =>
         recordActivity(current, {
-          ...describeActor(actor),
+          ...describeActor(employeeActor),
           ...(actorOverride ?? {}),
           action,
           summary,
         })
       );
     },
-    [actor]
+    [employeeActor]
   );
 
   const getEmployees = useCallback(
@@ -126,7 +128,7 @@ export function EmployeeManagementProvider({ children }) {
     async (draft) => {
       setIsWorking(true);
       await new Promise((resolve) => setTimeout(resolve, 280));
-      const result = createRecord(employees, draft, actor);
+      const result = createRecord(employees, draft, admin);
       setIsWorking(false);
       if (!result.ok) return result;
       setEmployees(result.employees);
@@ -137,14 +139,14 @@ export function EmployeeManagementProvider({ children }) {
       );
       return result;
     },
-    [employees, actor, note]
+    [employees, admin, note]
   );
 
   const updateEmployee = useCallback(
     async (employeeId, patch) => {
       setIsWorking(true);
       await new Promise((resolve) => setTimeout(resolve, 220));
-      const result = updateRecord(employees, employeeId, patch);
+      const result = updateRecord(employees, employeeId, patch, admin);
       setIsWorking(false);
       if (!result.ok) return result;
       setEmployees(result.employees);
@@ -156,12 +158,41 @@ export function EmployeeManagementProvider({ children }) {
       );
       return result;
     },
-    [employees, note, syncIfCurrent]
+    [employees, admin, note, syncIfCurrent]
+  );
+
+  const updateOwnProfile = useCallback(
+    async (patch) => {
+      if (!employeeActor) {
+        return { ok: false, code: "FORBIDDEN", message: "You need to sign in first." };
+      }
+      setIsWorking(true);
+      const result = updateOwnProfileRecord(
+        employees,
+        employeeActor.employeeId,
+        patch,
+        employeeActor
+      );
+      setIsWorking(false);
+      if (!result.ok) return result;
+      setEmployees(result.employees);
+      refreshSession();
+      setActivity((current) =>
+        recordActivity(current, {
+          ...describeActor(employeeActor),
+          targetEmployeeId: employeeActor.employeeId,
+          action: ACTIVITY_ACTIONS.EMPLOYEE_UPDATED,
+          summary: `${employeeFullName(employeeActor)} updated their own contact profile`,
+        })
+      );
+      return result;
+    },
+    [employees, employeeActor, refreshSession]
   );
 
   const updateEmployeeRole = useCallback(
     async (employeeId, role, options) => {
-      const result = updateRoleRecord(employees, employeeId, role, options);
+      const result = updateRoleRecord(employees, employeeId, role, options, admin);
       if (!result.ok) return result;
       setEmployees(result.employees);
       syncIfCurrent(result.employee);
@@ -172,12 +203,12 @@ export function EmployeeManagementProvider({ children }) {
       );
       return result;
     },
-    [employees, note, syncIfCurrent]
+    [employees, admin, note, syncIfCurrent]
   );
 
   const updateEmployeeDepartment = useCallback(
     async (employeeId, assignment) => {
-      const result = updateDepartmentRecord(employees, employeeId, assignment);
+      const result = updateDepartmentRecord(employees, employeeId, assignment, admin);
       if (!result.ok) return result;
       setEmployees(result.employees);
       syncIfCurrent(result.employee);
@@ -188,12 +219,12 @@ export function EmployeeManagementProvider({ children }) {
       );
       return result;
     },
-    [employees, note, syncIfCurrent]
+    [employees, admin, note, syncIfCurrent]
   );
 
   const updateEmployeePermissions = useCallback(
     async (employeeId, permissions) => {
-      const result = updatePermissionsRecord(employees, employeeId, permissions);
+      const result = updatePermissionsRecord(employees, employeeId, permissions, admin);
       if (!result.ok) return result;
       setEmployees(result.employees);
       syncIfCurrent(result.employee);
@@ -204,12 +235,12 @@ export function EmployeeManagementProvider({ children }) {
       );
       return result;
     },
-    [employees, note, syncIfCurrent]
+    [employees, admin, note, syncIfCurrent]
   );
 
   const suspendEmployee = useCallback(
     async (employeeId) => {
-      const result = suspendRecord(employees, employeeId);
+      const result = suspendRecord(employees, employeeId, admin);
       if (!result.ok) return result;
       setEmployees(result.employees);
       syncIfCurrent(result.employee);
@@ -220,12 +251,12 @@ export function EmployeeManagementProvider({ children }) {
       );
       return result;
     },
-    [employees, note, syncIfCurrent]
+    [employees, admin, note, syncIfCurrent]
   );
 
   const activateEmployee = useCallback(
     async (employeeId) => {
-      const result = activateRecord(employees, employeeId);
+      const result = activateRecord(employees, employeeId, admin);
       if (!result.ok) return result;
       setEmployees(result.employees);
       syncIfCurrent(result.employee);
@@ -236,12 +267,12 @@ export function EmployeeManagementProvider({ children }) {
       );
       return result;
     },
-    [employees, note, syncIfCurrent]
+    [employees, admin, note, syncIfCurrent]
   );
 
   const deactivateEmployee = useCallback(
     async (employeeId) => {
-      const result = deactivateRecord(employees, employeeId);
+      const result = deactivateRecord(employees, employeeId, admin);
       if (!result.ok) return result;
       setEmployees(result.employees);
       syncIfCurrent(result.employee);
@@ -252,14 +283,14 @@ export function EmployeeManagementProvider({ children }) {
       );
       return result;
     },
-    [employees, note, syncIfCurrent]
+    [employees, admin, note, syncIfCurrent]
   );
 
   const resetEmployeePassword = useCallback(
     async (employeeId) => {
       setIsWorking(true);
       await new Promise((resolve) => setTimeout(resolve, 240));
-      const result = resetRecord(employees, employeeId);
+      const result = resetRecord(employees, employeeId, admin);
       setIsWorking(false);
       if (!result.ok) return result;
       setEmployees(result.employees);
@@ -271,7 +302,7 @@ export function EmployeeManagementProvider({ children }) {
       );
       return result;
     },
-    [employees, note, syncIfCurrent]
+    [employees, admin, note, syncIfCurrent]
   );
 
   const getActivity = useCallback(
@@ -280,15 +311,19 @@ export function EmployeeManagementProvider({ children }) {
     [activity]
   );
 
+  const canManageEmployees = canManageEmployeeAccounts(admin);
+
   const value = useMemo(
     () => ({
       employees,
       activity,
       isWorking,
+      canManageEmployees,
       getEmployee,
       getEmployees,
       createEmployee,
       updateEmployee,
+      updateOwnProfile,
       updateEmployeeRole,
       updateEmployeeDepartment,
       updateEmployeePermissions,
@@ -303,10 +338,12 @@ export function EmployeeManagementProvider({ children }) {
       employees,
       activity,
       isWorking,
+      canManageEmployees,
       getEmployee,
       getEmployees,
       createEmployee,
       updateEmployee,
+      updateOwnProfile,
       updateEmployeeRole,
       updateEmployeeDepartment,
       updateEmployeePermissions,
@@ -330,10 +367,12 @@ const inertManagement = {
   employees: [],
   activity: [],
   isWorking: false,
+  canManageEmployees: false,
   getEmployee: () => null,
   getEmployees: () => [],
   createEmployee: async () => ({ ok: false }),
   updateEmployee: async () => ({ ok: false }),
+  updateOwnProfile: async () => ({ ok: false }),
   updateEmployeeRole: async () => ({ ok: false }),
   updateEmployeeDepartment: async () => ({ ok: false }),
   updateEmployeePermissions: async () => ({ ok: false }),

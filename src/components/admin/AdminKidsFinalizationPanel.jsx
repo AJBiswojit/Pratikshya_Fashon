@@ -42,10 +42,8 @@ import { reviewFlagLabel } from "../../services/productReviewFlags";
 import { categoryLabels } from "../../data/products/taxonomy";
 import { formatINR } from "../../utils/shopping";
 import { employeeFullName } from "../../utils/employee";
-import { getEmployees, loadEmployees } from "../../services/employees/employeeService";
-import { hasPermission } from "../../services/employees/authorization";
+import { getActiveAssignmentEmployees, loadEmployees } from "../../services/employees/employeeService";
 import { PERMISSIONS } from "../../config/employeePermissions";
-import { canEmployeeLogin } from "../../config/employeeStatus";
 
 /* The four decisions section 2 requires on every ownership conflict. */
 const CONFLICT_BUTTONS = [
@@ -82,9 +80,9 @@ const statusTone = { PUBLISHED: "ink", PENDING_REVIEW: "alert", DRAFT: "quiet", 
 
 const eligibleEmployees = () => {
   try {
-    return getEmployees(loadEmployees())
-      .filter((employee) => canEmployeeLogin(employee.status))
-      .filter((employee) => hasPermission(employee, PERMISSIONS.PRODUCTS_MANAGE));
+    return getActiveAssignmentEmployees(loadEmployees(), {
+      requiredPermission: PERMISSIONS.PRODUCTS_MANAGE,
+    });
   } catch {
     return [];
   }

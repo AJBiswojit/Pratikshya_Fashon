@@ -113,6 +113,31 @@ export const PERMISSIONS = {
   STYLING_MANAGE: "styling.manage",
 };
 
+/**
+ * Employee-account administration keys are retained as contract constants so
+ * the Admin role can use the existing permission vocabulary. They are
+ * reserved to the Admin identity domain and are never valid employee grants.
+ */
+export const EMPLOYEE_ACCOUNT_PERMISSION_KEYS = Object.freeze([
+  PERMISSIONS.EMPLOYEES_VIEW,
+  PERMISSIONS.EMPLOYEES_CREATE,
+  PERMISSIONS.EMPLOYEES_EDIT,
+  PERMISSIONS.EMPLOYEES_SUSPEND,
+  PERMISSIONS.EMPLOYEES_RESET_PASSWORD,
+  PERMISSIONS.EMPLOYEES_MANAGE_PERMISSIONS,
+  PERMISSIONS.EMPLOYEES_MANAGE,
+]);
+
+const EMPLOYEE_ACCOUNT_PERMISSION_SET = new Set(EMPLOYEE_ACCOUNT_PERMISSION_KEYS);
+
+export const isEmployeeAccountPermission = (permission) =>
+  EMPLOYEE_ACCOUNT_PERMISSION_SET.has(permission);
+
+export const sanitizeEmployeePermissions = (permissions = []) =>
+  [...new Set(Array.isArray(permissions) ? permissions : [])].filter(
+    (permission) => !isEmployeeAccountPermission(permission)
+  );
+
 /** Human labels for the permission matrix. Never expose raw keys in UI. */
 export const PERMISSION_CATALOGUE = [
   {
@@ -200,7 +225,7 @@ export const PERMISSION_CATALOGUE = [
     ],
   },
   {
-    group: "People & reports",
+    group: "Operations & reports",
     items: [
       { key: PERMISSIONS.TEAM_VIEW, label: "View assigned team" },
       { key: PERMISSIONS.ANALYTICS_VIEW, label: "View store reports" },
@@ -211,13 +236,6 @@ export const PERMISSION_CATALOGUE = [
       { key: PERMISSIONS.ANALYTICS_RETURNS, label: "View return analytics" },
       { key: PERMISSIONS.ANALYTICS_OFFERS, label: "View offer analytics" },
       { key: PERMISSIONS.ANALYTICS_EMPLOYEES, label: "View employee analytics" },
-      { key: PERMISSIONS.EMPLOYEES_VIEW, label: "View employees" },
-      { key: PERMISSIONS.EMPLOYEES_CREATE, label: "Create employees" },
-      { key: PERMISSIONS.EMPLOYEES_EDIT, label: "Edit employees" },
-      { key: PERMISSIONS.EMPLOYEES_SUSPEND, label: "Suspend employees" },
-      { key: PERMISSIONS.EMPLOYEES_RESET_PASSWORD, label: "Reset employee passwords" },
-      { key: PERMISSIONS.EMPLOYEES_MANAGE_PERMISSIONS, label: "Manage permissions" },
-      { key: PERMISSIONS.EMPLOYEES_MANAGE, label: "Manage employee accounts" },
     ],
   },
 ];
@@ -237,6 +255,9 @@ export const getPermissionLabel = (key) => {
 export default {
   PERMISSIONS,
   PERMISSION_CATALOGUE,
+  EMPLOYEE_ACCOUNT_PERMISSION_KEYS,
+  isEmployeeAccountPermission,
+  sanitizeEmployeePermissions,
   ALL_PERMISSION_KEYS,
   getPermissionLabel,
 };

@@ -21,13 +21,22 @@ import { useEmployeeManagement } from "../../../context/EmployeeManagementContex
 import { ORDER_STATUS, CANCELLATION_REASONS, CARRIERS } from "../../../config/orderConfig";
 import { formatINR } from "../../../utils/shopping";
 import { formatOrderDate, formatEventTime } from "../../../utils/orders";
+import { employeeFullName } from "../../../utils/employee";
+import { getActiveAssignmentEmployees } from "../../../services/employees/employeeService";
 import { AtelierButton } from "../../../design-system";
 
 export default function AdminOrderDetail() {
   const { orderId } = useParams();
   const { getOrderByIdAdmin, allocateOrder, assignFulfillment, markItemPicked, markPacked, markReadyToDispatch, dispatchOrder, markOutForDelivery, markDelivered, addInternalNote, cancelOrderAdmin } = useOrder();
   const inventory = useInventory();
-  const { employees } = useEmployeeManagement();
+  const { employees: employeeRegister } = useEmployeeManagement();
+  const employees = useMemo(
+    () => getActiveAssignmentEmployees(employeeRegister).map((employee) => ({
+      ...employee,
+      name: employeeFullName(employee),
+    })),
+    [employeeRegister]
+  );
 
   const order = getOrderByIdAdmin(orderId);
 

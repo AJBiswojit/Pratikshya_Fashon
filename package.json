@@ -23,7 +23,8 @@
     "audit:media": "node --import ./scripts/node-loader/register.mjs scripts/audit-media.mjs",
     "audit:hero-runtime": "node --import ./scripts/node-loader/register.mjs scripts/audit-hero-runtime.mjs",
     "media:analyze": "node scripts/optimize-media.mjs --dry-run",
-    "media:optimize": "node scripts/optimize-media.mjs"
+    "media:optimize": "node scripts/optimize-media.mjs",
+    "audit:employee-management": "node --import ./scripts/node-loader/register.mjs scripts/audit-employee-management.mjs"
   },
   "dependencies": {
     "clsx": "2.1.1",

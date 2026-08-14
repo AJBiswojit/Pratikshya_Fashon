@@ -15,7 +15,7 @@ import { cn } from "../../utils/cn";
 
 export default function EmployeeProfile() {
   const { employee, hasPermission, refreshSession } = useEmployeeAuth();
-  const { updateEmployee } = useEmployeeManagement();
+  const { updateOwnProfile } = useEmployeeManagement();
   const canEdit = hasPermission(PERMISSIONS.PROFILE_EDIT);
   const [phone, setPhone] = useState(employee?.phone || "");
   const [feedback, setFeedback] = useState(null);
@@ -35,7 +35,7 @@ export default function EmployeeProfile() {
       return;
     }
     setSaving(true);
-    const result = await updateEmployee(employee.employeeId, { phone });
+    const result = await updateOwnProfile({ phone });
     setSaving(false);
     if (result.ok) {
       refreshSession();
