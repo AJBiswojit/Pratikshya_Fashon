@@ -10,12 +10,18 @@
  * onto the employee record and are never returned by list/get methods.
  */
 
-import { ROLES, getDefaultPermissions, isKnownRole } from "../../config/employeeRoles";
+import { getDefaultPermissions, isKnownRole } from "../../config/employeeRoles";
 import {
   EMPLOYEE_STATUS,
+  EMPLOYEE_STATUSES,
   canEmployeeLogin,
   getEmployeeStatus,
 } from "../../config/employeeStatus";
+import {
+  isEmployeeAccountPermission,
+  sanitizeEmployeePermissions,
+} from "../../config/employeePermissions";
+import { authorizeEmployeeManagement } from "../admin/adminAuthorization";
 import { INITIAL_EMPLOYEES } from "../../data/employees/mockEmployees";
 import { DEMO_EMPLOYEE_LOGINS } from "../../data/employees/demoCredentials";
 import { isValidEmail, isValidPhone } from "../../utils/validation";
@@ -48,6 +54,7 @@ const PROFILE_FIELDS = [
   "mustChangePassword",
   "lastLogin",
   "createdAt",
+  "updatedAt",
   "shift",
 ];
 
@@ -65,16 +72,13 @@ export const toPublicEmployee = (record) => {
   if (!cleaned || !cleaned.employeeId) return null;
 
   const permissionMode = cleaned.permissionMode === "custom" ? "custom" : "role";
-  let permissions;
-  if (cleaned.role === ROLES.SUPER_ADMIN) {
-    permissions = getDefaultPermissions(ROLES.SUPER_ADMIN);
-  } else if (permissionMode === "role") {
-    permissions = getDefaultPermissions(cleaned.role);
-  } else {
-    permissions = Array.isArray(cleaned.permissions)
-      ? [...cleaned.permissions]
-      : getDefaultPermissions(cleaned.role);
-  }
+  const permissions = sanitizeEmployeePermissions(
+    permissionMode === "role"
+      ? getDefaultPermissions(cleaned.role)
+      : Array.isArray(cleaned.permissions)
+        ? cleaned.permissions
+        : getDefaultPermissions(cleaned.role)
+  );
 
   return {
     id: String(cleaned.id || cleaned.employeeId),
@@ -95,6 +99,7 @@ export const toPublicEmployee = (record) => {
     mustChangePassword: Boolean(cleaned.mustChangePassword),
     lastLogin: cleaned.lastLogin || null,
     createdAt: cleaned.createdAt || new Date().toISOString(),
+    updatedAt: cleaned.updatedAt || cleaned.createdAt || new Date().toISOString(),
     shift: cleaned.shift || "Morning · 10:00 – 19:00",
   };
 };
@@ -107,8 +112,8 @@ export const toPublicEmployee = (record) => {
  * admin can never appear in the Employee Directory, demo logins or any
  * employee selector.
  */
-const isAdminIdentity = (employee) =>
-  employee?.role === ROLES.SUPER_ADMIN ||
+export const isAdminIdentity = (employee) =>
+  ["ADMIN", "SUPER_ADMIN"].includes(String(employee?.role || "").toUpperCase()) ||
   String(employee?.employeeId || "").startsWith("PF-ADM-");
 
 export const normaliseEmployees = (raw) => {
@@ -150,8 +155,13 @@ export const loadEmployees = () => {
   return seeded;
 };
 
+export const EMPLOYEES_CHANGED_EVENT = "pratikshya-employees-changed";
+
 export const saveEmployees = (employees) => {
   writeStorage(EMPLOYEE_STORAGE_KEYS.EMPLOYEES, normaliseEmployees(employees));
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new Event(EMPLOYEES_CHANGED_EVENT));
+  }
 };
 
 export const loadCredentials = () => {
@@ -191,6 +201,24 @@ export const getEmployees = (employees, filters = {}) => {
   });
 };
 
+/**
+ * Canonical selector for assigning operational work. Account administration
+ * and work assignment are separate capabilities: this returns active,
+ * legitimate employees only and can optionally require an operational
+ * permission. Admin identities are rejected even if corrupt storage contains
+ * one.
+ */
+export const getActiveAssignmentEmployees = (
+  employees,
+  { requiredPermission = null } = {}
+) =>
+  (Array.isArray(employees) ? employees : []).filter((employee) => {
+    if (!employee || employee.status !== EMPLOYEE_STATUS.ACTIVE) return false;
+    if (isAdminIdentity(employee)) return false;
+    if (!requiredPermission) return true;
+    return employee.permissions.includes(requiredPermission);
+  });
+
 export const getEmployee = (employees, idOrEmployeeId) => {
   if (!idOrEmployeeId) return null;
   const needle = String(idOrEmployeeId).trim();
@@ -205,6 +233,20 @@ export const getEmployee = (employees, idOrEmployeeId) => {
 const replaceEmployee = (employees, next) =>
   employees.map((employee) => (employee.id === next.id ? next : employee));
 
+const forbiddenResult = (employees, authorization) => ({
+  ok: false,
+  code: authorization.code,
+  message: authorization.message,
+  errors: { authorization: authorization.message },
+  employee: null,
+  employees,
+});
+
+const authorize = (employees, actor) => {
+  const authorization = authorizeEmployeeManagement(actor);
+  return authorization.ok ? null : forbiddenResult(employees, authorization);
+};
+
 export const validateEmployeeDraft = (draft, employees, { isCreate = false } = {}) => {
   const errors = {};
   const firstName = String(draft.firstName || "").trim();
@@ -217,15 +259,22 @@ export const validateEmployeeDraft = (draft, employees, { isCreate = false } = {
   if (!email) errors.email = "Email is required.";
   else if (!isValidEmail(email)) errors.email = "Please enter a valid email address.";
   if (phone && !isValidPhone(phone)) errors.phone = "Please enter a valid 10-digit mobile number.";
-  if (!draft.role || !isKnownRole(draft.role)) errors.role = "Please choose a role.";
-  else if (draft.role === ROLES.SUPER_ADMIN) {
-    // Admin identities live in the admin account store only.
+  const requestedRole = String(draft.role || "").toUpperCase();
+  if (["ADMIN", "SUPER_ADMIN"].includes(requestedRole)) {
     errors.role = "Admin identities are not employee accounts.";
+  } else if (!draft.role || !isKnownRole(draft.role)) {
+    errors.role = "Please choose a legitimate employee role.";
+  }
+  if (
+    Array.isArray(draft.permissions) &&
+    draft.permissions.some(isEmployeeAccountPermission)
+  ) {
+    errors.permissions = "Employee-account administration permissions cannot be assigned to employees.";
   }
   if (!draft.department) errors.department = "Please choose a department.";
   if (!draft.store) errors.store = "Please choose a store or floor.";
   if (!draft.joiningDate) errors.joiningDate = "Joining date is required.";
-  if (draft.status && !getEmployeeStatus(draft.status).id) {
+  if (draft.status && !EMPLOYEE_STATUSES[draft.status]) {
     errors.status = "Please choose a valid status.";
   }
 
@@ -241,6 +290,9 @@ export const validateEmployeeDraft = (draft, employees, { isCreate = false } = {
 };
 
 export const createEmployee = (employees, draft, actor = null) => {
+  const denied = authorize(employees, actor);
+  if (denied) return { ...denied, temporaryPassword: null };
+
   const validation = validateEmployeeDraft(draft, employees, { isCreate: true });
   if (!validation.ok) {
     return { ok: false, errors: validation.errors, employee: null, temporaryPassword: null };
@@ -263,10 +315,11 @@ export const createEmployee = (employees, draft, actor = null) => {
   }
 
   const permissionMode = draft.permissionMode === "custom" ? "custom" : "role";
-  const permissions =
+  const permissions = sanitizeEmployeePermissions(
     permissionMode === "custom" && Array.isArray(draft.permissions)
-      ? [...draft.permissions]
-      : getDefaultPermissions(draft.role);
+      ? draft.permissions
+      : getDefaultPermissions(draft.role)
+  );
 
   const now = new Date().toISOString();
   const employee = toPublicEmployee({
@@ -288,6 +341,7 @@ export const createEmployee = (employees, draft, actor = null) => {
     mustChangePassword: true,
     lastLogin: null,
     createdAt: now,
+    updatedAt: now,
     shift: draft.shift || "Morning · 10:00 – 19:00",
   });
 
@@ -315,13 +369,21 @@ export const createEmployee = (employees, draft, actor = null) => {
   };
 };
 
-export const updateEmployee = (employees, employeeId, patch) => {
+export const updateEmployee = (employees, employeeId, patch, actor = null) => {
+  const denied = authorize(employees, actor);
+  if (denied) return denied;
   const current = getEmployee(employees, employeeId);
   if (!current) {
     return { ok: false, message: "Employee not found.", employee: null, employees };
   }
 
-  const merged = { ...current, ...patch, employeeId: current.employeeId, id: current.id };
+  const merged = {
+    ...current,
+    ...patch,
+    employeeId: current.employeeId,
+    id: current.id,
+    updatedAt: new Date().toISOString(),
+  };
   const validation = validateEmployeeDraft(merged, employees, { isCreate: false });
   if (!validation.ok) {
     return { ok: false, errors: validation.errors, employee: current, employees };
@@ -333,10 +395,50 @@ export const updateEmployee = (employees, employeeId, patch) => {
   return { ok: true, errors: {}, employee: next, employees: nextEmployees };
 };
 
-export const updateEmployeeRole = (employees, employeeId, role, { keepCustom = false } = {}) => {
+/** Employee self-service is deliberately narrow and cannot cross accounts. */
+export const updateOwnEmployeeProfile = (employees, employeeId, patch, actor = null) => {
+  const current = getEmployee(employees, employeeId);
+  if (
+    !current ||
+    !actor?.employeeId ||
+    actor.employeeId !== current.employeeId ||
+    !canEmployeeLogin(actor.status)
+  ) {
+    return {
+      ok: false,
+      code: "FORBIDDEN",
+      message: "Employees may update only their own profile.",
+      employee: current ?? null,
+      employees,
+    };
+  }
+  const phone = String(patch?.phone ?? current.phone).trim();
+  if (phone && !isValidPhone(phone)) {
+    return {
+      ok: false,
+      errors: { phone: "Please enter a valid 10-digit mobile number." },
+      employee: current,
+      employees,
+    };
+  }
+  const next = toPublicEmployee({
+    ...current,
+    phone,
+    updatedAt: new Date().toISOString(),
+  });
+  const nextEmployees = replaceEmployee(employees, next);
+  saveEmployees(nextEmployees);
+  return { ok: true, errors: {}, employee: next, employees: nextEmployees };
+};
+
+export const updateEmployeeRole = (employees, employeeId, role, { keepCustom = false } = {}, actor = null) => {
+  const denied = authorize(employees, actor);
+  if (denied) return denied;
   const current = getEmployee(employees, employeeId);
   if (!current) return { ok: false, message: "Employee not found.", employees };
-  if (!isKnownRole(role)) return { ok: false, message: "That role is not recognised.", employees };
+  if (["ADMIN", "SUPER_ADMIN"].includes(String(role || "").toUpperCase()) || !isKnownRole(role)) {
+    return { ok: false, message: "Admin identities are not employee roles.", employees };
+  }
 
   const keep = keepCustom && current.permissionMode === "custom";
   const next = toPublicEmployee({
@@ -344,6 +446,7 @@ export const updateEmployeeRole = (employees, employeeId, role, { keepCustom = f
     role,
     permissionMode: keep ? "custom" : "role",
     permissions: keep ? current.permissions : getDefaultPermissions(role),
+    updatedAt: new Date().toISOString(),
   });
   const nextEmployees = replaceEmployee(employees, next);
   saveEmployees(nextEmployees);
@@ -353,8 +456,11 @@ export const updateEmployeeRole = (employees, employeeId, role, { keepCustom = f
 export const updateEmployeeDepartment = (
   employees,
   employeeId,
-  { department, section, store }
+  { department, section, store },
+  actor = null
 ) => {
+  const denied = authorize(employees, actor);
+  if (denied) return denied;
   const current = getEmployee(employees, employeeId);
   if (!current) return { ok: false, message: "Employee not found.", employees };
   const next = toPublicEmployee({
@@ -362,47 +468,68 @@ export const updateEmployeeDepartment = (
     department: department ?? current.department,
     section: section ?? current.section,
     store: store ?? current.store,
+    updatedAt: new Date().toISOString(),
   });
   const nextEmployees = replaceEmployee(employees, next);
   saveEmployees(nextEmployees);
   return { ok: true, employee: next, employees: nextEmployees };
 };
 
-export const updateEmployeePermissions = (employees, employeeId, permissions) => {
+export const updateEmployeePermissions = (employees, employeeId, permissions, actor = null) => {
+  const denied = authorize(employees, actor);
+  if (denied) return denied;
   const current = getEmployee(employees, employeeId);
   if (!current) return { ok: false, message: "Employee not found.", employees };
+  if (Array.isArray(permissions) && permissions.some(isEmployeeAccountPermission)) {
+    return {
+      ok: false,
+      message: "Employee-account administration permissions cannot be assigned to employees.",
+      employees,
+    };
+  }
   const next = toPublicEmployee({
     ...current,
-    permissions: Array.isArray(permissions) ? permissions : current.permissions,
+    permissions: sanitizeEmployeePermissions(
+      Array.isArray(permissions) ? permissions : current.permissions
+    ),
     permissionMode: "custom",
+    updatedAt: new Date().toISOString(),
   });
   const nextEmployees = replaceEmployee(employees, next);
   saveEmployees(nextEmployees);
   return { ok: true, employee: next, employees: nextEmployees };
 };
 
-export const setEmployeeStatus = (employees, employeeId, status) => {
+export const setEmployeeStatus = (employees, employeeId, status, actor = null) => {
+  const denied = authorize(employees, actor);
+  if (denied) return denied;
   const current = getEmployee(employees, employeeId);
   if (!current) return { ok: false, message: "Employee not found.", employees };
-  if (!getEmployeeStatus(status).id) {
+  if (!EMPLOYEE_STATUSES[status]) {
     return { ok: false, message: "That status is not recognised.", employees };
   }
-  const next = toPublicEmployee({ ...current, status });
+  const next = toPublicEmployee({
+    ...current,
+    status,
+    updatedAt: new Date().toISOString(),
+  });
   const nextEmployees = replaceEmployee(employees, next);
   saveEmployees(nextEmployees);
   return { ok: true, employee: next, employees: nextEmployees };
 };
 
-export const suspendEmployee = (employees, employeeId) =>
-  setEmployeeStatus(employees, employeeId, EMPLOYEE_STATUS.SUSPENDED);
+export const suspendEmployee = (employees, employeeId, actor = null) =>
+  setEmployeeStatus(employees, employeeId, EMPLOYEE_STATUS.SUSPENDED, actor);
 
-export const activateEmployee = (employees, employeeId) =>
-  setEmployeeStatus(employees, employeeId, EMPLOYEE_STATUS.ACTIVE);
+export const activateEmployee = (employees, employeeId, actor = null) =>
+  setEmployeeStatus(employees, employeeId, EMPLOYEE_STATUS.ACTIVE, actor);
 
-export const deactivateEmployee = (employees, employeeId) =>
-  setEmployeeStatus(employees, employeeId, EMPLOYEE_STATUS.INACTIVE);
+export const deactivateEmployee = (employees, employeeId, actor = null) =>
+  setEmployeeStatus(employees, employeeId, EMPLOYEE_STATUS.INACTIVE, actor);
 
-export const resetEmployeePassword = (employees, employeeId) => {
+export const resetEmployeePassword = (employees, employeeId, actor = null) => {
+  const denied = authorize(employees, actor);
+  if (denied) return { ...denied, temporaryPassword: null };
   const current = getEmployee(employees, employeeId);
   if (!current) {
     return { ok: false, message: "Employee not found.", temporaryPassword: null, employees };
@@ -418,7 +545,11 @@ export const resetEmployeePassword = (employees, employeeId) => {
   };
   saveCredentials(credentials);
 
-  const next = toPublicEmployee({ ...current, mustChangePassword: true });
+  const next = toPublicEmployee({
+    ...current,
+    mustChangePassword: true,
+    updatedAt: now,
+  });
   const nextEmployees = replaceEmployee(employees, next);
   saveEmployees(nextEmployees);
 
@@ -434,7 +565,7 @@ export const resetEmployeePassword = (employees, employeeId) => {
 export const markLastLogin = (employees, employeeId, at = new Date().toISOString()) => {
   const current = getEmployee(employees, employeeId);
   if (!current) return { ok: false, employees };
-  const next = toPublicEmployee({ ...current, lastLogin: at });
+  const next = toPublicEmployee({ ...current, lastLogin: at, updatedAt: at });
   const nextEmployees = replaceEmployee(employees, next);
   saveEmployees(nextEmployees);
   return { ok: true, employee: next, employees: nextEmployees };
@@ -469,6 +600,7 @@ export const applyPasswordChange = (employees, employeeId, { currentPassword, ne
     mustChangePassword: false,
     status:
       current.status === EMPLOYEE_STATUS.PENDING ? EMPLOYEE_STATUS.ACTIVE : current.status,
+    updatedAt: new Date().toISOString(),
   });
   const nextEmployees = replaceEmployee(employees, next);
   saveEmployees(nextEmployees);
@@ -544,6 +676,7 @@ export const ensureSeeded = () => {
 };
 
 export default {
+  EMPLOYEES_CHANGED_EVENT,
   toPublicEmployee,
   normaliseEmployees,
   loadEmployees,
@@ -551,10 +684,13 @@ export default {
   loadCredentials,
   saveCredentials,
   getEmployees,
+  getActiveAssignmentEmployees,
   getEmployee,
+  isAdminIdentity,
   validateEmployeeDraft,
   createEmployee,
   updateEmployee,
+  updateOwnEmployeeProfile,
   updateEmployeeRole,
   updateEmployeeDepartment,
   updateEmployeePermissions,

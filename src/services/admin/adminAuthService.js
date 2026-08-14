@@ -13,7 +13,7 @@
  * crash.
  */
 
-import { ADMIN_ROLES, ADMIN_STATUS, canAdminSignIn, isAdminRole } from "../../config/adminAccess";
+import { ADMIN_STATUS, canAdminSignIn, isAdminRole } from "../../config/adminAccess";
 import { INITIAL_ADMINS } from "../../data/admin/adminAccounts";
 import { DEMO_ADMIN_LOGINS } from "../../data/admin/demoAdminCredentials";
 import { mockCredentialFingerprint } from "../employees/employeePassword";
@@ -32,7 +32,7 @@ export const toPublicAdmin = (raw) => {
     email: String(raw.email || "").toLowerCase(),
     phone: raw.phone || "",
     avatar: raw.avatar ?? null,
-    role: isAdminRole(raw.role) ? raw.role : ADMIN_ROLES.SUPER_ADMIN,
+    role: isAdminRole(raw.role) ? raw.role : null,
     status: raw.status === ADMIN_STATUS.SUSPENDED ? ADMIN_STATUS.SUSPENDED : ADMIN_STATUS.ACTIVE,
     title: raw.title || "Business Operations",
     lastLogin: raw.lastLogin ?? null,

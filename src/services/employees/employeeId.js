@@ -15,7 +15,6 @@ export const EMPLOYEE_ID_PATTERN = /^PF-[A-Z]{2,4}-[0-9]{5}$/;
 
 export const prefixForAssignment = (roleId, departmentId) => {
   const role = getRole(roleId);
-  if (role.id === "SUPER_ADMIN") return "ADM";
   if (role.id === "STORE_MANAGER") return "MGR";
   if (role.id === "WAREHOUSE_STAFF") return "WHS";
   if (role.id === "CUSTOMER_SUPPORT") return "CS";

@@ -71,6 +71,14 @@ export const ADMIN_NAV_GROUPS = [
     ],
   },
   {
+    id: "people",
+    label: "People / Organization",
+    icon: "usersRound",
+    items: [
+      { id: "employees", label: "Employees", to: "/admin/employees", icon: "badge" },
+    ],
+  },
+  {
     id: "orders",
     label: "Orders & Customers",
     icon: "bag",

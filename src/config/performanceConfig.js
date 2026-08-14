@@ -174,11 +174,6 @@ export const ROLE_TARGET_TEMPLATES = {
     { metric: METRIC.ORDERS_FULFILLED, targetValue: 18, unit: METRIC_UNIT.COUNT },
     { metric: METRIC.TEAM_ACHIEVEMENT, targetValue: 80, unit: METRIC_UNIT.PERCENT },
   ],
-  [ROLES.SUPER_ADMIN]: [
-    { metric: METRIC.STORE_REVENUE, targetValue: 450000, unit: METRIC_UNIT.INR },
-    { metric: METRIC.ORDERS_FULFILLED, targetValue: 18, unit: METRIC_UNIT.COUNT },
-    { metric: METRIC.TEAM_ACHIEVEMENT, targetValue: 80, unit: METRIC_UNIT.PERCENT },
-  ],
   [ROLES.INVENTORY_MANAGER]: [
     { metric: METRIC.STOCK_ACCURACY, targetValue: 97, unit: METRIC_UNIT.PERCENT },
     { metric: METRIC.RECEIVING_ACCURACY, targetValue: 98, unit: METRIC_UNIT.PERCENT },

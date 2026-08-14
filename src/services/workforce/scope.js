@@ -7,13 +7,11 @@
 
 import { EMPLOYEE_STATUS, canEmployeeLogin } from "../../config/employeeStatus";
 import { PERMISSIONS } from "../../config/employeePermissions";
-import { ROLES } from "../../config/employeeRoles";
 import { hasPermission } from "../employees/authorization";
 
 export const isAdminActor = (actor) => Boolean(actor?.adminId);
 
-export const isSuperAdminActor = (actor) =>
-  isAdminActor(actor) || actor?.role === ROLES.SUPER_ADMIN;
+export const isSuperAdminActor = (actor) => isAdminActor(actor);
 
 export const actorCanAct = (actor) => {
   if (!actor) return false;
@@ -45,9 +43,7 @@ export const teamEmployeeIds = (actor, employees = []) => {
   if (!actor) return [];
   if (isSuperAdminActor(actor)) return list.map((person) => person.employeeId);
   if (canUsePermission(actor, PERMISSIONS.ATTENDANCE_MANAGE) || canUsePermission(actor, PERMISSIONS.PERFORMANCE_REVIEW) || canUsePermission(actor, PERMISSIONS.TEAM_VIEW)) {
-    return list
-      .filter((person) => person.role !== ROLES.SUPER_ADMIN)
-      .map((person) => person.employeeId);
+    return list.map((person) => person.employeeId);
   }
   return actor.employeeId ? [actor.employeeId] : [];
 };

@@ -20,7 +20,7 @@ export default function ManagerDashboard() {
   const { employee } = useEmployeeAuth();
   const { revision } = useWorkforce();
   const { employees } = useEmployeeManagement();
-  const team = employees.filter((person) => person.role !== "SUPER_ADMIN");
+  const team = employees;
   const floor = getAssistedOrders().slice(0, 5);
   const inventory = useInventory();
   const attendance = useMemo(() => todayHouseSummary(employee), [employee, revision]);

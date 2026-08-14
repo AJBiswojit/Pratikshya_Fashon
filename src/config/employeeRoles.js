@@ -6,10 +6,9 @@
  * Admin without changing the role itself.
  */
 
-import { ALL_PERMISSION_KEYS, PERMISSIONS as P } from "./employeePermissions";
+import { PERMISSIONS as P } from "./employeePermissions";
 
 export const ROLES = {
-  SUPER_ADMIN: "SUPER_ADMIN",
   STORE_MANAGER: "STORE_MANAGER",
   SALES_EXECUTIVE: "SALES_EXECUTIVE",
   INVENTORY_MANAGER: "INVENTORY_MANAGER",
@@ -20,15 +19,6 @@ export const ROLES = {
 };
 
 export const ROLE_DEFINITIONS = {
-  [ROLES.SUPER_ADMIN]: {
-    id: ROLES.SUPER_ADMIN,
-    label: "Super Admin",
-    shortLabel: "Admin",
-    description: "Full employee-portal access and people administration.",
-    idPrefix: "ADM",
-    portal: "Operations command",
-    defaultPermissions: [...ALL_PERMISSION_KEYS],
-  },
   [ROLES.STORE_MANAGER]: {
     id: ROLES.STORE_MANAGER,
     label: "Store Manager",
@@ -100,7 +90,6 @@ export const ROLE_DEFINITIONS = {
       P.PERFORMANCE_REVIEW,
       P.PERFORMANCE_MANAGE,
       P.TEAM_VIEW,
-      P.EMPLOYEES_VIEW,
       P.SUPPORT_VIEW,
       P.STYLING_VIEW,
       P.WAREHOUSE_VIEW,

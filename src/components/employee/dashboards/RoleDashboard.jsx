@@ -1,6 +1,5 @@
 import { useEmployeeAuth } from "../../../context/EmployeeAuthContext";
 import { ROLES } from "../../../config/employeeRoles";
-import AdminDashboard from "./AdminDashboard";
 import ManagerDashboard from "./ManagerDashboard";
 import SalesDashboard from "./SalesDashboard";
 import InventoryDashboard from "./InventoryDashboard";
@@ -12,7 +11,6 @@ export default function RoleDashboard() {
   const { employee } = useEmployeeAuth();
   const role = employee?.role;
 
-  if (role === ROLES.SUPER_ADMIN) return <AdminDashboard />;
   if (role === ROLES.STORE_MANAGER) return <ManagerDashboard />;
   if (role === ROLES.SALES_EXECUTIVE) return <SalesDashboard />;
   if (role === ROLES.INVENTORY_MANAGER || role === ROLES.INVENTORY_STAFF) {

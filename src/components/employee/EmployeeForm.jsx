@@ -1,12 +1,12 @@
 import { useMemo } from "react";
 import EmployeeField, { employeeInputClass } from "./EmployeeField";
-import { ROLES, ROLE_OPTIONS } from "../../config/employeeRoles";
+import { ROLE_OPTIONS } from "../../config/employeeRoles";
 import { DEPARTMENT_OPTIONS, STORE_OPTIONS, sectionsForDepartment } from "../../config/employeeDepartments";
 import { STATUS_OPTIONS } from "../../config/employeeStatus";
 
-/* Admin identities (SUPER_ADMIN) are managed in the Admin Portal only —
-   they can never be created or edited as employees. */
-const EMPLOYEE_ROLE_OPTIONS = ROLE_OPTIONS.filter((role) => role.id !== ROLES.SUPER_ADMIN);
+/* This catalogue contains operational employee roles only. Admin identities
+   are a separate domain and therefore cannot appear in this form. */
+export const EMPLOYEE_ROLE_OPTIONS = ROLE_OPTIONS;
 
 export default function EmployeeForm({
   values,

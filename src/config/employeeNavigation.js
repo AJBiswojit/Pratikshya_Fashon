@@ -28,7 +28,7 @@ export const EMPLOYEE_BRAND = {
  * swallow every nested path.
  */
 export const EMPLOYEE_ROUTE_RULES = [
-  { path: "/employee/management", permission: P.EMPLOYEES_MANAGE, prefix: true },
+  { path: "/employee/management", permission: P.PROFILE_VIEW, prefix: true },
   { path: "/employee/team", permission: P.TEAM_VIEW, prefix: true },
   { path: "/employee/reports", permission: P.ANALYTICS_VIEW, prefix: true },
   { path: "/employee/sales", permission: P.ANALYTICS_VIEW, prefix: true },
@@ -177,14 +177,6 @@ export const EMPLOYEE_NAV_GROUPS = [
     items: [
       { id: "reports", label: "Reports", to: "/employee/reports", icon: "fileBarChart", permission: P.ANALYTICS_VIEW },
       { id: "sales", label: "Sales", to: "/employee/sales", icon: "trend", permission: P.ANALYTICS_VIEW },
-    ],
-  },
-  {
-    id: "people",
-    label: "People",
-    icon: "badge",
-    items: [
-      { id: "people", label: "Employees", to: "/employee/management", icon: "badge", permission: P.EMPLOYEES_MANAGE },
     ],
   },
 ];

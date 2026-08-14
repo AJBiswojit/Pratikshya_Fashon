@@ -16,6 +16,7 @@ import { WorkforceProvider } from "./context/WorkforceContext";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 import EmployeeProtectedRoute from "./components/employee/EmployeeProtectedRoute";
 import AdminProtectedRoute from "./components/admin/AdminProtectedRoute";
+import AdminEmployeeManagementRoute from "./components/admin/AdminEmployeeManagementRoute";
 import CustomerLayout from "./layouts/CustomerLayout";
 import EmployeeLayout from "./layouts/EmployeeLayout";
 import AdminLayout from "./layouts/AdminLayout";
@@ -73,15 +74,14 @@ const EmployeeDesk = lazy(() => import("./pages/employee/EmployeeDesk"));
 const EmployeeMediaDashboard = lazy(() => import("./pages/employee/EmployeeMediaDashboard"));
 const EmployeeMediaUpload = lazy(() => import("./pages/employee/EmployeeMediaUpload"));
 const EmployeeMediaDetail = lazy(() => import("./pages/employee/EmployeeMediaDetail"));
-const EmployeeList = lazy(() => import("./pages/employee/management/EmployeeList"));
-const EmployeeCreate = lazy(() => import("./pages/employee/management/EmployeeCreate"));
-const EmployeeDetail = lazy(() => import("./pages/employee/management/EmployeeDetail"));
-const EmployeeEdit = lazy(() => import("./pages/employee/management/EmployeeEdit"));
-const ActivityLog = lazy(() => import("./pages/employee/management/ActivityLog"));
 
 const AdminLogin = lazy(() => import("./pages/admin/AdminLogin"));
 const AdminDashboard = lazy(() => import("./pages/admin/AdminDashboard"));
 const AdminActivity = lazy(() => import("./pages/admin/AdminActivity"));
+const AdminEmployees = lazy(() => import("./pages/admin/employees/AdminEmployees"));
+const AdminEmployeeCreate = lazy(() => import("./pages/admin/employees/AdminEmployeeCreate"));
+const AdminEmployeeDetail = lazy(() => import("./pages/admin/employees/AdminEmployeeDetail"));
+const AdminEmployeeEdit = lazy(() => import("./pages/admin/employees/AdminEmployeeEdit"));
 const AdminProfile = lazy(() => import("./pages/admin/AdminProfile"));
 const AdminSettings = lazy(() => import("./pages/admin/AdminSettings"));
 const AdminProducts = lazy(() => import("./pages/admin/AdminProducts"));
@@ -153,8 +153,8 @@ export default function App() {
               <OrderProvider>
                 <CheckoutProvider>
                   <EmployeeAuthProvider>
-                  <EmployeeManagementProvider>
                     <AdminAuthProvider>
+                      <EmployeeManagementProvider>
                     <WorkforceProvider>
                     <Suspense fallback={<LoadingState label="Opening PRATIKSHYA FASHON" />}>
                     <Routes>
@@ -165,9 +165,13 @@ export default function App() {
                           <Route path="/admin" element={<AdminDashboard />} />
                           <Route path="/admin/dashboard" element={<Navigate to="/admin" replace />} />
 
-                          {/* Employee management lives exclusively in the
-                              Employee Portal (/employee). The Admin Portal is
-                              business administration only. */}
+                          <Route element={<AdminEmployeeManagementRoute />}>
+                            <Route path="/admin/employees" element={<AdminEmployees />} />
+                            <Route path="/admin/employees/new" element={<AdminEmployeeCreate />} />
+                            <Route path="/admin/employees/:employeeId/edit" element={<AdminEmployeeEdit />} />
+                            <Route path="/admin/employees/:employeeId" element={<AdminEmployeeDetail />} />
+                          </Route>
+
                           <Route path="/admin/activity" element={<AdminActivity />} />
                           <Route path="/admin/profile" element={<AdminProfile />} />
 
@@ -284,11 +288,10 @@ export default function App() {
                           <Route path="/employee/sales" element={<EmployeeDesk />} />
                           <Route path="/employee/team" element={<EmployeeDesk />} />
                           <Route path="/employee/reports" element={<EmployeeDesk />} />
-                          <Route path="/employee/management" element={<EmployeeList />} />
-                          <Route path="/employee/management/new" element={<EmployeeCreate />} />
-                          <Route path="/employee/management/activity" element={<ActivityLog />} />
-                          <Route path="/employee/management/:employeeId" element={<EmployeeDetail />} />
-                          <Route path="/employee/management/:employeeId/edit" element={<EmployeeEdit />} />
+                          {/* Legacy people-admin URL is retained only as a safe
+                              self-profile redirect. Employee account management
+                              exists exclusively at /admin/employees. */}
+                          <Route path="/employee/management/*" element={<Navigate to="/employee/profile" replace />} />
                         </Route>
                       </Route>
 
@@ -349,8 +352,8 @@ export default function App() {
                     </Routes>
                     </Suspense>
                     </WorkforceProvider>
+                      </EmployeeManagementProvider>
                     </AdminAuthProvider>
-                  </EmployeeManagementProvider>
                   </EmployeeAuthProvider>
                 </CheckoutProvider>
               </OrderProvider>

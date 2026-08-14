@@ -42,8 +42,7 @@ import {
 import { MEDIA_SCOPES, MEDIA_STATUS, MAPPING_STATUS, DUPLICATE_STATUS } from "../config/mediaTypes";
 import { DEFAULT_PRODUCT_ID_PREFIX, PRODUCT_ID_PREFIXES } from "../config/productCatalogConfig";
 import { PERMISSIONS } from "../config/employeePermissions";
-import { ROLES } from "../config/employeeRoles";
-import { canEmployeeLogin } from "../config/employeeStatus";
+import { EMPLOYEE_STATUS, canEmployeeLogin } from "../config/employeeStatus";
 import { hasPermission } from "./employees/authorization";
 import { getEmployee, loadEmployees } from "./employees/employeeService";
 import {
@@ -328,6 +327,13 @@ export const createProductDraftFromMedia = ({
   employeeId = null,
   actor = null,
 } = {}) => {
+  if (employeeId) {
+    const employee = getEmployee(loadEmployees(), employeeId);
+    if (!employee) return { ok: false, error: "Employee not found." };
+    if (employee.status !== EMPLOYEE_STATUS.ACTIVE) {
+      return { ok: false, error: "Only active employees can receive new product assignments." };
+    }
+  }
   const ids = (Array.isArray(mediaIds) ? mediaIds : [mediaIds]).filter(Boolean);
   const mediaItems = ids.map((id) => mediaRepository.getById(id)).filter(Boolean);
   if (!mediaItems.length) return { ok: false, error: "Select at least one media asset." };
@@ -389,8 +395,8 @@ export const assignProductToEmployee = (productId, employeeId, actor = null) => 
   if (employeeId) {
     const employee = getEmployee(loadEmployees(), employeeId);
     if (!employee) return { ok: false, error: "Employee not found." };
-    if (!canEmployeeLogin(employee.status)) {
-      return { ok: false, error: "That employee cannot sign in right now." };
+    if (employee.status !== EMPLOYEE_STATUS.ACTIVE) {
+      return { ok: false, error: "Only active employees can receive new product assignments." };
     }
   }
   const result = catalogRepository.assignToEmployee(productId, employeeId || null, actor);
@@ -490,13 +496,12 @@ export const pickEmployeeEditableFields = (patch = {}) =>
 
 /**
  * May this employee edit this product?
- * The existing authorization model decides: SUPER_ADMIN always; everyone
- * else needs products.manage AND the assignment of the product.
+ * The existing authorization model requires products.manage AND assignment of
+ * the product. Admin identities never authenticate through this employee path.
  */
 export const employeeCanEditProduct = (employee, product) => {
   if (!employee || !product) return false;
   if (!canEmployeeLogin(employee.status)) return false;
-  if (employee.role === ROLES.SUPER_ADMIN) return true;
   if (!hasPermission(employee, PERMISSIONS.PRODUCTS_MANAGE)) return false;
   return Boolean(product.assignedEmployeeId) && product.assignedEmployeeId === employee.employeeId;
 };

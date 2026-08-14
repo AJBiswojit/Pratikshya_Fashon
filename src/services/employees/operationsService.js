@@ -324,7 +324,7 @@ export const defaultDashboardMetrics = (role) => {
       ],
     };
   }
-  if (role === "STORE_MANAGER" || role === "SUPER_ADMIN") {
+  if (role === "STORE_MANAGER") {
     return {
       primary: [
         { label: "Store sales", value: "₹8,42,600", hint: "Today · demo" },

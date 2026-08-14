@@ -23,8 +23,12 @@ import {
   createProductDraftFromMedia,
 } from "../../services/productWorkflow";
 import { employeeFullName } from "../../utils/employee";
-import { getEmployee, loadEmployees } from "../../services/employees/employeeService";
-import { canEmployeeLogin } from "../../config/employeeStatus";
+import {
+  EMPLOYEES_CHANGED_EVENT,
+  getActiveAssignmentEmployees,
+  getEmployee,
+  loadEmployees,
+} from "../../services/employees/employeeService";
 
 const statusTone = (row) => {
   if (row.tags.includes("DRAFT")) return "quiet";
@@ -45,11 +49,17 @@ const statusLabel = (row) => {
 // Cache employees list at module level to avoid reloading each card
 let cachedEmployees = null;
 let cachedEmployeesTime = 0;
+if (typeof window !== "undefined") {
+  window.addEventListener(EMPLOYEES_CHANGED_EVENT, () => {
+    cachedEmployees = null;
+    cachedEmployeesTime = 0;
+  });
+}
 const getAssignableEmployees = () => {
   const now = Date.now();
   if (cachedEmployees && now - cachedEmployeesTime < 5000) return cachedEmployees;
   try {
-    const list = loadEmployees().filter((employee) => canEmployeeLogin(employee.status));
+    const list = getActiveAssignmentEmployees(loadEmployees());
     cachedEmployees = list;
     cachedEmployeesTime = now;
     return list;
