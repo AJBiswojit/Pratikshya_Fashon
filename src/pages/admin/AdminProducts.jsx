@@ -5,9 +5,16 @@
  * filtering, category filtering, bulk merchandising and the full product table.
  * Every row reads the shared catalogue repository; media summaries come from
  * the Phase 12 register. Covers only — the table never loads video.
+ *
+ * PERFORMANCE OPTIMIZATION:
+ *   · Search debounced, filtering uses precomputed searchable text
+ *   · Cover resolution only for filtered rows (not all 168)
+ *   · Row component memoized
+ *   · Bulk actions with loading state and immediate feedback
+ *   · Metrics memoized, derived data cached
  */
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, memo } from "react";
 import { Link } from "react-router-dom";
 import {
   Archive,
@@ -38,10 +45,6 @@ import { formatINR } from "../../utils/shopping";
 import { CATEGORY_OPTIONS, getProductStatusLabel } from "../../config/productCatalogConfig";
 import { categoryLabels } from "../../data/products/taxonomy";
 
-/**
- * The discount column: an authored markdown (MRP above the selling price)
- * reads as a percentage even when no explicit discount is configured.
- */
 const discountLabel = (product) => {
   const fromPricing = describeDiscount(product.pricing);
   if (fromPricing !== "—") return fromPricing;
@@ -66,87 +69,265 @@ const statusTone = {
   ARCHIVED: "muted",
 };
 
+const ProductRow = memo(function ProductRow({
+  product,
+  summary,
+  cover,
+  selected,
+  onToggleSelect,
+  onPublishQuick,
+  onDuplicate,
+  onArchive,
+  onRestore,
+  busyId,
+}) {
+  const canQuickPublish = product.status === "DRAFT" || product.status === "PENDING_REVIEW";
+  const isBusy = busyId === product.id;
+  return (
+    <tr className="border-b border-mist/60 font-ui text-sm">
+      <td className="px-3 py-4 align-top">
+        <input
+          type="checkbox"
+          aria-label={`Select ${product.name}`}
+          checked={selected.includes(product.id)}
+          onChange={() => onToggleSelect(product.id)}
+        />
+      </td>
+      <td className="px-3 py-4">
+        <div className="flex items-center gap-3">
+          {cover?.src ? (
+            <img src={cover.src} alt="" loading="lazy" className="h-12 w-10 shrink-0 object-cover border border-mist/60" />
+          ) : (
+            <span className="h-12 w-10 shrink-0 bg-mist/60 flex items-center justify-center font-ui text-[9px] text-taupe">No img</span>
+          )}
+          <div className="min-w-0">
+            <Link
+              to={`/admin/products/${product.id}`}
+              className="block max-w-56 truncate font-medium text-ink underline-offset-4 hover:text-accent hover:underline"
+            >
+              {product.name}
+            </Link>
+            <p className="text-[11px] text-taupe">{product.brand}</p>
+          </div>
+        </div>
+      </td>
+      <td className="px-3 py-4 align-top text-taupe font-mono text-xs">{product.sku}</td>
+      <td className="px-3 py-4 align-top">
+        <span className="font-medium text-ink">{categoryLabels[product.category] ?? product.category}</span>
+        {product.subcategory ? <span className="block text-[11px] text-taupe">{product.subcategory}</span> : null}
+      </td>
+      <td className="px-3 py-4 align-top">
+        <span className="font-medium text-ink">{formatINR(product.price)}</span>
+        {product.originalPrice > product.price ? (
+          <span className="block text-[11px] text-taupe line-through">{formatINR(product.originalPrice)}</span>
+        ) : null}
+      </td>
+      <td className="px-3 py-4 align-top text-taupe">{discountLabel(product)}</td>
+      <td className="px-3 py-4 align-top">{product.variants?.length || "—"}</td>
+      <td className="px-3 py-4 align-top">
+        {!summary || summary.isEmpty ? (
+          <Link
+            to={`/admin/products/${product.id}/media`}
+            className="font-ui text-[11px] uppercase tracking-widest text-taupe underline-offset-4 hover:text-accent hover:underline"
+          >
+            Add media
+          </Link>
+        ) : (
+          <Link
+            to={`/admin/products/${product.id}/media`}
+            className="flex flex-col gap-0.5 underline-offset-4 hover:text-accent hover:underline"
+          >
+            <span className="font-ui text-[11px] text-ink">{summary.images} img · {summary.videos} vid</span>
+            {summary.needsCover && !product.image ? (
+              <span className="font-ui text-[10px] uppercase tracking-widest text-accent font-semibold">Needs cover</span>
+            ) : null}
+          </Link>
+        )}
+      </td>
+      <td className="px-3 py-4 align-top">
+        <StatusBadge label={getProductStatusLabel(product.status)} tone={statusTone[product.status] ?? "quiet"} />
+      </td>
+      <td className="px-3 py-4 align-top text-[11px] text-taupe">
+        {product.updatedAt ? new Date(product.updatedAt).toLocaleDateString("en-IN") : "—"}
+        {product.updatedBy ? <span className="block text-[10px]">{product.updatedBy}</span> : null}
+      </td>
+      <td className="px-3 py-4 align-top">
+        <div className="flex flex-wrap items-center gap-2.5">
+          <Link to={`/admin/products/${product.id}`} aria-label={`View ${product.name}`} title="View record" className="text-taupe hover:text-ink"><Eye size={15} aria-hidden="true" /></Link>
+          <Link to={`/admin/products/${product.id}/edit`} aria-label={`Edit ${product.name}`} title="Edit product" className="text-taupe hover:text-ink"><Pencil size={15} aria-hidden="true" /></Link>
+          <Link to={`/admin/products/${product.id}/media`} aria-label={`Manage media for ${product.name}`} title="Manage Media" className="text-taupe hover:text-ink"><Images size={15} aria-hidden="true" /></Link>
+          {canQuickPublish ? (
+            <button
+              type="button"
+              aria-label={`Publish ${product.name}`}
+              title="Publish product"
+              disabled={isBusy}
+              onClick={() => onPublishQuick(product)}
+              className={`text-taupe hover:text-accent ${isBusy ? "opacity-40" : ""}`}
+            >
+              <Check size={15} aria-hidden="true" />
+            </button>
+          ) : null}
+          <button
+            type="button"
+            aria-label={`Duplicate ${product.name}`}
+            title="Duplicate"
+            disabled={isBusy}
+            onClick={() => onDuplicate(product)}
+            className={`text-taupe hover:text-ink ${isBusy ? "opacity-40" : ""}`}
+          >
+            <Copy size={15} aria-hidden="true" />
+          </button>
+          {product.status === "ARCHIVED" ? (
+            <button type="button" aria-label={`Restore ${product.name}`} title="Restore" disabled={isBusy} onClick={() => onRestore(product)} className={`text-taupe hover:text-ink ${isBusy ? "opacity-40" : ""}`}><RotateCcw size={15} aria-hidden="true" /></button>
+          ) : (
+            <button type="button" aria-label={`Archive ${product.name}`} title="Archive" disabled={isBusy} onClick={() => onArchive(product)} className={`text-taupe hover:text-accent ${isBusy ? "opacity-40" : ""}`}><Archive size={15} aria-hidden="true" /></button>
+          )}
+        </div>
+      </td>
+    </tr>
+  );
+});
+
 export default function AdminProducts() {
   const { admin } = useAdminAuth();
   const actor = admin ? { adminId: admin.adminId, name: admin.name || "Administrator" } : null;
 
   const items = useProducts();
   const [query, setQuery] = useState("");
+  const [debouncedQuery, setDebouncedQuery] = useState("");
   const [status, setStatus] = useState("ALL");
   const [category, setCategory] = useState("ALL");
   const [selected, setSelected] = useState([]);
   const [notice, setNotice] = useState(null);
+  const [busyId, setBusyId] = useState(null);
+  const [bulkBusy, setBulkBusy] = useState(false);
 
   const mediaSummaries = useProductMediaSummaries(items);
 
-  /* Cover plates resolve through the media register, falling back to the
-     authored catalogue image. The table never loads video. */
-  const covers = useMemo(
-    () => Object.fromEntries(items.map((product) => [product.id, resolveProductCover(product)])),
-    [items]
-  );
+  // Debounce search input for responsive typing
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedQuery(query), 250);
+    return () => clearTimeout(timer);
+  }, [query]);
+
+  // Precompute searchable text per product to avoid rebuilding string on every filter
+  const searchIndex = useMemo(() => {
+    const map = new Map();
+    for (let i = 0; i < items.length; i += 1) {
+      const p = items[i];
+      const text = [
+        p.name,
+        p.sku,
+        p.category,
+        categoryLabels[p.category] ?? "",
+        p.subcategory,
+        p.brand,
+        p.fabric,
+        p.collection,
+        ...(p.tags ?? []),
+      ].join(" ").toLowerCase();
+      map.set(p.id, text);
+    }
+    return map;
+  }, [items]);
 
   const filtered = useMemo(() => {
-    const term = query.trim().toLowerCase();
+    const term = debouncedQuery.trim().toLowerCase();
     return items.filter((product) => {
       if (status !== "ALL" && product.status !== status) return false;
       if (category !== "ALL" && product.category !== category) return false;
       if (!term) return true;
-      return [
-        product.name,
-        product.sku,
-        product.category,
-        categoryLabels[product.category] ?? "",
-        product.subcategory,
-        product.brand,
-        product.fabric,
-        product.collection,
-        ...(product.tags ?? []),
-      ]
-        .join(" ")
-        .toLowerCase()
-        .includes(term);
+      const hay = searchIndex.get(product.id) || "";
+      return hay.includes(term);
     });
-  }, [items, query, status, category]);
+  }, [items, debouncedQuery, status, category, searchIndex]);
+
+  // Only resolve covers for filtered rows (not all 168)
+  const covers = useMemo(
+    () => Object.fromEntries(filtered.map((product) => [product.id, resolveProductCover(product)])),
+    [filtered]
+  );
 
   const metrics = useMemo(() => catalogMetrics(items), [items]);
 
-  const toggleSelect = (id) =>
+  const toggleSelect = useCallback((id) =>
     setSelected((current) =>
       current.includes(id) ? current.filter((entry) => entry !== id) : [...current, id]
-    );
+    ), []);
 
   const allVisibleSelected = filtered.length > 0 && filtered.every((p) => selected.includes(p.id));
 
-  const toggleSelectAll = () =>
-    setSelected(allVisibleSelected ? [] : filtered.map((p) => p.id));
+  const toggleSelectAll = useCallback(() =>
+    setSelected(allVisibleSelected ? [] : filtered.map((p) => p.id)),
+    [allVisibleSelected, filtered]);
 
-  const runBulk = (patch, label) => {
-    if (!selected.length) return;
-    const result = catalogRepository.bulkUpdate(selected, patch, actor, label);
-    setNotice(
-      `${label}: applied to ${result.applied} product${result.applied === 1 ? "" : "s"}${
-        result.skipped ? `, ${result.skipped} skipped (publish requirements unmet)` : ""
-      }.`
-    );
-    if (patch.status === "PUBLISHED") {
-      selected.forEach((id) => {
-        const published = catalogRepository.find(id);
-        if (published?.status === "PUBLISHED") inventoryRepository.ensureOpeningStock(published, actor);
-      });
-    }
-    setSelected([]);
-  };
+  const runBulk = useCallback((patch, label) => {
+    if (!selected.length || bulkBusy) return;
+    setBulkBusy(true);
+    // Immediate feedback
+    setNotice(`${label}: processing ${selected.length} products…`);
+    setTimeout(() => {
+      const result = catalogRepository.bulkUpdate(selected, patch, actor, label);
+      setNotice(
+        `${label}: applied to ${result.applied} product${result.applied === 1 ? "" : "s"}${
+          result.skipped ? `, ${result.skipped} skipped (publish requirements unmet)` : ""
+        }.`
+      );
+      if (patch.status === "PUBLISHED") {
+        selected.forEach((id) => {
+          const published = catalogRepository.find(id);
+          if (published?.status === "PUBLISHED") inventoryRepository.ensureOpeningStock(published, actor);
+        });
+      }
+      setSelected([]);
+      setBulkBusy(false);
+    }, 0);
+  }, [selected, bulkBusy, actor]);
 
-  const publishQuick = (product) => {
-    const result = catalogRepository.publishProduct(product.id, actor);
-    if (result.ok) {
-      inventoryRepository.ensureOpeningStock(result.product, actor);
-      setNotice(`Published “${product.name}” — now visible to customers.`);
-    } else {
-      setNotice(`Could not publish “${product.name}”: ${(result.errors ?? [result.error]).join(" ")}`);
-    }
-  };
+  const publishQuick = useCallback((product) => {
+    if (busyId) return;
+    setBusyId(product.id);
+    setNotice(`Publishing “${product.name}”…`);
+    setTimeout(() => {
+      const result = catalogRepository.publishProduct(product.id, actor);
+      if (result.ok) {
+        inventoryRepository.ensureOpeningStock(result.product, actor);
+        setNotice(`Published “${product.name}” — now visible to customers.`);
+      } else {
+        setNotice(`Could not publish “${product.name}”: ${(result.errors ?? [result.error]).join(" ")}`);
+      }
+      setBusyId(null);
+    }, 0);
+  }, [busyId, actor]);
+
+  const handleDuplicate = useCallback((product) => {
+    if (busyId) return;
+    setBusyId(product.id);
+    setTimeout(() => {
+      const result = catalogRepository.duplicateProduct(product.id, actor);
+      if (result.ok) setNotice(`Duplicated as “${result.product.name}” — review its SKU and slug.`);
+      setBusyId(null);
+    }, 0);
+  }, [busyId, actor]);
+
+  const handleArchive = useCallback((product) => {
+    if (busyId) return;
+    setBusyId(product.id);
+    setTimeout(() => {
+      catalogRepository.archiveProduct(product.id, actor);
+      setBusyId(null);
+    }, 0);
+  }, [busyId, actor]);
+
+  const handleRestore = useCallback((product) => {
+    if (busyId) return;
+    setBusyId(product.id);
+    setTimeout(() => {
+      catalogRepository.restoreProduct(product.id, actor);
+      setBusyId(null);
+    }, 0);
+  }, [busyId, actor]);
 
   const clearNotice = () => setNotice(null);
   useEffect(() => {
@@ -158,17 +339,12 @@ export default function AdminProducts() {
   return (
     <AdminPage
       eyebrow="Business / Products"
-      title={
-        <>
-          Product <span className="italic text-accent">catalog.</span>
-        </>
-      }
+      title={<>Product <span className="italic text-accent">catalog.</span></>}
       description="One catalogue serves the storefront, the portals and every future surface. Manage identity, pricing, variants, media and publishing from this desk."
       actions={
         <>
           <AtelierButton as={Link} to="/admin/products/review" size="chip" variant="outline">
-            <ClipboardCheck size={13} aria-hidden="true" /> Review queue
-            {metrics.pendingReview ? ` (${metrics.pendingReview})` : ""}
+            <ClipboardCheck size={13} aria-hidden="true" /> Review queue{metrics.pendingReview ? ` (${metrics.pendingReview})` : ""}
           </AtelierButton>
           <AtelierButton as={Link} to="/admin/products/new" size="chip">
             <Plus size={13} aria-hidden="true" /> Create product
@@ -176,33 +352,17 @@ export default function AdminProducts() {
         </>
       }
     >
-      {/* 10 Metrics — always computed directly from the repository */}
       <div className="mb-8 grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-5">
         <AdminMetricCard label="Total" value={metrics.total} hint="Every product record" />
         <AdminMetricCard label="Published" value={metrics.published} hint="Visible to customers" />
         <AdminMetricCard label="Draft" value={metrics.drafts} hint="In progress" />
-        <AdminMetricCard
-          label="Pending Review"
-          value={metrics.pendingReview}
-          hint="Awaiting approval"
-          tone={metrics.pendingReview ? "alert" : "default"}
-        />
+        <AdminMetricCard label="Pending Review" value={metrics.pendingReview} hint="Awaiting approval" tone={metrics.pendingReview ? "alert" : "default"} />
         <AdminMetricCard label="Archived" value={metrics.archived} hint="Retired, order-safe" />
         <AdminMetricCard label="Featured" value={metrics.featured} hint="House selection" />
         <AdminMetricCard label="Bestseller" value={metrics.bestsellers} hint="Proven favourites" />
         <AdminMetricCard label="New Arrivals" value={metrics.newArrivals} hint="Just-in edit" />
-        <AdminMetricCard
-          label="Needs Media"
-          value={metrics.needsMedia}
-          hint="Missing a cover"
-          tone={metrics.needsMedia ? "alert" : "default"}
-        />
-        <AdminMetricCard
-          label="Needs Pricing Review"
-          value={metrics.needsPricingReview}
-          hint="Incomplete or invalid"
-          tone={metrics.needsPricingReview ? "alert" : "default"}
-        />
+        <AdminMetricCard label="Needs Media" value={metrics.needsMedia} hint="Missing a cover" tone={metrics.needsMedia ? "alert" : "default"} />
+        <AdminMetricCard label="Needs Pricing Review" value={metrics.needsPricingReview} hint="Incomplete or invalid" tone={metrics.needsPricingReview ? "alert" : "default"} />
       </div>
 
       {notice ? (
@@ -212,7 +372,6 @@ export default function AdminProducts() {
       ) : null}
 
       <AdminPanel eyebrow="Catalog" title="Products">
-        {/* Search, Status & Category Filters */}
         <div className="mb-5 flex flex-col gap-3 lg:flex-row lg:items-center">
           <label className="relative flex-1">
             <span className="sr-only">Search products</span>
@@ -226,11 +385,8 @@ export default function AdminProducts() {
             />
           </label>
 
-          {/* Category Filter */}
           <div className="flex items-center gap-2">
-            <label htmlFor="admin-category-filter" className="sr-only">
-              Filter by category
-            </label>
+            <label htmlFor="admin-category-filter" className="sr-only">Filter by category</label>
             <select
               id="admin-category-filter"
               aria-label="Filter by category"
@@ -240,14 +396,11 @@ export default function AdminProducts() {
             >
               <option value="ALL">All categories</option>
               {CATEGORY_OPTIONS.map((cat) => (
-                <option key={cat.id} value={cat.id}>
-                  {cat.label}
-                </option>
+                <option key={cat.id} value={cat.id}>{cat.label}</option>
               ))}
             </select>
           </div>
 
-          {/* Status Filters */}
           <div className="flex flex-wrap gap-1.5" role="radiogroup" aria-label="Status filter">
             {STATUS_FILTERS.map((option) => (
               <button
@@ -268,30 +421,15 @@ export default function AdminProducts() {
           </div>
         </div>
 
-        {/* Bulk action bar */}
         {selected.length ? (
           <div className="mb-5 flex flex-wrap items-center gap-2 border border-mist/80 bg-canvas p-3">
-            <p className="mr-2 font-ui text-[11px] uppercase tracking-[.16em] text-ink font-medium">
-              {selected.length} selected
-            </p>
-            <button type="button" onClick={() => runBulk({ status: "PUBLISHED" }, "Publish")} className="border border-mist px-3 py-1.5 font-ui text-[10px] uppercase tracking-[.14em] text-taupe transition-colors hover:border-ink hover:text-ink">
-              <UploadCloud size={11} className="mr-1 inline" aria-hidden="true" /> Publish
-            </button>
-            <button type="button" onClick={() => runBulk({ status: "ARCHIVED" }, "Archive")} className="border border-mist px-3 py-1.5 font-ui text-[10px] uppercase tracking-[.14em] text-taupe transition-colors hover:border-ink hover:text-ink">
-              <Archive size={11} className="mr-1 inline" aria-hidden="true" /> Archive
-            </button>
-            <button type="button" onClick={() => runBulk({ isFeatured: true }, "Mark featured")} className="border border-mist px-3 py-1.5 font-ui text-[10px] uppercase tracking-[.14em] text-taupe transition-colors hover:border-ink hover:text-ink">
-              Mark featured
-            </button>
-            <button type="button" onClick={() => runBulk({ isBestseller: true }, "Mark bestseller")} className="border border-mist px-3 py-1.5 font-ui text-[10px] uppercase tracking-[.14em] text-taupe transition-colors hover:border-ink hover:text-ink">
-              Mark bestseller
-            </button>
-            <button type="button" onClick={() => runBulk({ isNew: true }, "Mark new arrival")} className="border border-mist px-3 py-1.5 font-ui text-[10px] uppercase tracking-[.14em] text-taupe transition-colors hover:border-ink hover:text-ink">
-              Mark new arrival
-            </button>
-            <button type="button" onClick={() => setSelected([])} className="ml-auto font-ui text-[10px] uppercase tracking-[.14em] text-taupe underline-offset-4 hover:text-accent hover:underline">
-              Clear
-            </button>
+            <p className="mr-2 font-ui text-[11px] uppercase tracking-[.16em] text-ink font-medium">{selected.length} selected{bulkBusy ? " · processing…" : ""}</p>
+            <button type="button" disabled={bulkBusy} onClick={() => runBulk({ status: "PUBLISHED" }, "Publish")} className="border border-mist px-3 py-1.5 font-ui text-[10px] uppercase tracking-[.14em] text-taupe transition-colors hover:border-ink hover:text-ink disabled:opacity-40"><UploadCloud size={11} className="mr-1 inline" aria-hidden="true" /> Publish</button>
+            <button type="button" disabled={bulkBusy} onClick={() => runBulk({ status: "ARCHIVED" }, "Archive")} className="border border-mist px-3 py-1.5 font-ui text-[10px] uppercase tracking-[.14em] text-taupe transition-colors hover:border-ink hover:text-ink disabled:opacity-40"><Archive size={11} className="mr-1 inline" aria-hidden="true" /> Archive</button>
+            <button type="button" disabled={bulkBusy} onClick={() => runBulk({ isFeatured: true }, "Mark featured")} className="border border-mist px-3 py-1.5 font-ui text-[10px] uppercase tracking-[.14em] text-taupe transition-colors hover:border-ink hover:text-ink disabled:opacity-40">Mark featured</button>
+            <button type="button" disabled={bulkBusy} onClick={() => runBulk({ isBestseller: true }, "Mark bestseller")} className="border border-mist px-3 py-1.5 font-ui text-[10px] uppercase tracking-[.14em] text-taupe transition-colors hover:border-ink hover:text-ink disabled:opacity-40">Mark bestseller</button>
+            <button type="button" disabled={bulkBusy} onClick={() => runBulk({ isNew: true }, "Mark new arrival")} className="border border-mist px-3 py-1.5 font-ui text-[10px] uppercase tracking-[.14em] text-taupe transition-colors hover:border-ink hover:text-ink disabled:opacity-40">Mark new arrival</button>
+            <button type="button" onClick={() => setSelected([])} className="ml-auto font-ui text-[10px] uppercase tracking-[.14em] text-taupe underline-offset-4 hover:text-accent hover:underline">Clear</button>
           </div>
         ) : null}
 
@@ -299,158 +437,28 @@ export default function AdminProducts() {
           <table className="w-full min-w-[980px] text-left">
             <thead>
               <tr className="border-b border-mist font-ui text-[10px] uppercase tracking-widest text-taupe">
-                <th className="px-3 py-3">
-                  <input
-                    type="checkbox"
-                    aria-label="Select all visible products"
-                    checked={allVisibleSelected}
-                    onChange={toggleSelectAll}
-                  />
-                </th>
+                <th className="px-3 py-3"><input type="checkbox" aria-label="Select all visible products" checked={allVisibleSelected} onChange={toggleSelectAll} /></th>
                 {["Product", "SKU", "Category", "Price", "Discount", "Variants", "Media", "Status", "Updated", "Actions"].map((heading) => (
-                  <th className="px-3 py-3" key={heading} scope="col">
-                    {heading}
-                  </th>
+                  <th className="px-3 py-3" key={heading} scope="col">{heading}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
-              {filtered.map((product) => {
-                const summary = mediaSummaries[product.id];
-                const cover = covers[product.id];
-                const canQuickPublish = product.status === "DRAFT" || product.status === "PENDING_REVIEW";
-                return (
-                  <tr className="border-b border-mist/60 font-ui text-sm" key={product.id}>
-                    <td className="px-3 py-4 align-top">
-                      <input
-                        type="checkbox"
-                        aria-label={`Select ${product.name}`}
-                        checked={selected.includes(product.id)}
-                        onChange={() => toggleSelect(product.id)}
-                      />
-                    </td>
-                    <td className="px-3 py-4">
-                      <div className="flex items-center gap-3">
-                        {cover?.src ? (
-                          <img src={cover.src} alt="" loading="lazy" className="h-12 w-10 shrink-0 object-cover border border-mist/60" />
-                        ) : (
-                          <span className="h-12 w-10 shrink-0 bg-mist/60 flex items-center justify-center font-ui text-[9px] text-taupe">No img</span>
-                        )}
-                        <div className="min-w-0">
-                          <Link
-                            to={`/admin/products/${product.id}`}
-                            className="block max-w-56 truncate font-medium text-ink underline-offset-4 hover:text-accent hover:underline"
-                          >
-                            {product.name}
-                          </Link>
-                          <p className="text-[11px] text-taupe">{product.brand}</p>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-3 py-4 align-top text-taupe font-mono text-xs">{product.sku}</td>
-                    <td className="px-3 py-4 align-top">
-                      <span className="font-medium text-ink">{categoryLabels[product.category] ?? product.category}</span>
-                      {product.subcategory ? <span className="block text-[11px] text-taupe">{product.subcategory}</span> : null}
-                    </td>
-                    <td className="px-3 py-4 align-top">
-                      <span className="font-medium text-ink">{formatINR(product.price)}</span>
-                      {product.originalPrice > product.price ? (
-                        <span className="block text-[11px] text-taupe line-through">
-                          {formatINR(product.originalPrice)}
-                        </span>
-                      ) : null}
-                    </td>
-                    <td className="px-3 py-4 align-top text-taupe">{discountLabel(product)}</td>
-                    <td className="px-3 py-4 align-top">{product.variants?.length || "—"}</td>
-                    <td className="px-3 py-4 align-top">
-                      {!summary || summary.isEmpty ? (
-                        <Link
-                          to={`/admin/products/${product.id}/media`}
-                          className="font-ui text-[11px] uppercase tracking-widest text-taupe underline-offset-4 hover:text-accent hover:underline"
-                        >
-                          Add media
-                        </Link>
-                      ) : (
-                        <Link
-                          to={`/admin/products/${product.id}/media`}
-                          className="flex flex-col gap-0.5 underline-offset-4 hover:text-accent hover:underline"
-                        >
-                          <span className="font-ui text-[11px] text-ink">
-                            {summary.images} img · {summary.videos} vid
-                          </span>
-                          {summary.needsCover && !product.image ? (
-                            <span className="font-ui text-[10px] uppercase tracking-widest text-accent font-semibold">Needs cover</span>
-                          ) : null}
-                        </Link>
-                      )}
-                    </td>
-                    <td className="px-3 py-4 align-top">
-                      <StatusBadge label={getProductStatusLabel(product.status)} tone={statusTone[product.status] ?? "quiet"} />
-                    </td>
-                    <td className="px-3 py-4 align-top text-[11px] text-taupe">
-                      {product.updatedAt ? new Date(product.updatedAt).toLocaleDateString("en-IN") : "—"}
-                      {product.updatedBy ? <span className="block text-[10px]">{product.updatedBy}</span> : null}
-                    </td>
-                    <td className="px-3 py-4 align-top">
-                      <div className="flex flex-wrap items-center gap-2.5">
-                        <Link to={`/admin/products/${product.id}`} aria-label={`View ${product.name}`} title="View record" className="text-taupe hover:text-ink">
-                          <Eye size={15} aria-hidden="true" />
-                        </Link>
-                        <Link to={`/admin/products/${product.id}/edit`} aria-label={`Edit ${product.name}`} title="Edit product" className="text-taupe hover:text-ink">
-                          <Pencil size={15} aria-hidden="true" />
-                        </Link>
-                        <Link to={`/admin/products/${product.id}/media`} aria-label={`Manage media for ${product.name}`} title="Manage Media" className="text-taupe hover:text-ink">
-                          <Images size={15} aria-hidden="true" />
-                        </Link>
-                        {canQuickPublish ? (
-                          <button
-                            type="button"
-                            aria-label={`Publish ${product.name}`}
-                            title="Publish product"
-                            onClick={() => publishQuick(product)}
-                            className="text-taupe hover:text-accent"
-                          >
-                            <Check size={15} aria-hidden="true" />
-                          </button>
-                        ) : null}
-                        <button
-                          type="button"
-                          aria-label={`Duplicate ${product.name}`}
-                          title="Duplicate"
-                          onClick={() => {
-                            const result = catalogRepository.duplicateProduct(product.id, actor);
-                            if (result.ok) setNotice(`Duplicated as “${result.product.name}” — review its SKU and slug.`);
-                          }}
-                          className="text-taupe hover:text-ink"
-                        >
-                          <Copy size={15} aria-hidden="true" />
-                        </button>
-                        {product.status === "ARCHIVED" ? (
-                          <button
-                            type="button"
-                            aria-label={`Restore ${product.name}`}
-                            title="Restore"
-                            onClick={() => catalogRepository.restoreProduct(product.id, actor)}
-                            className="text-taupe hover:text-ink"
-                          >
-                            <RotateCcw size={15} aria-hidden="true" />
-                          </button>
-                        ) : (
-                          <button
-                            type="button"
-                            aria-label={`Archive ${product.name}`}
-                            title="Archive"
-                            onClick={() => catalogRepository.archiveProduct(product.id, actor)}
-                            className="text-taupe hover:text-accent"
-                          >
-                            <Archive size={15} aria-hidden="true" />
-                          </button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
+              {filtered.map((product) => (
+                <ProductRow
+                  key={product.id}
+                  product={product}
+                  summary={mediaSummaries[product.id]}
+                  cover={covers[product.id]}
+                  selected={selected}
+                  onToggleSelect={toggleSelect}
+                  onPublishQuick={publishQuick}
+                  onDuplicate={handleDuplicate}
+                  onArchive={handleArchive}
+                  onRestore={handleRestore}
+                  busyId={busyId}
+                />
+              ))}
             </tbody>
           </table>
         </div>

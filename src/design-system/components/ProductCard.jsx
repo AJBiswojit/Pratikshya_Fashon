@@ -1,3 +1,4 @@
+import { memo, useMemo } from "react";
 import { getProductCardMedia } from "../../services/media/productMediaSet";
 import { cn } from "../../utils/cn";
 import { heading, price as priceType } from "../typography";
@@ -17,6 +18,10 @@ import MediaFrame from "./MediaFrame";
  *
  * `as` swaps the link element — pass the router's `Link` (with `to`) inside
  * the application, leave it alone for a plain anchor.
+ *
+ * PERFORMANCE OPTIMIZATION:
+ *   · React.memo with custom comparator to avoid re-rendering unchanged cards
+ *   · Media lookup memoized per product id
  */
 
 export const formatPrice = (value) =>
@@ -27,7 +32,7 @@ export const discountPercent = (current, original) =>
     ? Math.round(((original - current) / original) * 100)
     : null;
 
-export default function ProductCard({
+function ProductCardComponent({
   product,
   as: Tag = "a",
   href = "#",
@@ -55,8 +60,12 @@ export default function ProductCard({
   } = product;
 
   /* Canonical product-owned plates only. Hover is omitted when the product
-     has no alternate of its own — the frame then stays on the primary. */
-  const { image, hoverImage } = getProductCardMedia(product);
+     has no alternate of its own — the frame then stays on the primary.
+     Memoized per product id to avoid repeated mediaSet assembly. */
+  const { image, hoverImage } = useMemo(
+    () => getProductCardMedia(product),
+    [product.id, product.mediaIds, product.primaryMediaId, product.galleryMediaIds, product.image]
+  );
 
   const discount = showDiscount ? discountPercent(price, originalPrice) : null;
 
@@ -128,3 +137,28 @@ export default function ProductCard({
     </Tag>
   );
 }
+
+function areEqual(prev, next) {
+  // Fast path: if product id same and relevant fields same, avoid re-render
+  if (prev.product.id !== next.product.id) return false;
+  if (prev.product.name !== next.product.name) return false;
+  if (prev.product.price !== next.product.price) return false;
+  if (prev.product.originalPrice !== next.product.originalPrice) return false;
+  if (prev.product.image !== next.product.image) return false;
+  if (prev.product.hoverImage !== next.product.hoverImage) return false;
+  if (prev.isWishlisted !== next.isWishlisted) return false;
+  if (prev.offerBadge !== next.offerBadge) return false;
+  if (prev.className !== next.className) return false;
+  if (prev.showCategory !== next.showCategory) return false;
+  if (prev.showDiscount !== next.showDiscount) return false;
+  if (prev.showAvailability !== next.showAvailability) return false;
+  // media claims may change
+  const prevClaims = (prev.product.mediaIds || []).join(",");
+  const nextClaims = (next.product.mediaIds || []).join(",");
+  if (prevClaims !== nextClaims) return false;
+  if (prev.product.primaryMediaId !== next.product.primaryMediaId) return false;
+  return true;
+}
+
+const ProductCard = memo(ProductCardComponent, areEqual);
+export default ProductCard;

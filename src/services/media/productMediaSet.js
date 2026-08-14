@@ -22,6 +22,10 @@
  *
  * The register is indexed once (productId → media set). Card lookup is O(1).
  * Nothing here writes. Nothing here imports React.
+ *
+ * PERFORMANCE OPTIMIZATION:
+ *   · Index is cached against mediaVersion, not recomputed via fingerprint loop.
+ *   · Per-product mediaSet cached against mediaVersion and product claims.
  */
 
 import {
@@ -32,7 +36,7 @@ import {
   PRODUCT_MEDIA_ROLES,
 } from "../../config/mediaTypes";
 import { imageRef } from "../../data/pratikshyaImageManifest";
-import { getAll, getById } from "./mediaRepository";
+import { getAll, getById, getMediaVersion } from "./mediaRepository";
 import { getViewOrderScore, parseMediaFilename } from "./mediaNaming";
 import { isIngestedPhotographyUrl, resolveLegacyMediaUrl } from "./mediaPaths";
 
@@ -249,12 +253,6 @@ const authoredOwnedPlates = (product) => {
 
   (Array.isArray(product.additionalImages) ? product.additionalImages : []).forEach(push);
 
-  /* product.images is trusted only when it was authored on the record
-     (additionalImages / explicit gallery), not when it was padded with
-     category-wide defaults. Callers that still pass a mixed images array
-     are filtered later by ownership. We accept images[] entries that match
-     the primary or additionalImages only — never a category fallback list. */
-
   return plates;
 };
 
@@ -419,18 +417,13 @@ export const assembleProductMediaSet = (
 /* ------------------------------------------------------------------ */
 
 let indexCache = {
-  fingerprint: null,
+  version: -1,
   byProductId: null,
 };
 
-const registerFingerprint = (items) => {
-  let acc = items.length;
-  for (let i = 0; i < items.length; i += 1) {
-    const item = items[i];
-    acc = (acc * 33 + String(item.id || "").length + String(item.productId || "").length) % 2147483647;
-    if (item.updatedAt) acc = (acc + item.updatedAt.length) % 2147483647;
-  }
-  return `${items.length}:${acc}`;
+let mediaSetCache = {
+  version: -1,
+  map: new Map(), // productId -> { claimsKey, set }
 };
 
 const buildIndex = (items) => {
@@ -448,13 +441,17 @@ const buildIndex = (items) => {
 
 /** One pass over the register. Safe to call from every card — cached. */
 export const getProductMediaIndex = () => {
-  const items = getAll();
-  const fingerprint = registerFingerprint(items);
-  if (indexCache.byProductId && indexCache.fingerprint === fingerprint) {
+  const version = getMediaVersion();
+  if (indexCache.byProductId && indexCache.version === version) {
     return indexCache.byProductId;
   }
+  const items = getAll();
   const byProductId = buildIndex(items);
-  indexCache = { fingerprint, byProductId };
+  indexCache = { version, byProductId };
+  // Invalidate mediaSet cache when index version changes
+  if (mediaSetCache.version !== version) {
+    mediaSetCache = { version, map: new Map() };
+  }
   return byProductId;
 };
 
@@ -476,42 +473,56 @@ export const getProductMediaSet = (productIdOrProduct, productHint = null) => {
   if (!productId) return emptySet(null);
 
   const id = String(productId);
+  const mediaVersion = getMediaVersion();
+
+  // Build claims fingerprint for per-product cache
+  const claimsKey = product
+    ? `${(product.mediaIds || []).join(",")}|${product.primaryMediaId || ""}|${(product.galleryMediaIds || []).join(",")}|${product.image ? (typeof product.image === "string" ? product.image : product.image.id || product.image.src || "") : ""}`
+    : "no-product";
+
+  const cached = mediaSetCache.map.get(id);
+  if (cached && cached.version === mediaVersion && cached.claimsKey === claimsKey) {
+    return cached.set;
+  }
+
   const index = getProductMediaIndex();
   const registered = index.get(id) || [];
 
   const owned = [];
-  registered.forEach((item) => {
-    if (!isProductOwnedMedia(item, id)) return;
+  for (let i = 0; i < registered.length; i += 1) {
+    const item = registered[i];
+    if (!isProductOwnedMedia(item, id)) continue;
     owned.push({
       ...item,
       fromRepository: true,
       view: viewOf(item),
       groupKey: groupKeyOf(item),
     });
-  });
-
-  /* Phase 23.2 — authored plates are a FALLBACK, never a gallery peer.
-     A shared house / category / campaign plate must not enter a product's
-     gallery or hover when the product already owns canonical library media.
-     Only when the register has no owned media for this product do the
-     authored plates stand in (the legacy catalogue fallback). */
-  if (owned.length === 0) {
-    authoredOwnedPlates(product).forEach((plate) => {
-      if (owned.some((item) => sameMedia(item, plate))) return;
-      owned.push(plate);
-    });
   }
 
-  /* Phase 22 — the record's own media claims (mediaIds / primaryMediaId /
-     galleryMediaIds). Consistent claims join the set; contested claims are
-     reported, never silently adopted. */
-  const { claims, conflicts } = resolveProductMediaClaims(product, id);
-  claims.forEach((item) => {
-    if (owned.some((ownedItem) => sameMedia(ownedItem, item))) return;
-    owned.push(item);
-  });
+  /* Phase 23.2 — authored plates are a FALLBACK, never a gallery peer. */
+  if (owned.length === 0) {
+    const fallbackPlates = authoredOwnedPlates(product);
+    for (let i = 0; i < fallbackPlates.length; i += 1) {
+      const plate = fallbackPlates[i];
+      let exists = false;
+      for (let j = 0; j < owned.length; j += 1) if (sameMedia(owned[j], plate)) { exists = true; break; }
+      if (!exists) owned.push(plate);
+    }
+  }
 
-  return assembleProductMediaSet(id, owned, product, conflicts);
+  /* Phase 22 — the record's own media claims */
+  const { claims, conflicts } = resolveProductMediaClaims(product, id);
+  for (let i = 0; i < claims.length; i += 1) {
+    const item = claims[i];
+    let exists = false;
+    for (let j = 0; j < owned.length; j += 1) if (sameMedia(owned[j], item)) { exists = true; break; }
+    if (!exists) owned.push(item);
+  }
+
+  const assembled = assembleProductMediaSet(id, owned, product, conflicts);
+  mediaSetCache.map.set(id, { version: mediaVersion, claimsKey, set: assembled });
+  return assembled;
 };
 
 /**
@@ -531,12 +542,6 @@ export const getProductCardMedia = (product) => {
 /**
  * Phase 22 — resolve a product's OWN media claims (mediaIds /
  * primaryMediaId / galleryMediaIds on the record).
- *
- * A claim whose register owner is null or this very product is treated as
- * owned and joins the media set. A claim whose register owner is a
- * DIFFERENT product is never folded into the gallery — it is reported in
- * `ownershipConflicts` with the owning Product ID, exactly like the
- * "MEDIA ALREADY ASSIGNED" rule requires. Nothing is silently reassigned.
  */
 export const resolveProductMediaClaims = (product, productId) => {
   const claims = [];

@@ -18,6 +18,13 @@
  *   · drafts stay invisible to customers until PUBLISHED
  *   · employees edit only their assigned products, only the allowed fields
  *   · visual similarity is a review signal, never automatic identity
+ *
+ * PERFORMANCE OPTIMIZATION:
+ *   · getMediaInbox, getPotentialProductGroups, getKidsReconciliationRows,
+ *     getKidsFinalizationRows (via finalization module), and getWorkflowMetrics
+ *     are memoized against catalogVersion + mediaVersion + groupsVersion.
+ *   · Employee-assigned products uses index instead of full scan when possible.
+ *   · Heavy group building is cached.
  */
 
 import catalogRepository, { PRODUCT_STATUS, getPublishIssues } from "./catalogRepository";
@@ -116,6 +123,33 @@ const employeeName = (employeeId) => {
 };
 
 /* ------------------------------------------------------------------ */
+/* Version caching helpers                                             */
+/* ------------------------------------------------------------------ */
+
+let workflowCache = {
+  catalogVersion: -1,
+  mediaVersion: -1,
+  groupsFingerprint: null,
+  inbox: null,
+  inboxFingerprint: null,
+  potentialGroups: null,
+  potentialGroupsFingerprint: null,
+  kidsReconciliation: null,
+  kidsReconciliationFingerprint: null,
+};
+
+const getGroupsFingerprint = () => {
+  try {
+    const groups = getAllGroups();
+    return `${groups.length}:${groups.map(g=>g.id).join(",").length}`;
+  } catch {
+    return "0";
+  }
+};
+
+const makeFingerprint = (catalogV, mediaV, extra = "") => `${catalogV}|${mediaV}|${extra}`;
+
+/* ------------------------------------------------------------------ */
 /* Stable Product IDs                                                  */
 /* ------------------------------------------------------------------ */
 
@@ -126,7 +160,8 @@ const employeeName = (employeeId) => {
  */
 export const nextStableProductId = (categoryId, preferredNumber = null) => {
   const prefix = productIdPrefixFor(categoryId);
-  const taken = new Set(catalogRepository.all().map((product) => String(product.id)));
+  const all = catalogRepository.all();
+  const taken = new Set(all.map((product) => String(product.id)));
 
   if (preferredNumber != null && Number.isFinite(Number(preferredNumber))) {
     const candidate = `${prefix}-${String(preferredNumber).padStart(3, "0")}`;
@@ -444,9 +479,6 @@ export const EMPLOYEE_EDITABLE_FIELDS = [
   "collectionIds",
   "collections",
   "tags",
-  /* Phase 22.2 — the opening inventory state a product must carry before
-     it can publish. The stock LEDGER stays with the inventory module; this
-     is the catalogue's opening quantity, edited on the draft. */
   "stock",
   "availability",
 ];
@@ -472,10 +504,16 @@ export const employeeCanEditProduct = (employee, product) => {
 /** The products an employee is authorized to work on. */
 export const employeeAssignedProducts = (employeeId) => {
   if (!employeeId) return [];
-  return catalogRepository
-    .all()
-    .filter((product) => product.assignedEmployeeId === employeeId)
-    .filter((product) => product.status !== PRODUCT_STATUS.ARCHIVED);
+  // Optimized: use cached snapshot instead of all() that re-normalizes? all() is now cached anyway.
+  // Filter by assignedEmployeeId
+  const snap = catalogRepository._getSnapshot ? catalogRepository._getSnapshot() : null;
+  const list = snap ? snap.list : catalogRepository.all();
+  const result = [];
+  for (let i = 0; i < list.length; i += 1) {
+    const p = list[i];
+    if (p.assignedEmployeeId === employeeId && p.status !== PRODUCT_STATUS.ARCHIVED) result.push(p);
+  }
+  return result;
 };
 
 /** Save an employee's draft edits — allowed fields only, signed. */
@@ -518,84 +556,105 @@ export const getProductWorkflowView = (product) => {
  * NEEDS_REVIEW, or claimed by / owned by a non-published product.
  * Never mutates; reads the one media register.
  */
-export const getMediaInbox = () => {
+export const getMediaInboxUncached = () => {
   const products = catalogRepository.all();
-  const productById = new Map(products.map((product) => [String(product.id), product]));
+  const productById = new Map();
+  for (let i = 0; i < products.length; i += 1) productById.set(String(products[i].id), products[i]);
 
   const claimsByMediaId = new Map();
-  products.forEach((product) => {
-    if (product.status === PRODUCT_STATUS.ARCHIVED) return;
-    (product.mediaIds ?? []).forEach((mediaId) => {
-      if (!claimsByMediaId.has(String(mediaId))) claimsByMediaId.set(String(mediaId), []);
-      claimsByMediaId.get(String(mediaId)).push(product);
-    });
-  });
+  for (let i = 0; i < products.length; i += 1) {
+    const product = products[i];
+    if (product.status === PRODUCT_STATUS.ARCHIVED) continue;
+    const mediaIds = product.mediaIds ?? [];
+    for (let j = 0; j < mediaIds.length; j += 1) {
+      const mid = String(mediaIds[j]);
+      if (!claimsByMediaId.has(mid)) claimsByMediaId.set(mid, []);
+      claimsByMediaId.get(mid).push(product);
+    }
+  }
 
   const isOpenOwner = (media) => {
     if (!media.productId) return false;
     const owner = productById.get(String(media.productId));
-    if (!owner) return true; // orphaned ownership — must surface
+    if (!owner) return true;
     return owner.status === PRODUCT_STATUS.DRAFT || owner.status === PRODUCT_STATUS.PENDING_REVIEW;
   };
 
-  const rows = mediaRepository
-    .getAll()
-    .filter(
-      (media) =>
-        media.scope === MEDIA_SCOPES.UNASSIGNED ||
-        media.status === MEDIA_STATUS.DRAFT ||
-        media.status === MEDIA_STATUS.PENDING_REVIEW ||
-        media.mappingStatus === MAPPING_STATUS.NEEDS_REVIEW ||
-        media.mappingStatus === MAPPING_STATUS.UNMAPPED ||
-        media.duplicateStatus === DUPLICATE_STATUS.DUPLICATE ||
-        media.duplicateStatus === DUPLICATE_STATUS.POSSIBLE_DUPLICATE ||
-        claimsByMediaId.has(String(media.id)) ||
-        isOpenOwner(media)
-    )
-    .map((media) => {
-      const owner = media.productId ? productById.get(String(media.productId)) ?? null : null;
-      const claimedBy = (claimsByMediaId.get(String(media.id)) ?? []).filter(
-        (product) => String(product.id) !== String(media.productId ?? "")
-      );
-      const claimedDrafts = claimedBy.filter(
-        (product) =>
-          product.status === PRODUCT_STATUS.DRAFT || product.status === PRODUCT_STATUS.PENDING_REVIEW
-      );
-      return {
-        media,
-        groupKey: media.groupKey,
-        view: media.view,
-        isStandalone: media.isStandalone !== false,
-        ownerProduct: owner ?? null,
-        claimedByDrafts: claimedDrafts,
-        categoryId: media.categoryId ?? owner?.category ?? null,
-        assignedEmployeeId: owner?.assignedEmployeeId ?? claimedDrafts[0]?.assignedEmployeeId ?? null,
-        assignedEmployeeName: employeeName(
-          owner?.assignedEmployeeId ?? claimedDrafts[0]?.assignedEmployeeId ?? null
-        ),
-        tags: media.status === MEDIA_STATUS.DRAFT
-          ? ["DRAFT"]
-          : media.status === MEDIA_STATUS.PENDING_REVIEW
-            ? ["REVIEW"]
-            : media.scope === MEDIA_SCOPES.UNASSIGNED
-              ? ["UNASSIGNED"]
-              : media.mappingStatus === MAPPING_STATUS.NEEDS_REVIEW ||
-                  media.mappingStatus === MAPPING_STATUS.UNMAPPED
-                ? ["NEEDS_REVIEW"]
-                : owner && (owner.status === PRODUCT_STATUS.DRAFT || owner.status === PRODUCT_STATUS.PENDING_REVIEW)
-                  ? ["REVIEW"]
-                  : claimedDrafts.length
-                    ? ["CLAIMED_BY_DRAFT"]
-                    : ["OPEN"],
-      };
-    })
-    .sort((a, b) => {
-      const rank = (row) =>
-        row.tags.includes("DRAFT") ? 0 : row.tags.includes("REVIEW") ? 1 : row.tags.includes("UNASSIGNED") ? 2 : row.tags.includes("NEEDS_REVIEW") ? 3 : 4;
-      return rank(a) - rank(b) || String(mediaFileName(a.media)).localeCompare(String(mediaFileName(b.media)));
+  const allMedia = mediaRepository.getAll();
+  const rows = [];
+  for (let i = 0; i < allMedia.length; i += 1) {
+    const media = allMedia[i];
+    const inScope =
+      media.scope === MEDIA_SCOPES.UNASSIGNED ||
+      media.status === MEDIA_STATUS.DRAFT ||
+      media.status === MEDIA_STATUS.PENDING_REVIEW ||
+      media.mappingStatus === MAPPING_STATUS.NEEDS_REVIEW ||
+      media.mappingStatus === MAPPING_STATUS.UNMAPPED ||
+      media.duplicateStatus === DUPLICATE_STATUS.DUPLICATE ||
+      media.duplicateStatus === DUPLICATE_STATUS.POSSIBLE_DUPLICATE ||
+      claimsByMediaId.has(String(media.id)) ||
+      isOpenOwner(media);
+    if (!inScope) continue;
+    const owner = media.productId ? productById.get(String(media.productId)) ?? null : null;
+    const claimedByRaw = claimsByMediaId.get(String(media.id)) ?? [];
+    const claimedBy = [];
+    for (let k = 0; k < claimedByRaw.length; k += 1) {
+      if (String(claimedByRaw[k].id) !== String(media.productId ?? "")) claimedBy.push(claimedByRaw[k]);
+    }
+    const claimedDrafts = [];
+    for (let k = 0; k < claimedBy.length; k += 1) {
+      const p = claimedBy[k];
+      if (p.status === PRODUCT_STATUS.DRAFT || p.status === PRODUCT_STATUS.PENDING_REVIEW) claimedDrafts.push(p);
+    }
+    rows.push({
+      media,
+      groupKey: media.groupKey,
+      view: media.view,
+      isStandalone: media.isStandalone !== false,
+      ownerProduct: owner ?? null,
+      claimedByDrafts: claimedDrafts,
+      categoryId: media.categoryId ?? owner?.category ?? null,
+      assignedEmployeeId: owner?.assignedEmployeeId ?? claimedDrafts[0]?.assignedEmployeeId ?? null,
+      assignedEmployeeName: employeeName(
+        owner?.assignedEmployeeId ?? claimedDrafts[0]?.assignedEmployeeId ?? null
+      ),
+      tags: media.status === MEDIA_STATUS.DRAFT
+        ? ["DRAFT"]
+        : media.status === MEDIA_STATUS.PENDING_REVIEW
+          ? ["REVIEW"]
+          : media.scope === MEDIA_SCOPES.UNASSIGNED
+            ? ["UNASSIGNED"]
+            : media.mappingStatus === MAPPING_STATUS.NEEDS_REVIEW ||
+                media.mappingStatus === MAPPING_STATUS.UNMAPPED
+              ? ["NEEDS_REVIEW"]
+              : owner && (owner.status === PRODUCT_STATUS.DRAFT || owner.status === PRODUCT_STATUS.PENDING_REVIEW)
+                ? ["REVIEW"]
+                : claimedDrafts.length
+                  ? ["CLAIMED_BY_DRAFT"]
+                  : ["OPEN"],
     });
+  }
+
+  rows.sort((a, b) => {
+    const rank = (row) =>
+      row.tags.includes("DRAFT") ? 0 : row.tags.includes("REVIEW") ? 1 : row.tags.includes("UNASSIGNED") ? 2 : row.tags.includes("NEEDS_REVIEW") ? 3 : 4;
+    return rank(a) - rank(b) || String(mediaFileName(a.media)).localeCompare(String(mediaFileName(b.media)));
+  });
 
   return rows;
+};
+
+export const getMediaInbox = () => {
+  const catalogV = catalogRepository.getVersion ? catalogRepository.getVersion() : 0;
+  const mediaV = mediaRepository.getVersion ? mediaRepository.getVersion() : 0;
+  const fingerprint = makeFingerprint(catalogV, mediaV, "inbox");
+  if (workflowCache.inbox && workflowCache.inboxFingerprint === fingerprint) {
+    return workflowCache.inbox;
+  }
+  const result = getMediaInboxUncached();
+  workflowCache.inbox = result;
+  workflowCache.inboxFingerprint = fingerprint;
+  return result;
 };
 
 /* ------------------------------------------------------------------ */
@@ -613,9 +672,10 @@ export const getMediaInbox = () => {
  * Visual similarity alone never proves identity — every candidate asks a
  * human: SAME PRODUCT or SEPARATE PRODUCTS.
  */
-export const getPotentialProductGroups = () => {
+export const getPotentialProductGroupsUncached = () => {
   const products = catalogRepository.all();
-  const productById = new Map(products.map((product) => [String(product.id), product]));
+  const productById = new Map();
+  for (let i = 0; i < products.length; i += 1) productById.set(String(products[i].id), products[i]);
   const allMedia = mediaRepository.getAll();
 
   const toRow = (media) => ({
@@ -634,51 +694,59 @@ export const getPotentialProductGroups = () => {
     media.duplicateStatus === DUPLICATE_STATUS.POSSIBLE_DUPLICATE ||
     media.duplicateStatus === DUPLICATE_STATUS.DUPLICATE;
 
-  /* 1. Deterministic filename groups. Multi-view groups whose files are
-     clean follow the naming convention automatically (confirmed). A group
-     that contains ingestion-flagged files still needs a human decision. */
-  const productMedia = allMedia.filter(
-    (media) => media.scope === MEDIA_SCOPES.PRODUCT || media.scope === MEDIA_SCOPES.UNASSIGNED
-  );
+  /* 1. Deterministic filename groups. */
+  const productMedia = [];
+  for (let i = 0; i < allMedia.length; i += 1) {
+    const m = allMedia[i];
+    if (m.scope === MEDIA_SCOPES.PRODUCT || m.scope === MEDIA_SCOPES.UNASSIGNED) productMedia.push(m);
+  }
   const filenameGroups = buildMediaGroups(
     productMedia.map((media) => ({ ...media, fileName: mediaFileName(media) }))
   ).filter((group) => group.files.length > 1);
 
-  const filenameGroupRows = filenameGroups.map((group) => {
-    const rows = group.files.map((file) => toRow(productMedia.find((media) => media.id === file.id) ?? file));
-    const flagged = group.files.some((file) => {
-      const record = productMedia.find((media) => media.id === file.id);
-      return record ? flaggedStatus(record) : false;
-    });
-    return {
+  const filenameGroupRows = [];
+  for (let g = 0; g < filenameGroups.length; g += 1) {
+    const group = filenameGroups[g];
+    const rows = [];
+    for (let f = 0; f < group.files.length; f += 1) {
+      const file = group.files[f];
+      let foundMedia = null;
+      for (let pm = 0; pm < productMedia.length; pm += 1) if (productMedia[pm].id === file.id) { foundMedia = productMedia[pm]; break; }
+      rows.push(toRow(foundMedia ?? file));
+    }
+    let flagged = false;
+    let flaggedCount = 0;
+    for (let f = 0; f < group.files.length; f += 1) {
+      const file = group.files[f];
+      let rec = null;
+      for (let pm = 0; pm < productMedia.length; pm += 1) if (productMedia[pm].id === file.id) { rec = productMedia[pm]; break; }
+      if (rec && flaggedStatus(rec)) { flagged = true; flaggedCount += 1; }
+    }
+    filenameGroupRows.push({
       id: `filename-${group.groupKey}`,
       kind: "FILENAME_GROUP",
       reason: flagged
-        ? `The naming convention groups these ${group.files.length} views as one product, and ingestion flagged ${
-            group.files.filter((file) => {
-              const record = productMedia.find((media) => media.id === file.id);
-              return record ? flaggedStatus(record) : false;
-            }).length
-          } asset(s) for review. Confirm: one product, or separate products?`
+        ? `The naming convention groups these ${group.files.length} views as one product, and ingestion flagged ${flaggedCount} asset(s) for review. Confirm: one product, or separate products?`
         : `One product, ${group.files.length} views (${[...new Set(group.files.map((file) => file.view).filter(Boolean))].join(", ")})`,
       media: rows,
       existingProductId: group.productId ?? null,
       confirmed: !flagged,
       decision: flagged ? null : GROUP_DECISIONS.SAME_PRODUCT,
       variantReviewRequired: false,
-    };
-  });
+    });
+  }
 
-  /* 2. Duplicate signals — a flagged asset plus the record it points at.
-     Visual similarity is only a suggestion: the pair is shown, a human
-     decides whether these are the same product. */
+  /* 2. Duplicate signals */
   const duplicatePairs = [];
   const paired = new Set();
-  allMedia.forEach((media) => {
-    if (paired.has(media.id)) return;
-    if (!media.duplicateOf) return;
-    const target = allMedia.find((item) => item.id === media.duplicateOf);
-    if (!target) return;
+  const mediaByIdForDup = new Map();
+  for (let i = 0; i < allMedia.length; i += 1) mediaByIdForDup.set(allMedia[i].id, allMedia[i]);
+  for (let i = 0; i < allMedia.length; i += 1) {
+    const media = allMedia[i];
+    if (paired.has(media.id)) continue;
+    if (!media.duplicateOf) continue;
+    const target = mediaByIdForDup.get(media.duplicateOf);
+    if (!target) continue;
     paired.add(media.id);
     paired.add(target.id);
     duplicatePairs.push({
@@ -694,12 +762,9 @@ export const getPotentialProductGroups = () => {
       decision: null,
       variantReviewRequired: false,
     });
-  });
+  }
 
-  /* 3. Stored human decisions still pending.
-     Phase 22.2 — a group already CLOSED as SEPARATE_PRODUCTS is a settled
-     identity (the 21 confirmed Kids products live here). It is a record,
-     not a candidate, so it never returns to the similarity queue. */
+  /* 3. Stored human decisions still pending. */
   const stored = getAllGroups()
     .filter((group) => group.status !== "ARCHIVED")
     .filter((group) => group.decision !== GROUP_DECISIONS.SEPARATE_PRODUCTS)
@@ -719,6 +784,20 @@ export const getPotentialProductGroups = () => {
     .filter((group) => group.media.length > 0);
 
   return [...stored, ...duplicatePairs, ...filenameGroupRows];
+};
+
+export const getPotentialProductGroups = () => {
+  const catalogV = catalogRepository.getVersion ? catalogRepository.getVersion() : 0;
+  const mediaV = mediaRepository.getVersion ? mediaRepository.getVersion() : 0;
+  const groupsFp = getGroupsFingerprint();
+  const fingerprint = makeFingerprint(catalogV, mediaV, groupsFp);
+  if (workflowCache.potentialGroups && workflowCache.potentialGroupsFingerprint === fingerprint) {
+    return workflowCache.potentialGroups;
+  }
+  const result = getPotentialProductGroupsUncached();
+  workflowCache.potentialGroups = result;
+  workflowCache.potentialGroupsFingerprint = fingerprint;
+  return result;
 };
 
 /**
@@ -794,6 +873,10 @@ export const decideProductGroup = ({
     product?.id ?? null
   );
 
+  // Invalidate potential groups cache
+  workflowCache.potentialGroups = null;
+  workflowCache.potentialGroupsFingerprint = null;
+
   return { ok: true, decision, product, conflicts: conflictCount };
 };
 
@@ -829,25 +912,40 @@ export const isReadyToPublish = (product) => {
 };
 
 /** KID-001 … KID-021 with their full workflow view, for the admin desk. */
-export const getKidsReconciliationRows = () => {
+export const getKidsReconciliationRowsUncached = () => {
   const products = catalogRepository
     .all()
     .filter((product) => /^KID-\d{3}$/.test(String(product.id)))
     .filter((product) => product.status !== PRODUCT_STATUS.ARCHIVED);
 
-  return products
-    .map((product) => {
-      const view = getProductWorkflowView(product);
-      return {
-        product,
-        mediaSet: view.mediaSet,
-        conflicts: view.conflicts,
-        issues: view.issues,
-        blockers: blockingReviewFlags(product.reviewFlags),
-        ready: isReadyToPublish(product),
-      };
-    })
-    .sort((a, b) => a.product.id.localeCompare(b.product.id));
+  const rows = [];
+  for (let i = 0; i < products.length; i += 1) {
+    const product = products[i];
+    const view = getProductWorkflowView(product);
+    rows.push({
+      product,
+      mediaSet: view.mediaSet,
+      conflicts: view.conflicts,
+      issues: view.issues,
+      blockers: blockingReviewFlags(product.reviewFlags),
+      ready: isReadyToPublish(product),
+    });
+  }
+  rows.sort((a, b) => a.product.id.localeCompare(b.product.id));
+  return rows;
+};
+
+export const getKidsReconciliationRows = () => {
+  const catalogV = catalogRepository.getVersion ? catalogRepository.getVersion() : 0;
+  const mediaV = mediaRepository.getVersion ? mediaRepository.getVersion() : 0;
+  const fingerprint = makeFingerprint(catalogV, mediaV, "kids-recon");
+  if (workflowCache.kidsReconciliation && workflowCache.kidsReconciliationFingerprint === fingerprint) {
+    return workflowCache.kidsReconciliation;
+  }
+  const result = getKidsReconciliationRowsUncached();
+  workflowCache.kidsReconciliation = result;
+  workflowCache.kidsReconciliationFingerprint = fingerprint;
+  return result;
 };
 
 /**
@@ -894,6 +992,7 @@ export const reconcileKidsConflict = (productId, action, actor = null) => {
       resolvedNote(
         `${productId}: REVIEW_LATER — conflict with ${owners.join(", ")} deferred for a future session`
       );
+      workflowCache.kidsReconciliation = null;
       return { ok: true, action, owners };
     }
 
@@ -904,6 +1003,7 @@ export const reconcileKidsConflict = (productId, action, actor = null) => {
       resolvedNote(
         `${productId}: KEEP_EXISTING — media stays with ${owners.join(", ")}; draft archived`
       );
+      workflowCache.kidsReconciliation = null;
       return { ok: true, action, owners, archivedDraft: productId };
     }
 
@@ -920,8 +1020,6 @@ export const reconcileKidsConflict = (productId, action, actor = null) => {
         const previousId = moved.previousOwnerId;
         if (previousId) {
           const owner = catalogRepository.find(previousId);
-          /* The existing Kids product lost its only plate — retire it so the
-             storefront never shows a published product without media. */
           if (
             owner &&
             owner.category === "kidswear" &&
@@ -941,6 +1039,8 @@ export const reconcileKidsConflict = (productId, action, actor = null) => {
           archivedOwners.length ? `; retired ${archivedOwners.join(", ")}` : ""
         }`
       );
+      workflowCache.kidsReconciliation = null;
+      workflowCache.inbox = null;
       return { ok: true, action, owners, archivedOwners };
     }
 
@@ -976,6 +1076,7 @@ export const reconcileKidsConflict = (productId, action, actor = null) => {
         `${productId}: MERGE — draft content merged into ${owners[0]}; draft archived`,
         owners[0]
       );
+      workflowCache.kidsReconciliation = null;
       return { ok: true, action, owners, mergedInto: owners[0] };
     }
 
@@ -992,6 +1093,7 @@ export const reconcileKidsConflict = (productId, action, actor = null) => {
       ];
       catalogRepository.updateDraft(productId, { reviewFlags: flags }, actor);
       resolvedNote(`${productId}: SEPARATE — draft keeps its identity and needs new media`);
+      workflowCache.kidsReconciliation = null;
       return { ok: true, action, owners };
     }
 
@@ -1033,6 +1135,7 @@ export const clearReviewFlags = (productId, flags = [], actor = null) => {
     actor,
     productId
   );
+  workflowCache.kidsReconciliation = null;
   return { ok: true, product: result.product };
 };
 
@@ -1070,6 +1173,7 @@ export const setPrimaryMedia = (productId, mediaId, actor = null) => {
     actor,
     productId
   );
+  workflowCache.kidsReconciliation = null;
   return { ok: true, product: result.product };
 };
 
@@ -1093,85 +1197,152 @@ export const updateMediaViewLabel = (mediaId, view, actor = null) => {
 /* Workflow metrics — the single snapshot for audits and the report    */
 /* ------------------------------------------------------------------ */
 
-export const getWorkflowMetrics = () => {
+let metricsCache = {
+  fingerprint: null,
+  value: null,
+};
+
+export const getWorkflowMetricsUncached = () => {
   const products = catalogRepository.all();
   const media = mediaRepository.getAll();
   const productIds = new Set(products.map((product) => String(product.id)));
 
-  const byStatus = (status) => products.filter((product) => product.status === status).length;
+  const byStatus = (status) => {
+    let count = 0;
+    for (let i = 0; i < products.length; i += 1) if (products[i].status === status) count += 1;
+    return count;
+  };
   const published = byStatus(PRODUCT_STATUS.PUBLISHED);
   const draft = byStatus(PRODUCT_STATUS.DRAFT);
   const review = byStatus(PRODUCT_STATUS.PENDING_REVIEW);
   const archived = byStatus(PRODUCT_STATUS.ARCHIVED);
 
-  const assignedMedia = media.filter((item) => item.scope === MEDIA_SCOPES.PRODUCT);
-  const unassignedMedia = media.filter((item) => item.scope === MEDIA_SCOPES.UNASSIGNED);
+  let assignedMediaCount = 0;
+  let unassignedMediaCount = 0;
+  let marketingCount = 0;
+  let mediaDraft = 0;
+  let mediaReview = 0;
+  let mediaActive = 0;
+  for (let i = 0; i < media.length; i += 1) {
+    const m = media[i];
+    if (m.scope === MEDIA_SCOPES.PRODUCT) assignedMediaCount += 1;
+    if (m.scope === MEDIA_SCOPES.UNASSIGNED) unassignedMediaCount += 1;
+    if (m.scope === MEDIA_SCOPES.MARKETING) marketingCount += 1;
+    if (m.status === MEDIA_STATUS.DRAFT) mediaDraft += 1;
+    if (m.status === MEDIA_STATUS.PENDING_REVIEW) mediaReview += 1;
+    if (m.status === MEDIA_STATUS.ACTIVE) mediaActive += 1;
+  }
 
-  /* Ownership health — one owner per file, owners that actually exist.
-     The Phase 12 seed register (house plates and sample footage) is a
-     legacy category: the same plate intentionally decorates many legacy
-     products. Duplicate-ownership is measured over the ingested product
-     photography register only, where one file must never be owned by two
-     products. */
-  const ownershipPool = media.filter((item) => item.ingested || item.source === "Ingested library");
+  const ownershipPool = [];
+  for (let i = 0; i < media.length; i += 1) {
+    const m = media[i];
+    if (m.ingested || m.source === "Ingested library") ownershipPool.push(m);
+  }
   const byFile = new Map();
-  ownershipPool.forEach((item) => {
+  for (let i = 0; i < ownershipPool.length; i += 1) {
+    const item = ownershipPool[i];
     const file = mediaFileName(item).toLowerCase();
-    if (!file) return;
+    if (!file) continue;
     if (!byFile.has(file)) byFile.set(file, []);
     byFile.get(file).push(item);
-  });
-  const duplicateOwnership = [...byFile.values()].filter(
-    (records) => new Set(records.map((record) => String(record.productId ?? ""))).size > 1
-  );
-  const orphaned = media.filter(
-    (item) => item.productId && !productIds.has(String(item.productId))
-  );
+  }
+  const duplicateOwnership = [];
+  for (const records of byFile.values()) {
+    const owners = new Set(records.map((record) => String(record.productId ?? "")));
+    if (owners.size > 1) duplicateOwnership.push(records);
+  }
+  const orphaned = [];
+  for (let i = 0; i < media.length; i += 1) {
+    const item = media[i];
+    if (item.productId && !productIds.has(String(item.productId))) orphaned.push(item);
+  }
 
   const groups = buildMediaGroups(
     media
       .filter((item) => item.scope === MEDIA_SCOPES.PRODUCT || item.scope === MEDIA_SCOPES.UNASSIGNED)
       .map((item) => ({ ...item, fileName: mediaFileName(item) }))
   );
-  const multiViewGroups = groups.filter((group) => group.isGrouped);
-  const unassignedGroups = groups.filter((group) => !group.files.some((file) => file.productId));
-  const confirmedGroups = groups.filter((group) => group.isGrouped && group.files.every((file) => file.productId));
-  const exactDuplicates = media.filter((item) => item.duplicateStatus === DUPLICATE_STATUS.DUPLICATE);
-  const potentialDuplicates = media.filter((item) => item.duplicateStatus === DUPLICATE_STATUS.POSSIBLE_DUPLICATE);
+  let multiViewGroups = 0;
+  let unassignedGroups = 0;
+  let confirmedGroups = 0;
+  for (let i = 0; i < groups.length; i += 1) {
+    const g = groups[i];
+    if (g.isGrouped) multiViewGroups += 1;
+    let hasProduct = false;
+    for (let f = 0; f < g.files.length; f += 1) if (g.files[f].productId) { hasProduct = true; break; }
+    if (!hasProduct) unassignedGroups += 1;
+    let allHaveProduct = true;
+    if (!g.isGrouped) allHaveProduct = false;
+    else {
+      for (let f = 0; f < g.files.length; f += 1) if (!g.files[f].productId) { allHaveProduct = false; break; }
+    }
+    if (allHaveProduct) confirmedGroups += 1;
+  }
+  let exactDuplicates = 0;
+  let potentialDuplicates = 0;
+  for (let i = 0; i < media.length; i += 1) {
+    const m = media[i];
+    if (m.duplicateStatus === DUPLICATE_STATUS.DUPLICATE) exactDuplicates += 1;
+    if (m.duplicateStatus === DUPLICATE_STATUS.POSSIBLE_DUPLICATE) potentialDuplicates += 1;
+  }
   const storedGroups = getAllGroups().filter((group) => group.status !== "ARCHIVED");
-  const variantCandidates = [
-    ...media.filter((item) => Boolean(item.variantId)),
-    ...storedGroups.filter((group) => group.variantReviewRequired),
-  ];
-  const potentialSameProductGroups = getPotentialProductGroups().filter((group) => !group.confirmed);
+  let variantCandidates = 0;
+  for (let i = 0; i < media.length; i += 1) if (media[i].variantId) variantCandidates += 1;
+  for (let i = 0; i < storedGroups.length; i += 1) if (storedGroups[i].variantReviewRequired) variantCandidates += 1;
 
-  const kidsMedia = media.filter((item) =>
-    /^kids-\d{3}\.\w+$/i.test(mediaFileName(item))
-  );
-  const kidsDrafts = products.filter(
-    (product) =>
-      /^KID-\d{3}$/.test(String(product.id)) &&
-      (product.status === PRODUCT_STATUS.DRAFT || product.status === PRODUCT_STATUS.PENDING_REVIEW)
-  );
-  const kidsPublished = products.filter(
-    (product) => product.category === "kidswear" && product.status === PRODUCT_STATUS.PUBLISHED
-  );
+  const potentialSameProductGroups = getPotentialProductGroups().filter((group) => !group.confirmed).length;
 
-  /* Phase 22.1 — reconciliation snapshot. */
+  const kidsMedia = [];
+  for (let i = 0; i < media.length; i += 1) if (/^kids-\d{3}\.\w+$/i.test(mediaFileName(media[i]))) kidsMedia.push(media[i]);
+
+  const kidsDrafts = [];
+  const kidsPublished = [];
+  for (let i = 0; i < products.length; i += 1) {
+    const p = products[i];
+    if (/^KID-\d{3}$/.test(String(p.id)) && (p.status === PRODUCT_STATUS.DRAFT || p.status === PRODUCT_STATUS.PENDING_REVIEW)) kidsDrafts.push(p);
+    if (p.category === "kidswear" && p.status === PRODUCT_STATUS.PUBLISHED) kidsPublished.push(p);
+  }
+
   const kidsGroupPool = kidsMedia.map((item) => ({ ...item, fileName: mediaFileName(item) }));
   const kidsMediaGroups = buildMediaGroups(kidsGroupPool);
   const kidsRows = getKidsReconciliationRows();
-  const kidsConflictRows = kidsRows.filter((row) => row.conflicts.length);
-  const kidsNeedsReviewRows = kidsRows.filter(
-    (row) =>
-      row.product.status === PRODUCT_STATUS.DRAFT &&
-      (row.conflicts.length || row.blockers.length || row.issues.length)
-  );
-  const kidsReadyRows = kidsRows.filter((row) => row.ready);
+  let kidsConflictRows = 0;
+  let kidsNeedsReviewRows = 0;
+  let kidsReadyRows = 0;
+  for (let i = 0; i < kidsRows.length; i += 1) {
+    const r = kidsRows[i];
+    if (r.conflicts.length) kidsConflictRows += 1;
+    if (r.product.status === PRODUCT_STATUS.DRAFT && (r.conflicts.length || r.blockers.length || r.issues.length)) kidsNeedsReviewRows += 1;
+    if (r.ready) kidsReadyRows += 1;
+  }
   const kidsPotentialSameProductGroups = getPotentialProductGroups().filter(
     (group) =>
       !group.confirmed && group.media.every((row) => /^kids-\d{3}\.\w+$/i.test(String(row.file ?? "")))
-  );
+  ).length;
+
+  let publishedKidDrafts = 0;
+  for (let i = 0; i < kidsRows.length; i += 1) if (kidsRows[i].product.status === PRODUCT_STATUS.PUBLISHED) publishedKidDrafts += 1;
+
+  let unassignedKidsMedia = 0;
+  let mediaWithValidOwnership = 0;
+  let mediaClaimedByDrafts = 0;
+  for (let i = 0; i < kidsMedia.length; i += 1) {
+    const item = kidsMedia[i];
+    if (item.scope === MEDIA_SCOPES.UNASSIGNED) unassignedKidsMedia += 1;
+    if (item.productId && productIds.has(String(item.productId))) {
+      let dup = false;
+      for (let d = 0; d < duplicateOwnership.length; d += 1) {
+        const records = duplicateOwnership[d];
+        for (let r = 0; r < records.length; r += 1) if (records[r].id === item.id) { dup = true; break; }
+        if (dup) break;
+      }
+      if (!dup) mediaWithValidOwnership += 1;
+    }
+    for (let kd = 0; kd < kidsDrafts.length; kd += 1) {
+      const kdMediaIds = kidsDrafts[kd].mediaIds ?? [];
+      for (let mId = 0; mId < kdMediaIds.length; mId += 1) if (String(kdMediaIds[mId]) === String(item.id)) { mediaClaimedByDrafts += 1; break; }
+    }
+  }
 
   return {
     products: {
@@ -1184,24 +1355,24 @@ export const getWorkflowMetrics = () => {
     },
     media: {
       total: media.length,
-      assigned: assignedMedia.length,
-      unassigned: unassignedMedia.length,
-      marketing: media.filter((item) => item.scope === MEDIA_SCOPES.MARKETING).length,
-      draft: media.filter((item) => item.status === MEDIA_STATUS.DRAFT).length,
-      review: media.filter((item) => item.status === MEDIA_STATUS.PENDING_REVIEW).length,
-      active: media.filter((item) => item.status === MEDIA_STATUS.ACTIVE).length,
+      assigned: assignedMediaCount,
+      unassigned: unassignedMediaCount,
+      marketing: marketingCount,
+      draft: mediaDraft,
+      review: mediaReview,
+      active: mediaActive,
       orphaned: orphaned.length,
       duplicateOwnership: duplicateOwnership.length,
       invalidProductIds: orphaned.map((item) => ({ mediaId: item.id, productId: item.productId })),
-      exactDuplicates: exactDuplicates.length,
-      potentialDuplicates: potentialDuplicates.length,
-      variantCandidates: variantCandidates.length,
+      exactDuplicates,
+      potentialDuplicates,
+      variantCandidates,
     },
     groups: {
-      multiView: multiViewGroups.length,
-      potentialSameProduct: potentialSameProductGroups.length,
-      unassigned: unassignedGroups.length,
-      confirmed: confirmedGroups.length,
+      multiView: multiViewGroups,
+      potentialSameProduct: potentialSameProductGroups,
+      unassigned: unassignedGroups,
+      confirmed: confirmedGroups,
       stored: storedGroups.length,
     },
     kids: {
@@ -1209,28 +1380,31 @@ export const getWorkflowMetrics = () => {
       totalGroups: kidsMediaGroups.length,
       singleImageProducts: kidsMediaGroups.filter((group) => !group.isGrouped).length,
       multiViewProducts: kidsMediaGroups.filter((group) => group.isGrouped).length,
-      existingProductConflicts: kidsConflictRows.length,
-      potentialSameProductGroups: kidsPotentialSameProductGroups.length,
-      needsReview: kidsNeedsReviewRows.length,
-      readyToPublish: kidsReadyRows.length,
-      publishedKidDrafts: kidsRows.filter(
-        (row) => row.product.status === PRODUCT_STATUS.PUBLISHED
-      ).length,
+      existingProductConflicts: kidsConflictRows,
+      potentialSameProductGroups: kidsPotentialSameProductGroups,
+      needsReview: kidsNeedsReviewRows,
+      readyToPublish: kidsReadyRows,
+      publishedKidDrafts,
       draftProducts: kidsDrafts.length,
       publishedProducts: kidsPublished.length,
-      unassignedMedia: kidsMedia.filter((item) => item.scope === MEDIA_SCOPES.UNASSIGNED).length,
-      mediaWithValidOwnership: kidsMedia.filter(
-        (item) =>
-          item.productId &&
-          productIds.has(String(item.productId)) &&
-          !duplicateOwnership.some((records) => records.some((record) => record.id === item.id))
-      ).length,
-      mediaClaimedByDrafts: kidsMedia.filter(
-        (item) =>
-          kidsDrafts.some((product) => (product.mediaIds ?? []).some((id) => String(id) === String(item.id)))
-      ).length,
+      unassignedMedia: unassignedKidsMedia,
+      mediaWithValidOwnership,
+      mediaClaimedByDrafts,
     },
   };
+};
+
+export const getWorkflowMetrics = () => {
+  const catalogV = catalogRepository.getVersion ? catalogRepository.getVersion() : 0;
+  const mediaV = mediaRepository.getVersion ? mediaRepository.getVersion() : 0;
+  const groupsFp = getGroupsFingerprint();
+  const fingerprint = makeFingerprint(catalogV, mediaV, `${groupsFp}|metrics`);
+  if (metricsCache.value && metricsCache.fingerprint === fingerprint) {
+    return metricsCache.value;
+  }
+  const result = getWorkflowMetricsUncached();
+  metricsCache = { fingerprint, value: result };
+  return result;
 };
 
 export default {

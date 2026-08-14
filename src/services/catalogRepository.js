@@ -18,6 +18,12 @@
  *   · final price is computed by the shared pricing engine, never locally
  *   · every mutation is signed (actor) and recorded in the shared diary
  *   · nothing is hard-deleted; retirement is ARCHIVED
+ *
+ * PERFORMANCE OPTIMIZATION:
+ *   · Normalized list is cached with fingerprint; repeated all()/find()
+ *     no longer re-normalizes 168 records each time.
+ *   · Indexes by id/slug for O(1) lookups.
+ *   · Product version counter for downstream memoization.
  */
 
 import catalogue from "../data/products/catalogue.js";
@@ -213,6 +219,7 @@ const imageIdOf = (value) => {
 };
 
 let memoryStorage = null;
+let productVersion = 0;
 
 /*
  * Parse cache — Phase 21.1 performance guard.
@@ -225,6 +232,15 @@ let memoryStorage = null;
  * changes the string and invalidates the cache automatically.
  */
 let readCache = null;
+
+/* Normalized cache — avoids re-normalizing 168 products on every all()/find() */
+let normalizedCache = {
+  raw: null,
+  parsedRef: null,
+  list: null,
+  byId: null,
+  bySlug: null,
+};
 
 const read = () => {
   try {
@@ -255,6 +271,41 @@ const read = () => {
   } catch {
     return healRead(null);
   }
+};
+
+const getNormalizedSnapshot = () => {
+  const rawData = read();
+  const rawKey = readCache?.raw ?? null;
+  if (
+    normalizedCache.list &&
+    normalizedCache.raw === rawKey &&
+    normalizedCache.parsedRef === rawData
+  ) {
+    return normalizedCache;
+  }
+  const list = rawData.map((record, index) => normaliseProductRecord(record, index));
+  const byId = new Map();
+  const bySlug = new Map();
+  for (let i = 0; i < list.length; i += 1) {
+    const product = list[i];
+    byId.set(String(product.id), product);
+    if (product.slug) bySlug.set(String(product.slug), product);
+  }
+  normalizedCache = {
+    raw: rawKey,
+    parsedRef: rawData,
+    list,
+    byId,
+    bySlug,
+  };
+  return normalizedCache;
+};
+
+export const getCatalogVersion = () => productVersion;
+export const getCatalogFingerprint = () => {
+  const raw = productsRegisterRaw();
+  const snap = getNormalizedSnapshot();
+  return `${raw ? raw.length : 0}:${snap.list.length}:${productVersion}`;
 };
 
 const healRead = (raw) => {
@@ -324,6 +375,11 @@ const save = (items) => {
   } catch {
     /* Storage failure never breaks the register. */
   }
+  productVersion += 1;
+  // Invalidate normalized cache on save (parsedRef will differ anyway, but bump version)
+  // keep readCache in sync
+  readCache = { raw: productsRegisterRaw() ?? null, parsed: items };
+  normalizedCache = { raw: null, parsedRef: null, list: null, byId: null, bySlug: null };
   if (typeof window !== "undefined") {
     window.dispatchEvent(new Event(PRODUCTS_CHANGED_EVENT));
   }
@@ -555,19 +611,31 @@ export const normaliseProductRecord = (raw = {}, index = 0) => {
 /* Reading                                                             */
 /* ------------------------------------------------------------------ */
 
-const allNormalised = () => read().map((record, index) => normaliseProductRecord(record, index));
+const allNormalised = () => getNormalizedSnapshot().list;
 
-const findNormalised = (id) =>
-  allNormalised().find((product) => String(product.id) === String(id)) ?? null;
+const findNormalised = (id) => {
+  const snap = getNormalizedSnapshot();
+  return snap.byId.get(String(id)) ?? null;
+};
+
+const findBySlugNormalised = (slug) => {
+  const snap = getNormalizedSnapshot();
+  return snap.bySlug.get(String(slug)) ?? null;
+};
 
 /* ------------------------------------------------------------------ */
 /* Uniqueness                                                          */
 /* ------------------------------------------------------------------ */
 
-const slugTaken = (slug, ignoreId = null) =>
-  allNormalised().some(
-    (product) => product.slug === slug && String(product.id) !== String(ignoreId)
-  );
+const slugTaken = (slug, ignoreId = null) => {
+  const snap = getNormalizedSnapshot();
+  if (!slug) return false;
+  for (const product of snap.list) {
+    if (String(product.id) === String(ignoreId)) continue;
+    if (product.slug === slug) return true;
+  }
+  return false;
+};
 
 /** Unique slug: the name's slug, suffixed with the product's own id on collision. */
 const ensureUniqueSlug = (slug, ignoreId = null) => {
@@ -586,11 +654,13 @@ const ensureUniqueSlug = (slug, ignoreId = null) => {
 const skuTaken = (sku, ignoreProductId = null) => {
   if (!sku) return false;
   const target = String(sku).toLowerCase();
-  return allNormalised().some((product) => {
-    if (String(product.id) === String(ignoreProductId)) return false;
+  const snap = getNormalizedSnapshot();
+  for (const product of snap.list) {
+    if (String(product.id) === String(ignoreProductId)) continue;
     if (product.sku?.toLowerCase() === target) return true;
-    return product.variants.some((variant) => variant.sku?.toLowerCase() === target);
-  });
+    if (product.variants.some((variant) => variant.sku?.toLowerCase() === target)) return true;
+  }
+  return false;
 };
 
 /* ------------------------------------------------------------------ */
@@ -831,7 +901,7 @@ export const catalogRepository = {
 
   find: findNormalised,
 
-  findBySlug: (slug) => allNormalised().find((product) => product.slug === slug) ?? null,
+  findBySlug: (slug) => findBySlugNormalised(slug),
 
   /** Legacy Phase 11 entry point — kept so nothing upstream breaks. */
   upsert: (product, actor = null) => {
@@ -1163,7 +1233,8 @@ export const catalogRepository = {
    * that can legally take the change; returns what happened.
    */
   bulkUpdate: (ids, patch, actor = null, summary = "Bulk product update") => {
-    const targets = allNormalised().filter((product) => ids.includes(product.id));
+    const snap = getNormalizedSnapshot();
+    const targets = snap.list.filter((product) => ids.includes(product.id));
     let applied = 0;
     let skipped = 0;
     targets.forEach((product) => {
@@ -1200,6 +1271,10 @@ export const catalogRepository = {
   slugTaken: (slug, ignoreId = null) => Boolean(slug) && slugTaken(slug, ignoreId),
 
   suggestSlug: (name, ignoreId = null) => ensureUniqueSlug(slugify(name || ""), ignoreId),
+
+  getVersion: () => getCatalogVersion(),
+  getFingerprint: () => getCatalogFingerprint(),
+  _getSnapshot: () => getNormalizedSnapshot(),
 };
 
 /* ------------------------------------------------------------------ */
