@@ -43,9 +43,12 @@ export default function ProductPreview({
   className = "",
   showConflictNotice = true,
 }) {
+  const productIdResolved = product?.id ?? productId ?? null;
+  const productClaimsKey = product ? `${(product.mediaIds||[]).join(",")}|${product.primaryMediaId||""}` : "";
   const set = useMemo(
     () => mediaSet || getProductMediaSet(product ?? productId),
-    [mediaSet, product, productId]
+    // Depend on id and claims, not whole product object which may be new reference each render
+    [mediaSet, productIdResolved, productClaimsKey]
   );
 
   const availableTabs = useMemo(

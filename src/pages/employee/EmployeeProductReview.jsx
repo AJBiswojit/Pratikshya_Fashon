@@ -72,8 +72,13 @@ export default function EmployeeProductReview() {
   const [busy, setBusy] = useState(false);
 
   const assigned = useMemo(
-    () => employeeAssignedProducts(employee?.employeeId),
-    [items, employee?.employeeId] // eslint-disable-line react-hooks/exhaustive-deps
+    () => {
+      const eid = employee?.employeeId;
+      if (!eid) return [];
+      // Filter from already-cached items instead of triggering another full catalog scan
+      return items.filter((p) => p.assignedEmployeeId === eid && p.status !== "ARCHIVED");
+    },
+    [items, employee?.employeeId]
   );
 
   const requestedId = searchParams.get("product");
@@ -145,16 +150,16 @@ export default function EmployeeProductReview() {
     }
   };
 
-  const view = selected ? getProductWorkflowView(selected) : null;
+  const view = useMemo(() => selected ? getProductWorkflowView(selected) : null, [selected]);
   /* Phase 22.2 — a confirmed Kids product is validated by the Kids rules
      (own media, Kids Wear category, valid subcategory, inventory state)
      on top of the shared publish validation. */
-  const isConfirmedKid = selected ? isConfirmedKidsProductId(selected.id) : false;
-  const issues = selected
+  const isConfirmedKid = useMemo(() => selected ? isConfirmedKidsProductId(selected.id) : false, [selected?.id]);
+  const issues = useMemo(() => selected
     ? isConfirmedKid
       ? getKidsPublishBlockers(selected)
       : getPublishIssues(selected)
-    : [];
+    : [], [selected, isConfirmedKid]);
   const hover = selected && isConfirmedKid ? kidsHoverState(selected) : null;
   const mediaFileName =
     kidsFileNameOf(view?.mediaSet?.primary) ||

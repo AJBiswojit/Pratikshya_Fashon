@@ -564,24 +564,41 @@ export const kidsStageOf = (product) => {
   return KIDS_STAGES.DRAFT;
 };
 
+let finalizationCache = {
+  catalogVersion: -1,
+  mediaVersion: -1,
+  rows: null,
+};
+
+const getFinalizationFingerprint = () => {
+  const catV = catalogRepository.getVersion ? catalogRepository.getVersion() : 0;
+  const medV = mediaRepository.getVersion ? mediaRepository.getVersion() : 0;
+  return `${catV}|${medV}`;
+};
+
 /**
  * One finalization row per confirmed Kids product, always 21 rows —
  * a missing record is reported rather than silently skipped.
+ * CACHED against catalogVersion + mediaVersion.
  */
-export const getKidsFinalizationRows = () => {
+export const getKidsFinalizationRowsUncached = () => {
   ensureKidsIdentitiesConfirmed();
   const byFile = new Map();
-  mediaRepository.getAll().forEach((media) => {
+  const allMedia = mediaRepository.getAll();
+  for (let i = 0; i < allMedia.length; i += 1) {
+    const media = allMedia[i];
     const file = kidsFileNameOf(media);
     if (file && !byFile.has(file)) byFile.set(file, media);
-  });
+  }
 
-  return CONFIRMED_KIDS_IDENTITIES.map((identity) => {
+  const rows = [];
+  for (let idx = 0; idx < CONFIRMED_KIDS_IDENTITIES.length; idx += 1) {
+    const identity = CONFIRMED_KIDS_IDENTITIES[idx];
     const product = catalogRepository.find(identity.productId);
     const media = byFile.get(identity.file) ?? null;
 
     if (!product) {
-      return {
+      rows.push({
         identity,
         productId: identity.productId,
         mediaFile: identity.file,
@@ -600,14 +617,15 @@ export const getKidsFinalizationRows = () => {
         assignedEmployeeName: null,
         identityConfirmed: kidsIdentityConfirmed(identity.productId),
         ready: false,
-      };
+      });
+      continue;
     }
 
     const mediaSet = getProductMediaSet(product);
     const blockers = getKidsPublishBlockers(product);
     const checklist = checklistFor(product);
 
-    return {
+    rows.push({
       identity,
       productId: product.id,
       mediaFile: identity.file,
@@ -627,8 +645,20 @@ export const getKidsFinalizationRows = () => {
       assignedEmployeeName: employeeLabel(product.assignedEmployeeId),
       identityConfirmed: kidsIdentityConfirmed(product.id),
       ready: product.status !== PRODUCT_STATUS.PUBLISHED && blockers.length === 0,
-    };
-  });
+    });
+  }
+  return rows;
+};
+
+export const getKidsFinalizationRows = () => {
+  const catV = catalogRepository.getVersion ? catalogRepository.getVersion() : 0;
+  const medV = mediaRepository.getVersion ? mediaRepository.getVersion() : 0;
+  if (finalizationCache.rows && finalizationCache.catalogVersion === catV && finalizationCache.mediaVersion === medV) {
+    return finalizationCache.rows;
+  }
+  const rows = getKidsFinalizationRowsUncached();
+  finalizationCache = { catalogVersion: catV, mediaVersion: medV, rows };
+  return rows;
 };
 
 /** The admin's one-glance summary of the 21 products. */
