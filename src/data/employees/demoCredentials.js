@@ -7,13 +7,13 @@
  * Never copy this table into an employee profile. Never log the password.
  */
 
+/*
+ * NOTE — Admin/Employee boundary:
+ * Admin credentials (Kavya Menon · PF-ADM-00001) live in the isolated
+ * admin credential table (src/data/admin/demoAdminCredentials.js) and are
+ * used at /admin/login only. They are never listed here.
+ */
 export const DEMO_EMPLOYEE_LOGINS = [
-  {
-    employeeId: "PF-ADM-00001",
-    password: "PF@Adm7K",
-    label: "Kavya Menon · Super Admin",
-    highlight: false,
-  },
   {
     employeeId: "PF-MGR-00008",
     password: "PF@Mgr4N",

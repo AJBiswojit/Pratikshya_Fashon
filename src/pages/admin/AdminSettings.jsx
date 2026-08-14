@@ -5,7 +5,9 @@ import { AtelierButton, AtelierBadge } from "../../design-system";
 import { getSettings, resetSection, updateSection } from "../../services/settingsRepository";
 import { ACTIVITY_ACTIONS, recordActivity, loadActivity } from "../../services/employees/activityService";
 
-const labels = { business:"Business Profile", store:"Store & Locations", locations:"Warehouse", hours:"Working Hours", attendance:"Attendance", holidays:"Holidays", tax:"Tax & GST", shipping:"Shipping", orders:"Orders", returns:"Returns", inventory:"Inventory", employees:"Employees", notifications:"Notifications", customer:"Customer Experience", offers:"Offers", media:"Media", payments:"Payments" };
+/* Employee-account policy is administered from the Employee Portal — the
+   Admin settings desk carries business configuration only. */
+const labels = { business:"Business Profile", store:"Store & Locations", locations:"Warehouse", hours:"Working Hours", attendance:"Attendance", holidays:"Holidays", tax:"Tax & GST", shipping:"Shipping", orders:"Orders", returns:"Returns", inventory:"Inventory", notifications:"Notifications", customer:"Customer Experience", offers:"Offers", media:"Media", payments:"Payments" };
 const fieldLabel = (key) => key.replace(/([A-Z])/g, " $1").replace(/^./, c => c.toUpperCase());
 const valid = (section, data) => {
   if (section === "business" && data.email && !/^\S+@\S+\.\S+$/.test(data.email)) return "Enter a valid business email.";

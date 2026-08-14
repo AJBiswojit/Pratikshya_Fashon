@@ -101,17 +101,6 @@ export const ADMIN_NAV_GROUPS = [
     ],
   },
   {
-    id: "workforce",
-    label: "Workforce",
-    icon: "usersRound",
-    items: [
-      { id: "employees", label: "Employees", to: "/admin/employees", icon: "usersRound" },
-      { id: "attendance", label: "Attendance", to: "/admin/attendance", icon: "clock" },
-      { id: "performance", label: "Performance", to: "/admin/performance", icon: "target" },
-      { id: "roles", label: "Roles", to: "/admin/roles", icon: "shield" },
-    ],
-  },
-  {
     id: "system",
     label: "System",
     icon: "sliders",
@@ -183,8 +172,6 @@ export const ADMIN_PLACEHOLDER_COPY = {
   orders: "Full order administration arrives with the order-operations module. Recent orders are already on the dashboard.",
   customers: "Customer administration arrives with the CRM module.",
   returns: "Return administration arrives with the order-operations module.",
-  attendance: "House-wide attendance reporting arrives with the workforce module.",
-  performance: "House-wide performance reporting arrives with the workforce module.",
   settings: "Business settings arrive once the operational modules above are in place.",
 };
 

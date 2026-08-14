@@ -1,8 +1,12 @@
 import { useMemo } from "react";
 import EmployeeField, { employeeInputClass } from "./EmployeeField";
-import { ROLE_OPTIONS } from "../../config/employeeRoles";
+import { ROLES, ROLE_OPTIONS } from "../../config/employeeRoles";
 import { DEPARTMENT_OPTIONS, STORE_OPTIONS, sectionsForDepartment } from "../../config/employeeDepartments";
 import { STATUS_OPTIONS } from "../../config/employeeStatus";
+
+/* Admin identities (SUPER_ADMIN) are managed in the Admin Portal only —
+   they can never be created or edited as employees. */
+const EMPLOYEE_ROLE_OPTIONS = ROLE_OPTIONS.filter((role) => role.id !== ROLES.SUPER_ADMIN);
 
 export default function EmployeeForm({
   values,
@@ -65,7 +69,7 @@ export default function EmployeeForm({
           className={employeeInputClass(Boolean(errors.role))}
         >
           <option value="">Select role</option>
-          {ROLE_OPTIONS.map((role) => (
+          {EMPLOYEE_ROLE_OPTIONS.map((role) => (
             <option key={role.id} value={role.id}>
               {role.label}
             </option>

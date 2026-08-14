@@ -196,14 +196,6 @@ export const MOCK_PERFORMANCE = {
     conversion: 28,
     teamOnFloor: 14,
   },
-  "PF-ADM-00001": {
-    monthlyTarget: 9200000,
-    achievement: 6842600,
-    customersServed: 186,
-    ordersAssisted: 74,
-    conversion: 28,
-    teamOnFloor: 14,
-  },
 };
 
 export const MOCK_WALKIN_CUSTOMERS = [
@@ -219,8 +211,8 @@ export const INITIAL_ACTIVITY = [
   {
     id: "act-seed-01",
     at: "2026-08-08T11:00:00.000Z",
-    actorEmployeeId: "PF-ADM-00001",
-    actorName: "Kavya Menon",
+    actorEmployeeId: null,
+    actorName: "Kavya Menon · PF-ADM-00001",
     targetEmployeeId: "PF-SLS-00155",
     action: "EMPLOYEE_CREATED",
     summary: "Created employee Tanvi Joshi · PF-SLS-00155",
@@ -228,8 +220,8 @@ export const INITIAL_ACTIVITY = [
   {
     id: "act-seed-02",
     at: "2026-07-30T09:12:00.000Z",
-    actorEmployeeId: "PF-ADM-00001",
-    actorName: "Kavya Menon",
+    actorEmployeeId: null,
+    actorName: "Kavya Menon · PF-ADM-00001",
     targetEmployeeId: "PF-SLS-00140",
     action: "EMPLOYEE_SUSPENDED",
     summary: "Suspended Nikhil Rao · PF-SLS-00140",
@@ -237,8 +229,8 @@ export const INITIAL_ACTIVITY = [
   {
     id: "act-seed-03",
     at: "2026-01-06T10:00:00.000Z",
-    actorEmployeeId: "PF-ADM-00001",
-    actorName: "Kavya Menon",
+    actorEmployeeId: null,
+    actorName: "Kavya Menon · PF-ADM-00001",
     targetEmployeeId: "PF-SLS-00118",
     action: "EMPLOYEE_DEACTIVATED",
     summary: "Deactivated Pooja Reddy · PF-SLS-00118",

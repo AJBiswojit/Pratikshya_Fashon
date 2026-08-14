@@ -24,8 +24,8 @@ export default function AdminNotFound() {
         <AtelierButton as={Link} to="/admin">
           Business overview
         </AtelierButton>
-        <AtelierButton as={Link} to="/admin/employees" variant="outline">
-          Employees
+        <AtelierButton as={Link} to="/admin/products" variant="outline">
+          Products
         </AtelierButton>
       </div>
     </div>

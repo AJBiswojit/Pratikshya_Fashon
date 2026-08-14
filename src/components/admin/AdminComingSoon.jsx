@@ -28,14 +28,13 @@ export default function AdminComingSoon({ title, group, description }) {
         </h2>
         <Rule width="w-10" tone="accent" className="my-5" />
         <p className="max-w-xl font-ui text-sm leading-relaxed text-taupe">
-          Employee administration is fully live in the Admin Portal today — accounts,
-          roles, permissions, credentials and status all run on the same state the
-          Employee Portal uses. The remaining business modules land in later phases.
+          Catalogue, media, orders, offers and analytics are fully live in the Admin
+          Portal today. The remaining business modules land in later phases.
         </p>
 
         <div className="mt-8 flex flex-wrap gap-3">
-          <AtelierButton as={Link} to="/admin/employees" size="chip">
-            Manage employees <ArrowRight size={12} aria-hidden="true" />
+          <AtelierButton as={Link} to="/admin/products" size="chip">
+            Manage products <ArrowRight size={12} aria-hidden="true" />
           </AtelierButton>
           <AtelierButton as={Link} to="/admin" variant="outline" size="chip">
             Business overview

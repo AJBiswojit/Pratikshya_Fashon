@@ -106,7 +106,7 @@ export default function AnalyticsWorkspace({
       {view === "inventory" ? <InventorySection snapshot={snapshot} filters={filters} portal={portal} /> : null}
       {view === "returns" ? <ReturnsSection snapshot={snapshot} /> : null}
       {view === "offers" ? <OffersSection snapshot={snapshot} portal={portal} /> : null}
-      {view === "employees" ? <EmployeesSection snapshot={snapshot} portal={portal} /> : null}
+      {view === "employees" ? <EmployeesSection snapshot={snapshot} /> : null}
     </div>
   );
 }
@@ -735,9 +735,11 @@ function OffersSection({ snapshot, portal }) {
   );
 }
 
-function EmployeesSection({ snapshot, portal }) {
+function EmployeesSection({ snapshot }) {
   const people = snapshot.employees;
-  const performanceBase = portal === "admin" ? "/admin/performance" : "/employee/performance";
+  /* Workforce analytics are an Employee Portal desk — people links always
+     resolve to the Employee Portal performance pages. */
+  const performanceBase = "/employee/performance";
   return (
     <>
       <MetricGrid

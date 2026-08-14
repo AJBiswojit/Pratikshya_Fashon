@@ -81,19 +81,9 @@ const ActivityLog = lazy(() => import("./pages/employee/management/ActivityLog")
 
 const AdminLogin = lazy(() => import("./pages/admin/AdminLogin"));
 const AdminDashboard = lazy(() => import("./pages/admin/AdminDashboard"));
-const AdminEmployeeList = lazy(() => import("./pages/admin/employees/AdminEmployeeList"));
-const AdminEmployeeCreate = lazy(() => import("./pages/admin/employees/AdminEmployeeCreate"));
-const AdminEmployeeDetail = lazy(() => import("./pages/admin/employees/AdminEmployeeDetail"));
-const AdminEmployeeEdit = lazy(() => import("./pages/admin/employees/AdminEmployeeEdit"));
-const AdminRoles = lazy(() => import("./pages/admin/AdminRoles"));
-const AdminRoleDetail = lazy(() => import("./pages/admin/AdminRoleDetail"));
 const AdminActivity = lazy(() => import("./pages/admin/AdminActivity"));
 const AdminProfile = lazy(() => import("./pages/admin/AdminProfile"));
 const AdminSettings = lazy(() => import("./pages/admin/AdminSettings"));
-const AdminAttendance = lazy(() => import("./pages/admin/attendance/AdminAttendance"));
-const AdminAttendanceDetail = lazy(() => import("./pages/admin/attendance/AdminAttendanceDetail"));
-const AdminPerformance = lazy(() => import("./pages/admin/performance/AdminPerformance"));
-const AdminPerformanceDetail = lazy(() => import("./pages/admin/performance/AdminPerformanceDetail"));
 const AdminProducts = lazy(() => import("./pages/admin/AdminProducts"));
 const ProductForm = lazy(() => import("./pages/admin/ProductForm"));
 const AdminProductDetail = lazy(() => import("./pages/admin/AdminProductDetail"));
@@ -175,12 +165,9 @@ export default function App() {
                           <Route path="/admin" element={<AdminDashboard />} />
                           <Route path="/admin/dashboard" element={<Navigate to="/admin" replace />} />
 
-                          <Route path="/admin/employees" element={<AdminEmployeeList />} />
-                          <Route path="/admin/employees/new" element={<AdminEmployeeCreate />} />
-                          <Route path="/admin/employees/:employeeId" element={<AdminEmployeeDetail />} />
-                          <Route path="/admin/employees/:employeeId/edit" element={<AdminEmployeeEdit />} />
-                          <Route path="/admin/roles" element={<AdminRoles />} />
-                          <Route path="/admin/roles/:roleId" element={<AdminRoleDetail />} />
+                          {/* Employee management lives exclusively in the
+                              Employee Portal (/employee). The Admin Portal is
+                              business administration only. */}
                           <Route path="/admin/activity" element={<AdminActivity />} />
                           <Route path="/admin/profile" element={<AdminProfile />} />
 
@@ -227,10 +214,6 @@ export default function App() {
                           <Route path="/admin/inventory/low-stock" element={<InventoryLowStockPage portal="admin" />} />
                           <Route path="/admin/warehouses" element={<Navigate to="/admin/inventory?locationType=WAREHOUSE" replace />} />
                           <Route path="/admin/stock-movements" element={<Navigate to="/admin/inventory/movements" replace />} />
-                          <Route path="/admin/attendance" element={<AdminAttendance />} />
-                          <Route path="/admin/attendance/:employeeId" element={<AdminAttendanceDetail />} />
-                          <Route path="/admin/performance" element={<AdminPerformance />} />
-                          <Route path="/admin/performance/:employeeId" element={<AdminPerformanceDetail />} />
                           <Route path="/admin/analytics" element={<AdminAnalytics />} />
                           <Route path="/admin/ai-assistant" element={<AiBusinessAssistant />} />
                           <Route path="/admin/analytics/sales" element={<AdminAnalytics />} />
@@ -239,7 +222,6 @@ export default function App() {
                           <Route path="/admin/analytics/inventory" element={<AdminAnalytics />} />
                           <Route path="/admin/analytics/returns" element={<AdminAnalytics />} />
                           <Route path="/admin/analytics/offers" element={<AdminAnalytics />} />
-                          <Route path="/admin/analytics/employees" element={<AdminAnalytics />} />
                           <Route path="/admin/settings" element={<AdminSettings />} />
 
                           <Route path="/admin/*" element={<AdminNotFound />} />
