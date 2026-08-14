@@ -101,6 +101,17 @@ export const ADMIN_NAV_GROUPS = [
     ],
   },
   {
+    id: "people",
+    label: "People",
+    icon: "usersRound",
+    items: [
+      /* Employee ACCOUNT management — a Super Admin capability. Operational
+         workforce desks (attendance, performance, leave) remain in the
+         Employee Portal; this module administers accounts only. */
+      { id: "employees", label: "Employees", to: "/admin/employees", icon: "usersRound" },
+    ],
+  },
+  {
     id: "system",
     label: "System",
     icon: "sliders",

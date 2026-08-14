@@ -28,6 +28,9 @@ export const EMPLOYEE_BRAND = {
  * swallow every nested path.
  */
 export const EMPLOYEE_ROUTE_RULES = [
+  /* Employee-account administration is a SUPER ADMIN capability at
+     /admin/employees. No employee route grants it; EMPLOYEES_MANAGE never
+     resolves true through employee authorization. */
   { path: "/employee/management", permission: P.EMPLOYEES_MANAGE, prefix: true },
   { path: "/employee/team", permission: P.TEAM_VIEW, prefix: true },
   { path: "/employee/reports", permission: P.ANALYTICS_VIEW, prefix: true },
@@ -179,14 +182,8 @@ export const EMPLOYEE_NAV_GROUPS = [
       { id: "sales", label: "Sales", to: "/employee/sales", icon: "trend", permission: P.ANALYTICS_VIEW },
     ],
   },
-  {
-    id: "people",
-    label: "People",
-    icon: "badge",
-    items: [
-      { id: "people", label: "Employees", to: "/employee/management", icon: "badge", permission: P.EMPLOYEES_MANAGE },
-    ],
-  },
+  /* The People group was retired with /employee/management — employee
+     ACCOUNTS are administered by the Super Admin at /admin/employees. */
 ];
 
 /** Flatten every nav link (parents + children) for active-route resolution. */

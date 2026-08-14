@@ -29,6 +29,37 @@ import {
   validateEmployeePassword,
 } from "./employeePassword";
 
+/* ------------------------------------------------------------------ */
+/* Account authority — SUPER ADMIN manages employee accounts.          */
+/* ------------------------------------------------------------------ */
+
+/**
+ * An account-administration actor must belong to the ADMIN identity
+ * domain (an `adminId`, issued by /admin/login). An employee session —
+ * any employee session, whatever its permissions claim — is never an
+ * account administrator. This is the service-layer guard the UI cannot
+ * bypass.
+ */
+export const isAccountAdministrator = (actor) =>
+  Boolean(actor && actor.adminId) && !actor.employeeId;
+
+const FORBIDDEN = {
+  ok: false,
+  code: "FORBIDDEN",
+  message: "Only a signed-in administrator can manage employee accounts.",
+};
+
+const forbidden = (extra = {}) => ({ ...FORBIDDEN, errors: {}, ...extra });
+
+/** Contact fields an employee may edit on their OWN profile. */
+const SELF_EDITABLE_FIELDS = ["phone", "avatar"];
+
+const isSelfContactPatch = (actor, target, patch) =>
+  Boolean(actor?.employeeId) &&
+  Boolean(target?.employeeId) &&
+  actor.employeeId === target.employeeId &&
+  Object.keys(patch || {}).every((key) => SELF_EDITABLE_FIELDS.includes(key));
+
 const PROFILE_FIELDS = [
   "id",
   "employeeId",
@@ -241,6 +272,11 @@ export const validateEmployeeDraft = (draft, employees, { isCreate = false } = {
 };
 
 export const createEmployee = (employees, draft, actor = null) => {
+  /* Service-layer authorization: employee accounts are created by a
+     signed-in administrator only. UI checks are a courtesy; this is law. */
+  if (!isAccountAdministrator(actor)) {
+    return forbidden({ employee: null, temporaryPassword: null });
+  }
   const validation = validateEmployeeDraft(draft, employees, { isCreate: true });
   if (!validation.ok) {
     return { ok: false, errors: validation.errors, employee: null, temporaryPassword: null };
@@ -315,10 +351,17 @@ export const createEmployee = (employees, draft, actor = null) => {
   };
 };
 
-export const updateEmployee = (employees, employeeId, patch) => {
+export const updateEmployee = (employees, employeeId, patch, actor = null) => {
   const current = getEmployee(employees, employeeId);
   if (!current) {
     return { ok: false, message: "Employee not found.", employee: null, employees };
+  }
+
+  /* Administrators edit any account. An employee may only touch the
+     contact fields of their OWN profile — never role, permissions,
+     status or anyone else's record. */
+  if (!isAccountAdministrator(actor) && !isSelfContactPatch(actor, current, patch)) {
+    return forbidden({ employee: current, employees });
   }
 
   const merged = { ...current, ...patch, employeeId: current.employeeId, id: current.id };
@@ -333,10 +376,23 @@ export const updateEmployee = (employees, employeeId, patch) => {
   return { ok: true, errors: {}, employee: next, employees: nextEmployees };
 };
 
-export const updateEmployeeRole = (employees, employeeId, role, { keepCustom = false } = {}) => {
+export const updateEmployeeRole = (
+  employees,
+  employeeId,
+  role,
+  { keepCustom = false, actor = null } = {}
+) => {
+  if (!isAccountAdministrator(actor)) return forbidden({ employees });
   const current = getEmployee(employees, employeeId);
   if (!current) return { ok: false, message: "Employee not found.", employees };
   if (!isKnownRole(role)) return { ok: false, message: "That role is not recognised.", employees };
+  if (role === ROLES.SUPER_ADMIN) {
+    return {
+      ok: false,
+      message: "Admin identities live in the Admin domain — an employee cannot be converted into one.",
+      employees,
+    };
+  }
 
   const keep = keepCustom && current.permissionMode === "custom";
   const next = toPublicEmployee({
@@ -353,8 +409,10 @@ export const updateEmployeeRole = (employees, employeeId, role, { keepCustom = f
 export const updateEmployeeDepartment = (
   employees,
   employeeId,
-  { department, section, store }
+  { department, section, store },
+  actor = null
 ) => {
+  if (!isAccountAdministrator(actor)) return forbidden({ employees });
   const current = getEmployee(employees, employeeId);
   if (!current) return { ok: false, message: "Employee not found.", employees };
   const next = toPublicEmployee({
@@ -368,7 +426,8 @@ export const updateEmployeeDepartment = (
   return { ok: true, employee: next, employees: nextEmployees };
 };
 
-export const updateEmployeePermissions = (employees, employeeId, permissions) => {
+export const updateEmployeePermissions = (employees, employeeId, permissions, actor = null) => {
+  if (!isAccountAdministrator(actor)) return forbidden({ employees });
   const current = getEmployee(employees, employeeId);
   if (!current) return { ok: false, message: "Employee not found.", employees };
   const next = toPublicEmployee({
@@ -381,7 +440,8 @@ export const updateEmployeePermissions = (employees, employeeId, permissions) =>
   return { ok: true, employee: next, employees: nextEmployees };
 };
 
-export const setEmployeeStatus = (employees, employeeId, status) => {
+export const setEmployeeStatus = (employees, employeeId, status, actor = null) => {
+  if (!isAccountAdministrator(actor)) return forbidden({ employees });
   const current = getEmployee(employees, employeeId);
   if (!current) return { ok: false, message: "Employee not found.", employees };
   if (!getEmployeeStatus(status).id) {
@@ -393,16 +453,19 @@ export const setEmployeeStatus = (employees, employeeId, status) => {
   return { ok: true, employee: next, employees: nextEmployees };
 };
 
-export const suspendEmployee = (employees, employeeId) =>
-  setEmployeeStatus(employees, employeeId, EMPLOYEE_STATUS.SUSPENDED);
+export const suspendEmployee = (employees, employeeId, actor = null) =>
+  setEmployeeStatus(employees, employeeId, EMPLOYEE_STATUS.SUSPENDED, actor);
 
-export const activateEmployee = (employees, employeeId) =>
-  setEmployeeStatus(employees, employeeId, EMPLOYEE_STATUS.ACTIVE);
+export const activateEmployee = (employees, employeeId, actor = null) =>
+  setEmployeeStatus(employees, employeeId, EMPLOYEE_STATUS.ACTIVE, actor);
 
-export const deactivateEmployee = (employees, employeeId) =>
-  setEmployeeStatus(employees, employeeId, EMPLOYEE_STATUS.INACTIVE);
+export const deactivateEmployee = (employees, employeeId, actor = null) =>
+  setEmployeeStatus(employees, employeeId, EMPLOYEE_STATUS.INACTIVE, actor);
 
-export const resetEmployeePassword = (employees, employeeId) => {
+export const resetEmployeePassword = (employees, employeeId, actor = null) => {
+  if (!isAccountAdministrator(actor)) {
+    return forbidden({ temporaryPassword: null, employees });
+  }
   const current = getEmployee(employees, employeeId);
   if (!current) {
     return { ok: false, message: "Employee not found.", temporaryPassword: null, employees };
@@ -544,6 +607,7 @@ export const ensureSeeded = () => {
 };
 
 export default {
+  isAccountAdministrator,
   toPublicEmployee,
   normaliseEmployees,
   loadEmployees,

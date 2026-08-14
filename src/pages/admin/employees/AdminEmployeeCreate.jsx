@@ -1,28 +1,31 @@
 import { useState } from "react";
-import { Navigate, useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { AtelierButton } from "../../../design-system";
-import EmployeePage from "../../../components/employee/EmployeePage";
+import AdminPage from "../../../components/admin/AdminPage";
 import EmployeeForm, { emptyEmployeeDraft } from "../../../components/employee/EmployeeForm";
 import CredentialSheet from "../../../components/employee/CredentialSheet";
 import PermissionMatrix from "../../../components/employee/PermissionMatrix";
 import { useEmployeeManagement } from "../../../context/EmployeeManagementContext";
 import { getDefaultPermissions } from "../../../config/employeeRoles";
-import { PERMISSIONS } from "../../../config/employeePermissions";
-import { useEmployeeAuth } from "../../../context/EmployeeAuthContext";
 
-export default function EmployeeCreate() {
+/**
+ * /admin/employees/new — SUPER ADMIN creates an employee account.
+ *
+ * Creation goes through the existing employee service: deterministic
+ * employee-ID generation, temporary credential issue, role defaults and
+ * the activity entry are reused, not reimplemented. The role selector
+ * (EmployeeForm) exposes legitimate employee roles only — SUPER_ADMIN
+ * cannot be created here, and the service rejects it besides.
+ */
+export default function AdminEmployeeCreate() {
   const navigate = useNavigate();
-  const { hasPermission } = useEmployeeAuth();
   const { createEmployee, isWorking } = useEmployeeManagement();
   const [draft, setDraft] = useState(emptyEmployeeDraft);
   const [errors, setErrors] = useState({});
   const [custom, setCustom] = useState(false);
   const [permissions, setPermissions] = useState([]);
   const [result, setResult] = useState(null);
-
-  if (!hasPermission(PERMISSIONS.EMPLOYEES_CREATE) && !hasPermission(PERMISSIONS.EMPLOYEES_MANAGE)) {
-    return <Navigate to="/employee/access-denied" replace />;
-  }
+  const [failure, setFailure] = useState("");
 
   const handleChange = (next) => {
     setDraft(next);
@@ -33,6 +36,8 @@ export default function EmployeeCreate() {
 
   const handleSubmit = async (event) => {
     event.preventDefault();
+    if (isWorking) return; /* No duplicate submissions. */
+    setFailure("");
     const created = await createEmployee({
       ...draft,
       permissionMode: custom ? "custom" : "role",
@@ -40,6 +45,7 @@ export default function EmployeeCreate() {
     });
     if (!created.ok) {
       setErrors(created.errors || {});
+      if (created.code === "FORBIDDEN") setFailure(created.message);
       return;
     }
     setResult(created);
@@ -47,28 +53,65 @@ export default function EmployeeCreate() {
 
   if (result?.employee) {
     return (
-      <EmployeePage eyebrow="People" title="Employee created">
+      <AdminPage
+        eyebrow="People"
+        title={
+          <>
+            Employee <span className="italic text-accent">created.</span>
+          </>
+        }
+        description="Share these once. The colleague must change the temporary password on first sign-in."
+      >
         <CredentialSheet
           employee={result.employee}
           temporaryPassword={result.temporaryPassword}
-          onDone={() => navigate(`/employee/management/${result.employee.employeeId}`)}
+          onDone={() => navigate(`/admin/employees/${result.employee.employeeId}`)}
         />
-      </EmployeePage>
+        <div className="mt-6 flex flex-wrap gap-3">
+          <AtelierButton
+            size="chip"
+            onClick={() => navigate(`/admin/employees/${result.employee.employeeId}`)}
+          >
+            Open employee
+          </AtelierButton>
+          <AtelierButton
+            variant="outline"
+            size="chip"
+            onClick={() => navigate("/admin/employees")}
+          >
+            All employees
+          </AtelierButton>
+        </div>
+      </AdminPage>
     );
   }
 
   return (
-    <EmployeePage
+    <AdminPage
       eyebrow="People"
       title={
         <>
-          Create an <span className="italic text-accent">employee.</span>
+          Add an <span className="italic text-accent">employee.</span>
         </>
       }
-      description="An employee ID and temporary password are generated on save. The new colleague must change the password on first sign-in."
+      description="An employee ID and a temporary password are generated on save. Role, department, section, store and permissions are assigned here. Admin identities cannot be created as employees."
+      actions={
+        <AtelierButton as={Link} to="/admin/employees" variant="outline" size="chip">
+          All employees
+        </AtelierButton>
+      }
     >
-      <form onSubmit={handleSubmit} className="space-y-8 border border-mist/80 bg-surface/40 p-6 sm:p-8">
-        <EmployeeForm values={draft} errors={errors} onChange={handleChange} idPrefix="create" />
+      {failure ? (
+        <p role="alert" className="mb-6 border border-accent/40 bg-accent/[0.05] px-4 py-3 font-ui text-sm text-accent">
+          {failure}
+        </p>
+      ) : null}
+
+      <form
+        onSubmit={handleSubmit}
+        className="space-y-8 border border-mist/80 bg-surface/40 p-6 sm:p-8"
+      >
+        <EmployeeForm values={draft} errors={errors} onChange={handleChange} idPrefix="admin-create" />
 
         <div>
           <label className="flex items-center gap-3 font-ui text-sm text-ink">
@@ -106,13 +149,13 @@ export default function EmployeeCreate() {
 
         <div className="flex flex-wrap gap-3">
           <AtelierButton type="submit" disabled={isWorking}>
-            {isWorking ? "Creating account..." : "Create employee"}
+            {isWorking ? "Creating…" : "Create employee"}
           </AtelierButton>
-          <AtelierButton type="button" variant="outline" onClick={() => navigate("/employee/management")}>
+          <AtelierButton type="button" variant="outline" onClick={() => navigate("/admin/employees")}>
             Cancel
           </AtelierButton>
         </div>
       </form>
-    </EmployeePage>
+    </AdminPage>
   );
 }

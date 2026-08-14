@@ -1,6 +1,5 @@
 import { useEmployeeAuth } from "../../../context/EmployeeAuthContext";
 import { ROLES } from "../../../config/employeeRoles";
-import AdminDashboard from "./AdminDashboard";
 import ManagerDashboard from "./ManagerDashboard";
 import SalesDashboard from "./SalesDashboard";
 import InventoryDashboard from "./InventoryDashboard";
@@ -8,11 +7,14 @@ import WarehouseDashboard from "./WarehouseDashboard";
 import SupportDashboard from "./SupportDashboard";
 import StylistDashboard from "./StylistDashboard";
 
+/**
+ * Role → operational desk. Admin identities never authenticate here (the
+ * employee repository holds employees only), so there is no admin case.
+ */
 export default function RoleDashboard() {
   const { employee } = useEmployeeAuth();
   const role = employee?.role;
 
-  if (role === ROLES.SUPER_ADMIN) return <AdminDashboard />;
   if (role === ROLES.STORE_MANAGER) return <ManagerDashboard />;
   if (role === ROLES.SALES_EXECUTIVE) return <SalesDashboard />;
   if (role === ROLES.INVENTORY_MANAGER || role === ROLES.INVENTORY_STAFF) {

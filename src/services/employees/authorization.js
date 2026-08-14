@@ -13,9 +13,30 @@ import { ROLES, isKnownRole } from "../../config/employeeRoles";
 import { PERMISSIONS } from "../../config/employeePermissions";
 import { requiredPermissionForPath } from "../../config/employeeNavigation";
 
+/**
+ * Employee-account administration is an ADMIN capability, never an employee
+ * one. These permission keys exist in the catalogue for the Admin Portal's
+ * benefit, but `hasPermission` refuses them for every employee — an
+ * employee cannot hold them via role defaults, custom grants or corrupt
+ * storage. The Employee Portal can therefore never become a backdoor to
+ * employee administration.
+ */
+export const ADMIN_ONLY_PERMISSIONS = Object.freeze([
+  PERMISSIONS.EMPLOYEES_CREATE,
+  PERMISSIONS.EMPLOYEES_EDIT,
+  PERMISSIONS.EMPLOYEES_SUSPEND,
+  PERMISSIONS.EMPLOYEES_RESET_PASSWORD,
+  PERMISSIONS.EMPLOYEES_MANAGE_PERMISSIONS,
+  PERMISSIONS.EMPLOYEES_MANAGE,
+]);
+
+const ADMIN_ONLY_PERMISSION_SET = new Set(ADMIN_ONLY_PERMISSIONS);
+
 export const hasPermission = (employee, permission) => {
   if (!employee || !permission) return false;
   if (!canEmployeeLogin(employee.status)) return false;
+  /* Employee-account management never resolves through employee auth. */
+  if (ADMIN_ONLY_PERMISSION_SET.has(permission)) return false;
   if (employee.role === ROLES.SUPER_ADMIN) return true;
   if (!Array.isArray(employee.permissions)) return false;
   if (employee.permissions.includes(permission)) return true;
@@ -68,6 +89,7 @@ export const canAccessPath = (employee, pathname) => {
 export const hasRecognizedRole = (employee) => Boolean(employee && isKnownRole(employee.role));
 
 export default {
+  ADMIN_ONLY_PERMISSIONS,
   hasPermission,
   hasAnyPermission,
   hasAllPermissions,

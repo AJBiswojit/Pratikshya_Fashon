@@ -73,14 +73,14 @@ const EmployeeDesk = lazy(() => import("./pages/employee/EmployeeDesk"));
 const EmployeeMediaDashboard = lazy(() => import("./pages/employee/EmployeeMediaDashboard"));
 const EmployeeMediaUpload = lazy(() => import("./pages/employee/EmployeeMediaUpload"));
 const EmployeeMediaDetail = lazy(() => import("./pages/employee/EmployeeMediaDetail"));
-const EmployeeList = lazy(() => import("./pages/employee/management/EmployeeList"));
-const EmployeeCreate = lazy(() => import("./pages/employee/management/EmployeeCreate"));
-const EmployeeDetail = lazy(() => import("./pages/employee/management/EmployeeDetail"));
-const EmployeeEdit = lazy(() => import("./pages/employee/management/EmployeeEdit"));
-const ActivityLog = lazy(() => import("./pages/employee/management/ActivityLog"));
+
 
 const AdminLogin = lazy(() => import("./pages/admin/AdminLogin"));
 const AdminDashboard = lazy(() => import("./pages/admin/AdminDashboard"));
+const AdminEmployeeList = lazy(() => import("./pages/admin/employees/AdminEmployeeList"));
+const AdminEmployeeCreate = lazy(() => import("./pages/admin/employees/AdminEmployeeCreate"));
+const AdminEmployeeDetail = lazy(() => import("./pages/admin/employees/AdminEmployeeDetail"));
+const AdminEmployeeEdit = lazy(() => import("./pages/admin/employees/AdminEmployeeEdit"));
 const AdminActivity = lazy(() => import("./pages/admin/AdminActivity"));
 const AdminProfile = lazy(() => import("./pages/admin/AdminProfile"));
 const AdminSettings = lazy(() => import("./pages/admin/AdminSettings"));
@@ -153,8 +153,8 @@ export default function App() {
               <OrderProvider>
                 <CheckoutProvider>
                   <EmployeeAuthProvider>
-                  <EmployeeManagementProvider>
-                    <AdminAuthProvider>
+                  <AdminAuthProvider>
+                    <EmployeeManagementProvider>
                     <WorkforceProvider>
                     <Suspense fallback={<LoadingState label="Opening PRATIKSHYA FASHON" />}>
                     <Routes>
@@ -165,9 +165,13 @@ export default function App() {
                           <Route path="/admin" element={<AdminDashboard />} />
                           <Route path="/admin/dashboard" element={<Navigate to="/admin" replace />} />
 
-                          {/* Employee management lives exclusively in the
-                              Employee Portal (/employee). The Admin Portal is
-                              business administration only. */}
+                          {/* Employee ACCOUNT management — a Super Admin
+                              capability. Operational workforce desks remain
+                              in the Employee Portal. */}
+                          <Route path="/admin/employees" element={<AdminEmployeeList />} />
+                          <Route path="/admin/employees/new" element={<AdminEmployeeCreate />} />
+                          <Route path="/admin/employees/:employeeId" element={<AdminEmployeeDetail />} />
+                          <Route path="/admin/employees/:employeeId/edit" element={<AdminEmployeeEdit />} />
                           <Route path="/admin/activity" element={<AdminActivity />} />
                           <Route path="/admin/profile" element={<AdminProfile />} />
 
@@ -284,11 +288,11 @@ export default function App() {
                           <Route path="/employee/sales" element={<EmployeeDesk />} />
                           <Route path="/employee/team" element={<EmployeeDesk />} />
                           <Route path="/employee/reports" element={<EmployeeDesk />} />
-                          <Route path="/employee/management" element={<EmployeeList />} />
-                          <Route path="/employee/management/new" element={<EmployeeCreate />} />
-                          <Route path="/employee/management/activity" element={<ActivityLog />} />
-                          <Route path="/employee/management/:employeeId" element={<EmployeeDetail />} />
-                          <Route path="/employee/management/:employeeId/edit" element={<EmployeeEdit />} />
+                          {/* Employee-account administration is a SUPER ADMIN
+                              capability at /admin/employees. The old
+                              /employee/management desk is retired — no
+                              employee can hold EMPLOYEES_MANAGE. */}
+                          <Route path="/employee/management/*" element={<Navigate to="/employee/access-denied" replace />} />
                         </Route>
                       </Route>
 
@@ -349,8 +353,8 @@ export default function App() {
                     </Routes>
                     </Suspense>
                     </WorkforceProvider>
-                    </AdminAuthProvider>
-                  </EmployeeManagementProvider>
+                    </EmployeeManagementProvider>
+                  </AdminAuthProvider>
                   </EmployeeAuthProvider>
                 </CheckoutProvider>
               </OrderProvider>
