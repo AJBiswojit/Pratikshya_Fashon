@@ -266,7 +266,12 @@ export const transferMediaOwnership = ({
         patch.additionalImages = owner.additionalImages.filter((entry) => !matches(entry));
       }
       patch.reviewFlags = [...new Set([...(owner.reviewFlags ?? []), "MEDIA_OWNERSHIP_MOVED"])];
-      catalogRepository.updateProduct(previousOwnerId, patch, auth.principal.actor ?? actor);
+      /* Phase 3E — this strip is part of the ONE transfer action; the
+         PRODUCT_MEDIA_TRANSFERRED event below is its activity record.
+         A generic PRODUCT_EDITED here would double-log the transfer. */
+      catalogRepository.updateProduct(previousOwnerId, patch, auth.principal.actor ?? actor, {
+        activity: null,
+      });
       previousOwnerStripped = true;
     }
   }
@@ -373,7 +378,11 @@ export const unassignMediaFromProduct = ({ mediaId, principal = null, actor = nu
       patch.additionalImages = owner.additionalImages.filter((entry) => !matches(entry));
     }
     patch.reviewFlags = [...new Set([...(owner.reviewFlags ?? []), "MEDIA_UNASSIGNED"])];
-    catalogRepository.updateProduct(previousOwnerId, patch, auth.principal.actor ?? actor);
+    /* Phase 3E — the PRODUCT_MEDIA_UNASSIGNED event below is the ONE
+       activity record for this action; no generic PRODUCT_EDITED beside it. */
+    catalogRepository.updateProduct(previousOwnerId, patch, auth.principal.actor ?? actor, {
+      activity: null,
+    });
   }
 
   note(

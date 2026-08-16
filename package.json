@@ -30,6 +30,8 @@
     "audit:explicit-migrations": "node --import ./scripts/node-loader/register.mjs scripts/audit-explicit-migrations.mjs",
     "audit:canonical-lifecycle": "node --import ./scripts/node-loader/register.mjs scripts/audit-canonical-lifecycle.mjs",
     "audit:unified-review": "node --import ./scripts/node-loader/register.mjs scripts/audit-unified-review.mjs",
+    "audit:publish-visibility": "node --import ./scripts/node-loader/register.mjs scripts/audit-publish-visibility.mjs",
+    "audit:activity-events": "node --import ./scripts/node-loader/register.mjs scripts/audit-activity-events.mjs",
     "audit-product-performance": "node --import ./scripts/node-loader/register.mjs scripts/audit-product-performance.mjs"
   },
   "dependencies": {

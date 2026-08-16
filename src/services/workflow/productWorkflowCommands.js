@@ -343,7 +343,9 @@ export const submitProduct = (productId, actor = null) => {
         rejectionReason: "",
       },
     },
-    auth.resolved.principal.actor ?? actor
+    auth.resolved.principal.actor ?? actor,
+    /* Phase 3E — this command records its own lifecycle event below. */
+    { activity: null }
   );
   if (!result.ok) return result;
   note(
@@ -416,7 +418,9 @@ export const returnProduct = (productId, reason = "", actor = null) => {
         rejectionReason: reason,
       },
     },
-    auth.resolved.principal.actor ?? actor
+    auth.resolved.principal.actor ?? actor,
+    /* Phase 3E — this command records its own lifecycle event below. */
+    { activity: null }
   );
   if (!result.ok) return result;
   note(ACTIVITY_ACTIONS.PRODUCT_REJECTED, `Returned ${product.name} — ${reason}`, actor, productId);
@@ -468,7 +472,9 @@ export const approveProduct = (productId, actor = null, options = {}) => {
         approvedAt: nowIso(),
       },
     },
-    auth.resolved.principal.actor ?? actor
+    auth.resolved.principal.actor ?? actor,
+    /* Phase 3E — this command records its own lifecycle event below. */
+    { activity: null }
   );
   if (!result.ok) return result;
   note(
@@ -512,7 +518,9 @@ export const publishProduct = (productId, actor = null, options = {}) => {
   const result = catalogRepository.updateProduct(
     productId,
     { status: PRODUCT_STATUS.PUBLISHED },
-    auth.resolved.principal.actor ?? actor
+    auth.resolved.principal.actor ?? actor,
+    /* Phase 3E — this command records its own lifecycle event below. */
+    { activity: null }
   );
   if (!result.ok) return result;
   note(
@@ -537,7 +545,9 @@ export const archiveProduct = (productId, actor = null, options = {}) => {
   const result = catalogRepository.updateProduct(
     productId,
     { status: PRODUCT_STATUS.ARCHIVED },
-    auth.resolved.principal.actor ?? actor
+    auth.resolved.principal.actor ?? actor,
+    /* Phase 3E — this command records its own lifecycle event below. */
+    { activity: null }
   );
   if (!result.ok) return result;
   note(ACTIVITY_ACTIONS.PRODUCT_ARCHIVED, `Archived ${product.name}`, actor, productId);
@@ -559,7 +569,9 @@ export const restoreProduct = (productId, actor = null, options = {}) => {
       status: PRODUCT_STATUS.DRAFT,
       review: { ...(product.review ?? {}), state: REVIEW_STATE.NONE },
     },
-    auth.resolved.principal.actor ?? actor
+    auth.resolved.principal.actor ?? actor,
+    /* Phase 3E — this command records its own lifecycle event below. */
+    { activity: null }
   );
   if (!result.ok) return result;
   note(ACTIVITY_ACTIONS.PRODUCT_RESTORED, `Restored ${product.name} from the archive`, actor, productId);
@@ -582,7 +594,9 @@ export const unpublishProduct = (productId, actor = null, options = {}) => {
       review: { ...(product.review ?? {}), state: REVIEW_STATE.NONE },
       workflow: { ...(product.workflow ?? {}), approvedAt: null },
     },
-    auth.resolved.principal.actor ?? actor
+    auth.resolved.principal.actor ?? actor,
+    /* Phase 3E — this command records its own lifecycle event below. */
+    { activity: null }
   );
   if (!result.ok) return result;
   note(ACTIVITY_ACTIONS.PRODUCT_UNPUBLISHED, `Unpublished ${product.name} to draft`, actor, productId);
