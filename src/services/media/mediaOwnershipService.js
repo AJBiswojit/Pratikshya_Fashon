@@ -173,6 +173,46 @@ const validateOwnershipChange = ({ media, targetProductId, product, confirm, op 
 };
 
 /**
+ * Phase 3C — READ-ONLY preflight for a transfer. Runs exactly the same
+ * ownership rules the transfer command runs (Kids plate lock, marketing
+ * isolation, contested confirmation) but writes nothing, so a caller that
+ * must move several assets atomically — e.g. a Product ID rename — can
+ * refuse the whole operation before any part of it persists.
+ *
+ * It deliberately reuses `validateOwnershipChange`: there is one ownership
+ * rule set, not a second copy for preflight.
+ */
+export const validateMediaOwnershipTransfer = ({
+  mediaId,
+  targetProductId,
+  principal = null,
+  confirm = false,
+  requireTargetProduct = true,
+} = {}) => {
+  const auth = adminOnly(principal);
+  if (!auth.ok) return { ok: false, error: auth.error, code: auth.code };
+
+  const media = mediaRepository.getById(mediaId);
+  if (!media) return { ok: false, error: "Media not found." };
+
+  if (requireTargetProduct) {
+    const target = assertProductTarget(targetProductId);
+    if (!target.ok) return target;
+  }
+
+  const previousOwnerId = media.productId ? String(media.productId) : null;
+  const owner = previousOwnerId ? catalogRepository.find(previousOwnerId) : null;
+
+  return validateOwnershipChange({
+    media,
+    targetProductId,
+    product: owner,
+    confirm,
+    op: "transfer",
+  });
+};
+
+/**
  * The safe transfer command. Moves media ownership to another product,
  * strips the previous owner's stale authored references, records the
  * transfer in the shared diary and revalidates both products.
@@ -366,6 +406,7 @@ export const getOwnershipView = (product) => {
 
 export default {
   transferMediaOwnership,
+  validateMediaOwnershipTransfer,
   assignMediaToProduct,
   unassignMediaFromProduct,
   getOwnershipView,
