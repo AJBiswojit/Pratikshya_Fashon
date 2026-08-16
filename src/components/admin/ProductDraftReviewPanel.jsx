@@ -8,6 +8,12 @@
  * workflow actions — Save / Submit / Approve & Publish / Archive.
  * Every action routes through the workflow service and the shared diary.
  *
+ * Phase 3D: this panel is the EDITING desk inside the unified Admin Product
+ * Review workspace (`ProductReviewDetail`). With `hideLifecycleActions` the
+ * duplicated transition buttons are hidden — approve / return / publish live
+ * on the workspace's one canonical action bar. The panel itself is unchanged
+ * otherwise.
+ *
  * PERFORMANCE OPTIMIZATION:
  *   · View and issues memoized
  *   · Busy states for immediate button feedback
@@ -52,7 +58,7 @@ const discountPercent = (price, compareAt) => {
   return Math.round(((compare - selling) / compare) * 100);
 };
 
-export default function ProductDraftReviewPanel({ product, actor, onNotice }) {
+export default function ProductDraftReviewPanel({ product, actor, onNotice, hideLifecycleActions = false }) {
   const [name, setName] = useState(product.name ?? "");
   const [category, setCategory] = useState(product.category ?? "");
   const [subcategory, setSubcategory] = useState(product.subcategory ?? "");
@@ -267,10 +273,19 @@ export default function ProductDraftReviewPanel({ product, actor, onNotice }) {
           {issues.length ? (<div className="border border-accent/40 bg-accent/5 px-3 py-2"><p className="font-ui text-[10px] uppercase tracking-[.16em] text-accent">Before publishing</p><ul className="mt-1 list-disc pl-4 font-ui text-[11px] text-ink/80">{issues.map((issue) => (<li key={issue}>{issue}</li>))}</ul></div>) : null}
           <div className="flex flex-wrap items-center gap-2 border-t border-mist pt-4">
             <button type="button" disabled={!!busy} onClick={save} className={`inline-flex items-center gap-1.5 border border-ink bg-ink px-4 py-2 font-ui text-[10px] uppercase tracking-[.16em] text-ivory transition-colors hover:bg-transparent hover:text-ink ${busy ? "opacity-40" : ""}`}><Save size={11} aria-hidden="true" /> {busy === "save" ? "Saving…" : "Save Draft"}</button>
-            <button type="button" disabled={!!busy} onClick={submit} className={`inline-flex items-center gap-1.5 border border-ink px-4 py-2 font-ui text-[10px] uppercase tracking-[.16em] text-ink transition-colors hover:bg-ink hover:text-ivory ${busy ? "opacity-40" : ""}`}><ArrowRight size={11} aria-hidden="true" /> {busy === "submit" ? "Submitting…" : "Submit for Review"}</button>
-            <button type="button" disabled={!!busy} onClick={approve} className={`inline-flex items-center gap-1.5 border border-accent px-4 py-2 font-ui text-[10px] uppercase tracking-[.16em] text-accent transition-colors hover:bg-accent hover:text-ivory ${busy ? "opacity-40" : ""}`}><Check size={11} aria-hidden="true" /> {busy === "approve" ? "Approving…" : "Approve & Publish"}</button>
-            <button type="button" disabled={!!busy} onClick={publish} className={`border border-mist px-4 py-2 font-ui text-[10px] uppercase tracking-[.16em] text-taupe transition-colors hover:border-ink hover:text-ink ${busy ? "opacity-40" : ""}`}>{busy === "publish" ? "Publishing…" : "Publish"}</button>
-            <button type="button" disabled={!!busy} onClick={archive} className={`inline-flex items-center gap-1.5 border border-mist px-4 py-2 font-ui text-[10px] uppercase tracking-[.16em] text-taupe transition-colors hover:border-accent hover:text-accent ${busy ? "opacity-40" : ""}`}><Archive size={11} aria-hidden="true" /> {busy === "archive" ? "Archiving…" : "Archive"}</button>
+            {/* Phase 3D — inside the unified Product Review workspace the
+                lifecycle actions live on the workspace's ONE canonical action
+                bar (ProductReviewDetail). `hideLifecycleActions` hides the
+                duplicated transition buttons here; the default keeps the
+                historical behaviour for any standalone embedding. */}
+            {!hideLifecycleActions ? (
+              <>
+                <button type="button" disabled={!!busy} onClick={submit} className={`inline-flex items-center gap-1.5 border border-ink px-4 py-2 font-ui text-[10px] uppercase tracking-[.16em] text-ink transition-colors hover:bg-ink hover:text-ivory ${busy ? "opacity-40" : ""}`}><ArrowRight size={11} aria-hidden="true" /> {busy === "submit" ? "Submitting…" : "Submit for Review"}</button>
+                <button type="button" disabled={!!busy} onClick={approve} className={`inline-flex items-center gap-1.5 border border-accent px-4 py-2 font-ui text-[10px] uppercase tracking-[.16em] text-accent transition-colors hover:bg-accent hover:text-ivory ${busy ? "opacity-40" : ""}`}><Check size={11} aria-hidden="true" /> {busy === "approve" ? "Approving…" : "Approve & Publish"}</button>
+                <button type="button" disabled={!!busy} onClick={publish} className={`border border-mist px-4 py-2 font-ui text-[10px] uppercase tracking-[.16em] text-taupe transition-colors hover:border-ink hover:text-ink ${busy ? "opacity-40" : ""}`}>{busy === "publish" ? "Publishing…" : "Publish"}</button>
+                <button type="button" disabled={!!busy} onClick={archive} className={`inline-flex items-center gap-1.5 border border-mist px-4 py-2 font-ui text-[10px] uppercase tracking-[.16em] text-taupe transition-colors hover:border-accent hover:text-accent ${busy ? "opacity-40" : ""}`}><Archive size={11} aria-hidden="true" /> {busy === "archive" ? "Archiving…" : "Archive"}</button>
+              </>
+            ) : null}
           </div>
           {idEditing ? (
             <div className="flex flex-wrap items-center gap-2 border-t border-mist pt-3">
