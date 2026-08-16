@@ -3,1475 +3,745 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Pratikshya Fashion — Media Workflow Guide</title>
-<meta name="description" content="From image upload to product, review, marketing and storefront — the complete media workflow of Pratikshya Fashion.">
+<title>Pratikshya Fashion — How An Image Becomes A Product</title>
+<meta name="description" content="Simple visual workflow guide: from image to customer-ready product at Pratikshya Fashion.">
 <style>
-/* ============================================================
-   PRATIKSHYA FASHION — MEDIA WORKFLOW GUIDE
-   Self-contained. No frameworks. No external assets.
-   ============================================================ */
 :root{
-  --canvas:#faf8f4; --paper:#ffffff; --ink:#1c1814; --graphite:#4a423a;
-  --taupe:#8a7d6d; --mist:#e7e0d5; --sand:#f1ebe1; --brass:#a07c3c;
-  --brass-soft:#c9a86a; --brass-tint:#f6efe1;
-  --sys:#2f6091;  --sys-bg:#eaf1f8;   /* blue  = system action        */
-  --ok:#3c7a52;   --ok-bg:#e9f3ec;    /* green = approved / complete  */
-  --warn:#a37b1c; --warn-bg:#faf3df;  /* yellow= needs review         */
-  --bad:#a8433d;  --bad-bg:#f9ebea;   /* red   = blocked / conflict   */
-  --mkt:#6d4b96;  --mkt-bg:#f1ebf8;   /* purple= marketing media      */
-  --radius:14px; --radius-sm:9px;
-  --shadow:0 1px 2px rgba(28,24,20,.05),0 10px 30px -14px rgba(28,24,20,.16);
-  --shadow-lift:0 2px 4px rgba(28,24,20,.06),0 22px 44px -18px rgba(28,24,20,.24);
-  --serif:Georgia,"Palatino Linotype",Palatino,"Times New Roman",serif;
-  --sans:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
-  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  --bg:#fdfbf6;
+  --bg-2:#f7f0e6;
+  --paper:#ffffff;
+  --ink:#161211;
+  --muted:#7a6e62;
+  --line:#ece4d6;
+  --brass:#a67c3b;
+  --brass-light:#d8b67a;
+  --brass-soft:#f6efe1;
+  --shadow:0 2px 12px rgba(28,18,8,.06), 0 18px 42px -22px rgba(28,18,8,.22);
+  --shadow-hover:0 6px 20px rgba(28,18,8,.08), 0 28px 58px -20px rgba(28,18,8,.28);
+  --radius:20px;
+  --radius-sm:14px;
+  --serif: Georgia, "Times New Roman", Palatino, serif;
+  --sans: Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
 }
 *{box-sizing:border-box;margin:0;padding:0}
-html{scroll-behavior:smooth;scroll-padding-top:96px}
-body{background:var(--canvas);color:var(--ink);font-family:var(--sans);line-height:1.65;font-size:16px;-webkit-font-smoothing:antialiased;overflow-x:hidden}
-img,svg{max-width:100%}
+html{scroll-behavior:smooth;scroll-padding-top:88px}
+body{background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1.7;font-size:16px;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1060px;margin:0 auto;padding:0 24px}
+img{max-width:100%}
 a{color:var(--brass);text-decoration:none}
 a:hover{text-decoration:underline}
-.wrap{max-width:1120px;margin:0 auto;padding:0 24px}
+
+/* NAV */
+#topnav{position:sticky;top:0;z-index:50;background:rgba(253,251,246,.86);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-bottom:1px solid var(--line)}
+#topnav .bar{max-width:1180px;margin:0 auto;display:flex;align-items:center;gap:18px;padding:14px 24px}
+.brand{font-family:var(--serif);letter-spacing:.22em;font-size:13px;text-transform:uppercase;white-space:nowrap}
+.brand b{color:var(--brass);font-weight:600}
+.links{display:flex;gap:2px;flex:1;flex-wrap:wrap}
+.links a{font-size:11.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);padding:8px 12px;border-radius:999px;text-decoration:none;transition:.2s}
+.links a:hover{background:var(--brass-soft);color:var(--ink)}
+.links a.active{background:var(--ink);color:#fff}
+@media(max-width:720px){.links{display:none}}
+
+/* HERO */
+#hero{padding:54px 0 18px}
+.eyebrow{font-size:11px;letter-spacing:.32em;text-transform:uppercase;color:var(--brass);font-weight:700;display:flex;align-items:center;gap:10px;margin-bottom:18px}
+.eyebrow::before{content:"";width:28px;height:1px;background:var(--brass-light);display:inline-block}
+h1{font-family:var(--serif);font-weight:500;line-height:1.02;letter-spacing:-.02em;font-size:clamp(36px,6vw,72px)}
+h1 .thin{display:block;font-size:.42em;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);margin-top:14px;line-height:1.3}
+.lead{color:var(--muted);max-width:62ch;font-size:19px;line-height:1.6;margin-top:20px}
+.lead b{color:var(--ink);font-weight:600}
+
+/* BIG STORY JOURNEY - main visual */
+.journey-hero{margin-top:44px;background:var(--paper);border:1px solid var(--line);border-radius:28px;box-shadow:var(--shadow);overflow:hidden}
+.journey-hero-top{display:grid;grid-template-columns:1.15fr .85fr;gap:0}
+@media(max-width:900px){.journey-hero-top{grid-template-columns:1fr}}
+.journey-left{padding:36px 36px 32px}
+.journey-right{background:linear-gradient(160deg,var(--bg-2),#fff);padding:28px;border-left:1px solid var(--line);display:flex;flex-direction:column;justify-content:center}
+@media(max-width:900px){.journey-right{border-left:0;border-top:1px solid var(--line)}}
+.badge{display:inline-flex;align-items:center;gap:8px;font-size:10.5px;letter-spacing:.18em;text-transform:uppercase;font-weight:700;padding:6px 14px;border-radius:999px;background:var(--ink);color:#fff}
+.badge.gold{background:var(--brass);color:#fff}
+.journey-left h2{font-family:var(--serif);font-size:clamp(26px,3.4vw,38px);line-height:1.15;margin:18px 0 12px}
+.journey-left p{color:var(--muted);font-size:15.5px;max-width:56ch}
+
+.example-box{margin-top:18px;background:#fff;border:1px solid var(--line);border-radius:18px;padding:18px;display:flex;gap:16px;align-items:center;box-shadow:var(--shadow)}
+.ex-thumb{width:84px;height:84px;border-radius:14px;background:linear-gradient(150deg,#f5e8d0,#fff);border:1px solid var(--line);display:grid;place-items:center;font-size:38px;flex:0 0 84px}
+.ex-meta b{font-family:var(--serif);font-size:18px;font-weight:500;display:block}
+.ex-meta span{font-size:13px;color:var(--muted)}
+
+/* vertial timeline */
+.v-journey{display:flex;flex-direction:column;align-items:center;gap:0;position:relative;width:100%}
+.v-journey::before{content:"";position:absolute;left:50%;top:18px;bottom:18px;width:1px;background:linear-gradient(180deg,var(--brass-light),var(--line));transform:translateX(-50%)}
+@media(max-width:520px){.v-journey::before{left:22px;transform:none}}
+.vj-item{position:relative;z-index:1;width:100%;display:grid;grid-template-columns:1fr 56px 1fr;align-items:center;gap:8px;padding:8px 0}
+@media(max-width:520px){.vj-item{grid-template-columns:44px 1fr}}
+.vj-item .side{font-size:12px;color:var(--muted)}
+.vj-item .side.right{text-align:left}
+.vj-item .side.left{text-align:right}
+@media(max-width:520px){.vj-item .side.left{display:none}}
+.vj-dot{width:56px;height:56px;border-radius:50%;background:var(--paper);border:1px solid var(--line);box-shadow:var(--shadow);display:grid;place-items:center;font-size:20px;transition:transform .25s ease, box-shadow .25s ease}
+.vj-item.active .vj-dot{border-color:var(--brass-light);box-shadow:var(--shadow-hover);transform:scale(1.05)}
+.vj-dot small{display:block;font-size:8px;letter-spacing:.14em;text-transform:uppercase;color:var(--brass);font-weight:700;margin-top:1px}
+.vj-card{background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:12px 14px;box-shadow:var(--shadow);min-width:0}
+.vj-card b{font-size:13px;display:block;letter-spacing:.02em}
+.vj-card span{font-size:11.5px;color:var(--muted);line-height:1.4;display:block;margin-top:2px}
+.vj-arrow{color:var(--brass-light);font-size:18px;text-align:center;line-height:1;padding:2px 0;animation:arrowPulse 2.2s ease-in-out infinite}
+@keyframes arrowPulse{0%,100%{opacity:.35;transform:translateY(0)}50%{opacity:1;transform:translateY(3px)}}
+
+/* SECTIONS */
 section{padding:72px 0;position:relative}
-section + section{border-top:1px solid var(--mist)}
-h1,h2,h3,.display{font-family:var(--serif);font-weight:500;letter-spacing:.01em;color:var(--ink)}
-h2{font-size:clamp(26px,3.4vw,38px);line-height:1.18;margin-bottom:10px}
-h3{font-size:20px;margin-bottom:8px}
-p.lead{font-size:18px;color:var(--graphite);max-width:70ch}
-p.muted,.muted{color:var(--taupe)}
-.eyebrow{font-size:11px;letter-spacing:.28em;text-transform:uppercase;color:var(--brass);font-weight:600;margin-bottom:14px;display:flex;align-items:center;gap:10px}
-.eyebrow::before{content:"";width:26px;height:1px;background:var(--brass-soft);display:inline-block}
-.section-head{max-width:760px;margin-bottom:36px}
-code,.mono{font-family:var(--mono);font-size:.86em;background:var(--sand);border:1px solid var(--mist);border-radius:5px;padding:1px 6px;color:var(--graphite);white-space:nowrap}
-.file{font-family:var(--mono);font-size:12.5px;color:var(--sys)}
-/* ---------- badges & legend colors ---------- */
-.badge{display:inline-flex;align-items:center;gap:6px;font-size:10.5px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;border-radius:999px;padding:4px 12px;border:1px solid transparent;font-family:var(--sans);white-space:nowrap}
-.badge::before{content:"";width:7px;height:7px;border-radius:50%;background:currentColor}
-.b-impl{color:var(--ok);background:var(--ok-bg);border-color:#cfe4d6}
-.b-part{color:var(--warn);background:var(--warn-bg);border-color:#ecd9a8}
-.b-not{color:var(--bad);background:var(--bad-bg);border-color:#eccfcd}
-.b-sys{color:var(--sys);background:var(--sys-bg);border-color:#c9daea}
-.b-mkt{color:var(--mkt);background:var(--mkt-bg);border-color:#dccdee}
-.b-ink{color:var(--graphite);background:var(--sand);border-color:var(--mist)}
-/* ---------- cards ---------- */
-.card{background:var(--paper);border:1px solid var(--mist);border-radius:var(--radius);padding:26px;box-shadow:var(--shadow);transition:transform .25s ease,box-shadow .25s ease}
-.card:hover{transform:translateY(-2px);box-shadow:var(--shadow-lift)}
-.grid{display:grid;gap:18px}
-.g2{grid-template-columns:repeat(2,1fr)}
-.g3{grid-template-columns:repeat(3,1fr)}
-.g4{grid-template-columns:repeat(4,1fr)}
-@media(max-width:900px){.g3,.g4{grid-template-columns:repeat(2,1fr)}}
-@media(max-width:600px){.g2,.g3,.g4{grid-template-columns:1fr}}
-/* ---------- sticky nav ---------- */
-#topnav{position:fixed;inset:0 0 auto 0;z-index:60;background:rgba(250,248,244,.88);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-bottom:1px solid var(--mist)}
-#topnav .bar{display:flex;align-items:center;gap:14px;padding:12px 24px;max-width:1280px;margin:0 auto;flex-wrap:wrap}
-#topnav .brand{font-family:var(--serif);font-size:15px;letter-spacing:.18em;text-transform:uppercase;white-space:nowrap}
-#topnav .brand b{color:var(--brass);font-weight:600}
-#navlinks{display:flex;gap:2px;flex-wrap:wrap;flex:1;min-width:0}
-#navlinks a{font-size:11.5px;letter-spacing:.06em;color:var(--graphite);padding:6px 9px;border-radius:7px;text-decoration:none;white-space:nowrap}
-#navlinks a:hover{background:var(--sand);color:var(--ink)}
-#searchbox{display:flex;align-items:center;gap:6px;background:var(--paper);border:1px solid var(--mist);border-radius:999px;padding:6px 12px;min-width:170px}
-#searchbox input{border:0;outline:0;background:transparent;font-size:13px;width:130px;color:var(--ink);font-family:var(--sans)}
-#progress{position:absolute;left:0;bottom:-1px;height:2px;background:linear-gradient(90deg,var(--brass),var(--brass-soft));width:0%;transition:width .12s linear}
-/* filter chips + beginner toggle */
-#controls{border-bottom:1px solid var(--mist);background:var(--paper)}
-#controls .row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:10px 24px;max-width:1280px;margin:0 auto}
-.chip{font-size:11px;letter-spacing:.1em;text-transform:uppercase;font-weight:600;border:1px solid var(--mist);border-radius:999px;padding:6px 14px;background:var(--canvas);color:var(--graphite);cursor:pointer;transition:all .18s ease;font-family:var(--sans)}
-.chip:hover{border-color:var(--brass-soft);color:var(--brass)}
-.chip.active{background:var(--ink);color:#fff;border-color:var(--ink)}
-.chip.beginner.active{background:var(--brass);border-color:var(--brass)}
-.chip-label{font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--taupe);margin-right:2px}
-/* beginner notes */
-.beginner-note{display:none;background:var(--brass-tint);border:1px dashed var(--brass-soft);border-radius:var(--radius-sm);padding:14px 16px;font-size:14px;color:var(--graphite);margin:14px 0}
-.beginner-note b{color:var(--brass)}
-body.beginner .beginner-note{display:block}
-/* ---------- hero ---------- */
-#hero{padding:150px 0 80px;border-top:0;background:
- radial-gradient(1100px 480px at 78% -8%,rgba(160,124,60,.13),transparent 62%),
- radial-gradient(800px 420px at 8% 4%,rgba(109,75,150,.07),transparent 60%),
- linear-gradient(180deg,#fdfcf9,var(--canvas))}
-#hero .kicker{font-size:12px;letter-spacing:.42em;text-transform:uppercase;color:var(--brass);margin-bottom:22px}
-#hero h1{font-size:clamp(40px,7vw,84px);line-height:1.02;margin-bottom:8px}
-#hero h1 .thin{display:block;font-size:.52em;color:var(--graphite);letter-spacing:.14em;margin-top:14px;text-transform:uppercase}
-#hero .sub{font-size:clamp(17px,2vw,21px);color:var(--graphite);max-width:56ch;margin:22px 0 8px;font-family:var(--serif);font-style:italic}
-#hero .note{color:var(--taupe);max-width:62ch}
-/* hero flow ribbon */
-.flow-ribbon{display:flex;align-items:stretch;gap:0;flex-wrap:wrap;margin-top:46px;border:1px solid var(--mist);border-radius:var(--radius);background:rgba(255,255,255,.72);backdrop-filter:blur(6px);box-shadow:var(--shadow);overflow:hidden}
-.flow-ribbon .fnode{flex:1 1 90px;min-width:88px;text-align:center;padding:18px 6px 16px;position:relative;transition:background .2s ease}
-.flow-ribbon .fnode:hover{background:var(--brass-tint)}
-.flow-ribbon .fnode + .fnode{border-left:1px solid var(--mist)}
-.flow-ribbon .fnode .dot{width:10px;height:10px;border-radius:50%;margin:0 auto 8px;background:var(--sys)}
-.flow-ribbon .fnode:nth-child(7) .dot{background:var(--mkt)}
-.flow-ribbon .fnode:nth-child(8) .dot,.flow-ribbon .fnode:nth-child(9) .dot{background:var(--warn)}
-.flow-ribbon .fnode:nth-child(10) .dot{background:var(--ok)}
-.flow-ribbon .fnode .fl{font-size:10.5px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--ink)}
-.flow-ribbon .fnode .arrow{position:absolute;right:-7px;top:50%;transform:translateY(-50%);color:var(--brass-soft);font-size:13px;z-index:2}
-@media(max-width:760px){
-  .flow-ribbon{flex-direction:column}
-  .flow-ribbon .fnode{display:flex;align-items:center;gap:12px;text-align:left;padding:12px 18px}
-  .flow-ribbon .fnode + .fnode{border-left:0;border-top:1px solid var(--mist)}
-  .flow-ribbon .fnode .dot{margin:0}
-  .flow-ribbon .fnode .arrow{display:none}
-}
-/* ---------- master workflow ---------- */
-#master-steps{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;margin:32px 0 26px}
-@media(max-width:1000px){#master-steps{grid-template-columns:repeat(4,1fr)}}
-@media(max-width:700px){#master-steps{grid-template-columns:repeat(2,1fr)}}
-.step-tile{border:1px solid var(--mist);border-radius:var(--radius-sm);background:var(--paper);padding:16px 14px;cursor:pointer;text-align:left;transition:all .2s ease;font-family:var(--sans);position:relative}
-.step-tile .num{font-family:var(--serif);font-size:22px;color:var(--brass-soft);line-height:1}
-.step-tile .tl{font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;margin-top:8px;color:var(--ink);line-height:1.45}
-.step-tile:hover{border-color:var(--brass-soft);transform:translateY(-2px);box-shadow:var(--shadow)}
-.step-tile.active{background:var(--ink);border-color:var(--ink)}
-.step-tile.active .tl{color:#fff}
-.step-tile.active .num{color:var(--brass-soft)}
-#step-detail{border:1px solid var(--mist);border-radius:var(--radius);background:var(--paper);box-shadow:var(--shadow);overflow:hidden;animation:fadeup .35s ease}
-#step-detail .sd-head{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:22px 26px;border-bottom:1px solid var(--mist);background:linear-gradient(180deg,#fdfcf9,var(--paper));flex-wrap:wrap}
-#step-detail .sd-head h3{font-size:24px;margin:0}
-#step-detail .sd-head .sd-num{font-family:var(--serif);color:var(--brass-soft);font-size:15px;letter-spacing:.24em}
-#step-detail .sd-body{display:grid;grid-template-columns:1fr 1fr;gap:0}
-@media(max-width:800px){#step-detail .sd-body{grid-template-columns:1fr}}
-#step-detail .sd-cell{padding:20px 26px;border-top:1px solid var(--sand)}
-#step-detail .sd-cell:nth-child(odd){border-right:1px solid var(--sand)}
-@media(max-width:800px){#step-detail .sd-cell:nth-child(odd){border-right:0}}
-.sd-label{font-size:10px;font-weight:700;letter-spacing:.22em;text-transform:uppercase;color:var(--taupe);margin-bottom:8px}
-.sd-cell ul{list-style:none}
-.sd-cell li{padding:4px 0 4px 18px;position:relative;font-size:14.5px;color:var(--graphite)}
-.sd-cell li::before{content:"";position:absolute;left:0;top:12px;width:7px;height:7px;border-radius:2px;background:var(--brass-soft)}
-.sd-cell.problems li::before{background:var(--bad)}
-.sd-cell.rules li::before{background:var(--warn)}
-@keyframes fadeup{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
-/* ---------- diagrams (ASCII-like but styled) ---------- */
-.diagram{background:var(--ink);color:#efe9df;border-radius:var(--radius);padding:26px 22px;font-family:var(--mono);font-size:13px;line-height:1.8;overflow-x:auto;box-shadow:var(--shadow)}
-.diagram .hl{color:var(--brass-soft)}
-.diagram .g{color:#8ec9a0}.diagram .y{color:#e5c46f}.diagram .r{color:#e19a95}.diagram .p{color:#c3a6e8}.diagram .b{color:#93bde4}
-.vflow{display:flex;flex-direction:column;align-items:center;gap:0;margin:22px 0}
-.vflow .vnode{background:var(--paper);border:1px solid var(--mist);border-radius:var(--radius-sm);padding:12px 26px;font-size:13px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;box-shadow:var(--shadow);text-align:center;min-width:220px}
-.vflow .vnode.ok{border-color:#cfe4d6;background:var(--ok-bg);color:var(--ok)}
-.vflow .vnode.warn{border-color:#ecd9a8;background:var(--warn-bg);color:var(--warn)}
-.vflow .vnode.sys{border-color:#c9daea;background:var(--sys-bg);color:var(--sys)}
-.vflow .vnode.mkt{border-color:#dccdee;background:var(--mkt-bg);color:var(--mkt)}
-.vflow .varrow{color:var(--brass-soft);font-size:18px;line-height:1;padding:7px 0;animation:pulse 2.4s ease-in-out infinite}
-@keyframes pulse{0%,100%{opacity:.45;transform:translateY(0)}50%{opacity:1;transform:translateY(3px)}}
-/* ---------- view type cards ---------- */
-.view-card{text-align:center;padding:22px 14px}
-.view-card .frame{width:74px;height:96px;margin:0 auto 14px;border-radius:8px;border:1px solid var(--mist);background:linear-gradient(160deg,var(--sand),#fff);position:relative;display:flex;align-items:center;justify-content:center}
-.view-card .frame svg{width:38px;height:58px}
-.view-card h4{font-size:12px;letter-spacing:.2em;text-transform:uppercase;font-weight:700}
-.view-card p{font-size:13px;color:var(--taupe);margin-top:6px;line-height:1.5}
-/* ---------- warning banner ---------- */
-.warn-banner{background:linear-gradient(135deg,#231d17,#3a2f22);color:#f3ede2;border-radius:var(--radius);padding:42px 36px;box-shadow:var(--shadow-lift);position:relative;overflow:hidden}
-.warn-banner::after{content:"";position:absolute;right:-70px;top:-70px;width:260px;height:260px;border-radius:50%;background:radial-gradient(circle,rgba(201,168,106,.22),transparent 68%)}
-.warn-banner h3{color:#fff;font-size:clamp(22px,3vw,32px);margin-bottom:14px}
-.warn-banner .rule-line{color:var(--brass-soft);font-size:12px;letter-spacing:.3em;text-transform:uppercase;margin-bottom:16px}
-.compare-visual{display:flex;align-items:center;justify-content:center;gap:18px;flex-wrap:wrap;margin-top:26px}
-.compare-visual .imgbox{width:104px;height:130px;border-radius:10px;border:1px solid rgba(255,255,255,.22);background:linear-gradient(160deg,rgba(255,255,255,.14),rgba(255,255,255,.04));display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;font-size:11px;letter-spacing:.14em;color:#d8cfc0}
-.compare-visual .neq{font-family:var(--serif);font-size:44px;color:var(--brass-soft)}
-/* ---------- tables ---------- */
-.tbl{width:100%;border-collapse:collapse;background:var(--paper);border:1px solid var(--mist);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow);font-size:14px}
-.tbl th{background:var(--ink);color:#f0eadf;text-align:left;font-size:11px;letter-spacing:.16em;text-transform:uppercase;padding:13px 16px;font-weight:600}
-.tbl td{padding:12px 16px;border-top:1px solid var(--sand);color:var(--graphite);vertical-align:top}
-.tbl tr:hover td{background:#fdfbf7}
-.tbl .yes{color:var(--ok);font-weight:700}
-.tbl .no{color:var(--taupe)}
-.tbl-scroll{overflow-x:auto;border-radius:var(--radius)}
-/* ---------- accordions ---------- */
-details.acc{background:var(--paper);border:1px solid var(--mist);border-radius:var(--radius-sm);margin-bottom:10px;overflow:hidden;transition:box-shadow .2s ease}
-details.acc[open]{box-shadow:var(--shadow)}
-details.acc summary{cursor:pointer;list-style:none;padding:16px 20px;display:flex;align-items:center;gap:12px;font-weight:600;font-size:14.5px;color:var(--ink)}
-details.acc summary::-webkit-details-marker{display:none}
-details.acc summary::after{content:"+";margin-left:auto;font-family:var(--serif);font-size:20px;color:var(--brass);transition:transform .2s ease}
-details.acc[open] summary::after{transform:rotate(45deg)}
-details.acc .acc-body{padding:0 20px 18px;color:var(--graphite);font-size:14.5px}
-details.tech{background:var(--sand);border:1px dashed var(--mist)}
-details.tech summary{font-size:12.5px;color:var(--taupe);letter-spacing:.08em;text-transform:uppercase}
-details.tech .acc-body{font-family:var(--mono);font-size:12.5px;line-height:2}
-/* ---------- decision cards ---------- */
-.decision-card{border-top:3px solid var(--brass-soft)}
-.decision-card h4{font-size:13px;letter-spacing:.2em;text-transform:uppercase;font-weight:700;margin-bottom:12px}
-.decision-card dl{font-size:13.5px}
-.decision-card dt{font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--taupe);margin-top:10px;font-weight:700}
-.decision-card dd{color:var(--graphite);margin-top:2px}
-/* ---------- publishing gate ---------- */
-.gate{background:linear-gradient(180deg,#fdfcf9,#f7f2e9);border:1px solid var(--mist);border-radius:var(--radius);padding:40px 30px;box-shadow:var(--shadow);text-align:center}
-.gate .checks{display:flex;flex-wrap:wrap;justify-content:center;gap:10px;margin:24px 0}
-.gate .check{display:inline-flex;align-items:center;gap:8px;background:var(--paper);border:1px solid #cfe4d6;color:var(--ok);border-radius:999px;padding:8px 16px;font-size:12.5px;font-weight:600;letter-spacing:.06em}
-.gate .check svg{width:13px;height:13px}
-.gate .gate-arrow{font-family:var(--serif);color:var(--brass);font-size:26px;padding:6px 0}
-.gate .final{display:inline-block;background:var(--ink);color:#fff;border-radius:999px;padding:12px 34px;font-size:13px;font-weight:700;letter-spacing:.24em;text-transform:uppercase}
-/* ---------- hover demo ---------- */
-.hover-demo{display:flex;gap:18px;flex-wrap:wrap;justify-content:center}
-.hd-card{width:180px;text-align:center}
-.hd-frame{height:220px;border-radius:10px;border:1px solid var(--mist);overflow:hidden;position:relative;background:var(--sand);box-shadow:var(--shadow);cursor:pointer}
-.hd-face{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;transition:opacity .35s ease;font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--graphite)}
-.hd-face .big{font-family:var(--serif);font-size:30px;color:var(--brass);letter-spacing:.05em;text-transform:none}
-.hd-face.alt{opacity:0;background:linear-gradient(160deg,#efe7d8,#fff)}
-.hd-frame:hover .hd-face.alt{opacity:1}
-.hd-frame.static .hd-face.alt{display:none}
-.hd-caption{font-size:12px;color:var(--taupe);margin-top:10px;line-height:1.5}
-.hd-caption b{color:var(--ink)}
-/* ---------- timeline (end-to-end) ---------- */
-.timeline{position:relative;margin:26px 0;padding-left:34px}
-.timeline::before{content:"";position:absolute;left:11px;top:6px;bottom:6px;width:2px;background:linear-gradient(180deg,var(--brass-soft),var(--mist))}
-.tl-item{position:relative;padding:0 0 26px}
-.tl-item::before{content:"";position:absolute;left:-29px;top:4px;width:14px;height:14px;border-radius:50%;background:var(--paper);border:3px solid var(--brass-soft)}
-.tl-item.sys::before{border-color:var(--sys)}
-.tl-item.warn::before{border-color:var(--warn)}
-.tl-item.ok::before{border-color:var(--ok)}
-.tl-item h4{font-size:13px;letter-spacing:.14em;text-transform:uppercase;font-weight:700;margin-bottom:4px}
-.tl-item p{font-size:14.5px;color:var(--graphite);max-width:72ch}
-/* ---------- exception cards ---------- */
-.exc details.acc summary .badge{margin-left:auto;margin-right:6px}
-.exc-flow{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:10px;font-size:12.5px}
-.exc-flow .st{border-radius:7px;padding:6px 12px;font-weight:600}
-.exc-flow .st.p{background:var(--bad-bg);color:var(--bad)}
-.exc-flow .st.s{background:var(--sys-bg);color:var(--sys)}
-.exc-flow .st.h{background:var(--warn-bg);color:var(--warn)}
-.exc-flow .st.f{background:var(--ok-bg);color:var(--ok)}
-.exc-flow .a{color:var(--brass-soft)}
-/* ---------- glossary ---------- */
-.glossary{columns:2;column-gap:28px}
-@media(max-width:760px){.glossary{columns:1}}
-.gl-item{break-inside:avoid;background:var(--paper);border:1px solid var(--mist);border-radius:var(--radius-sm);padding:14px 18px;margin-bottom:12px}
-.gl-item dt{font-weight:700;font-size:13.5px;letter-spacing:.04em}
-.gl-item dd{font-size:13.5px;color:var(--graphite);margin-top:4px}
-/* ---------- legend ---------- */
-.legend{display:flex;flex-wrap:wrap;gap:12px}
-.leg{display:flex;align-items:center;gap:10px;background:var(--paper);border:1px solid var(--mist);border-radius:999px;padding:8px 18px;font-size:13px;font-weight:600}
-.leg .sw{width:14px;height:14px;border-radius:4px}
-/* ---------- tooltips ---------- */
-.term{border-bottom:1px dotted var(--brass);cursor:help;position:relative}
-.term:hover::after{content:attr(data-tip);position:absolute;left:50%;bottom:130%;transform:translateX(-50%);background:var(--ink);color:#f2ecdf;font-size:12px;line-height:1.5;padding:9px 13px;border-radius:8px;width:230px;z-index:40;box-shadow:var(--shadow-lift);font-weight:400;letter-spacing:0;text-transform:none}
-.term:hover::before{content:"";position:absolute;left:50%;bottom:118%;transform:translateX(-50%);border:6px solid transparent;border-top-color:var(--ink);z-index:40}
-/* ---------- footer / util ---------- */
-.backlinks{display:flex;gap:10px;margin-top:26px;flex-wrap:wrap}
-.btn{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--mist);background:var(--paper);color:var(--graphite);border-radius:999px;padding:9px 20px;font-size:12px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;cursor:pointer;text-decoration:none;transition:all .2s ease;font-family:var(--sans)}
-.btn:hover{border-color:var(--brass);color:var(--brass);text-decoration:none}
-#totop{position:fixed;right:22px;bottom:22px;z-index:50;width:44px;height:44px;border-radius:50%;background:var(--ink);color:#fff;border:0;cursor:pointer;font-size:18px;box-shadow:var(--shadow-lift);opacity:0;pointer-events:none;transition:opacity .25s ease}
-#totop.show{opacity:1;pointer-events:auto}
-footer{padding:56px 0 72px;border-top:1px solid var(--mist);text-align:center;color:var(--taupe);font-size:13px}
-footer .fbrand{font-family:var(--serif);letter-spacing:.24em;text-transform:uppercase;color:var(--ink);font-size:14px;margin-bottom:10px}
-/* reveal on scroll */
-.reveal{opacity:0;transform:translateY(18px);transition:opacity .6s ease,transform .6s ease}
+section + section{border-top:1px solid var(--line)}
+.section-head{max-width:760px;margin-bottom:34px}
+.section-head h2{font-family:var(--serif);font-size:clamp(28px,4vw,44px);line-height:1.12;font-weight:500}
+.section-head .sub{color:var(--muted);font-size:17px;margin-top:10px;line-height:1.6}
+
+/* WORKFLOW 7 CARDS */
+.workflow-wrap{position:relative}
+.workflow-line{position:absolute;left:50%;top:14px;bottom:14px;width:1px;background:linear-gradient(180deg,var(--brass-light),transparent 10%,transparent 90%,var(--brass-light));transform:translateX(-50%);pointer-events:none}
+@media(max-width:820px){.workflow-line{left:28px;transform:none}}
+.steps{display:flex;flex-direction:column;gap:22px;position:relative}
+.step-card{background:var(--paper);border:1px solid var(--line);border-radius:var(--radius);padding:28px 28px 24px;box-shadow:var(--shadow);display:grid;grid-template-columns:86px 1fr;gap:18px;transition:transform .28s ease,box-shadow .28s ease,border-color .28s ease;position:relative}
+.step-card:hover{transform:translateY(-4px);box-shadow:var(--shadow-hover);border-color:var(--brass-light)}
+@media(max-width:640px){.step-card{grid-template-columns:1fr;padding:22px}}
+.step-num{font-family:var(--serif);font-size:54px;line-height:.9;color:var(--brass-light);font-weight:400}
+.step-num small{display:block;font-family:var(--sans);font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--brass);font-weight:700;margin-top:6px}
+.step-title{font-family:var(--serif);font-size:26px;line-height:1.15;margin-bottom:18px}
+.step-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:18px;margin-top:8px}
+@media(max-width:820px){.step-grid{grid-template-columns:1fr}}
+.k{font-size:10px;letter-spacing:.22em;text-transform:uppercase;font-weight:800;color:var(--muted);margin-bottom:8px;display:flex;align-items:center;gap:8px}
+.k::before{content:"";width:14px;height:1px;background:var(--brass-light);display:inline-block}
+.step-grid p{font-size:14.2px;line-height:1.55;color:var(--ink)}
+.step-grid p.muted{color:var(--muted)}
+.next-badge{margin-top:20px;display:inline-flex;align-items:center;gap:8px;font-size:11px;letter-spacing:.16em;text-transform:uppercase;font-weight:700;color:var(--brass);background:var(--brass-soft);border:1px solid #ecdcc0;padding:7px 14px;border-radius:999px}
+.next-badge i{font-style:normal}
+
+/* arrow between cards */
+.step-arrow{display:flex;justify-content:center;padding:2px 0;color:var(--brass-light);font-size:22px;line-height:1}
+.step-arrow span{display:inline-flex;width:40px;height:40px;border-radius:50%;border:1px solid var(--line);background:var(--paper);align-items:center;justify-content:center;box-shadow:var(--shadow);animation:arrowPulse 2.4s ease-in-out infinite}
+
+/* PRODUCT VIEWS */
+.views-visual{display:grid;grid-template-columns:1fr auto 1fr auto 1fr;gap:12px;align-items:center;max-width:780px;margin:30px auto 0}
+@media(max-width:700px){.views-visual{grid-template-columns:1fr;gap:8px}}
+.views-visual .center-node{text-align:center}
+.product-node{background:var(--ink);color:#fff;border-radius:22px;padding:16px 22px;display:inline-flex;align-items:center;gap:10px;font-family:var(--serif);font-size:18px;box-shadow:var(--shadow);letter-spacing:.02em}
+.view-node{background:var(--paper);border:1px solid var(--line);border-radius:18px;padding:16px 14px;text-align:center;box-shadow:var(--shadow);transition:.22s}
+.view-node:hover{transform:translateY(-3px);box-shadow:var(--shadow-hover);border-color:var(--brass-light)}
+.view-node b{display:block;font-size:13px;letter-spacing:.16em;text-transform:uppercase;margin-top:10px}
+.view-node span{font-size:12.5px;color:var(--muted);display:block;margin-top:4px;line-height:1.4}
+.view-icon{width:64px;height:86px;margin:0 auto;border-radius:12px;background:linear-gradient(160deg,var(--bg-2),#fff);border:1px solid var(--line);display:grid;place-items:center;font-size:28px}
+.connector{width:1px;height:28px;background:var(--brass-light);margin:0 auto}
+@media(max-width:700px){.connector{display:none}}
+.views-note{text-align:center;color:var(--muted);font-size:14.5px;margin-top:18px;max-width:60ch;margin-left:auto;margin-right:auto}
+
+/* MEDIA VS MARKETING */
+.compare{display:grid;grid-template-columns:1fr auto 1fr;gap:18px;align-items:stretch;margin-top:30px}
+@media(max-width:800px){.compare{grid-template-columns:1fr;gap:12px}}
+.compare-card{background:var(--paper);border:1px solid var(--line);border-radius:var(--radius);padding:28px;box-shadow:var(--shadow);text-align:center;transition:.22s}
+.compare-card:hover{transform:translateY(-3px);box-shadow:var(--shadow-hover)}
+.compare-card.product{border-top:3px solid var(--brass)}
+.compare-card.marketing{border-top:3px solid #8b6b9e}
+.compare-card h3{font-family:var(--serif);font-size:22px;margin-bottom:6px}
+.compare-card .ey{font-size:11px;letter-spacing:.22em;text-transform:uppercase;font-weight:800;color:var(--brass);margin-bottom:14px}
+.compare-card.marketing .ey{color:#8b6b9e}
+.compare-list{list-style:none;text-align:left;margin-top:18px;display:grid;gap:8px}
+.compare-list li{font-size:13.5px;color:var(--muted);padding-left:18px;position:relative}
+.compare-list li::before{content:"";position:absolute;left:0;top:10px;width:6px;height:6px;border-radius:50%;background:var(--brass-light)}
+.compare-card.marketing .compare-list li::before{background:#c3a6e8}
+.compare-vs{display:grid;place-items:center;font-family:var(--serif);font-size:34px;color:var(--brass);font-style:italic}
+.simple-flow{display:flex;align-items:center;justify-content:center;gap:14px;margin-top:22px;flex-wrap:wrap}
+.flow-node{background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:12px 18px;font-size:12px;letter-spacing:.1em;text-transform:uppercase;font-weight:700;box-shadow:var(--shadow)}
+.flow-node.dark{background:var(--ink);color:#fff;border-color:var(--ink)}
+.flow-arrow{color:var(--brass-light);font-size:18px}
+
+/* REVIEW FLAGS */
+.flags{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-top:28px}
+@media(max-width:900px){.flags{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:520px){.flags{grid-template-columns:1fr}}
+.flag-card{background:var(--paper);border:1px solid var(--line);border-radius:18px;padding:22px;box-shadow:var(--shadow);transition:.22s;position:relative;overflow:hidden}
+.flag-card:hover{transform:translateY(-3px);box-shadow:var(--shadow-hover)}
+.flag-card::before{content:"";position:absolute;left:0;top:0;right:0;height:3px;background:var(--brass-light)}
+.flag-card h4{font-size:12px;letter-spacing:.2em;text-transform:uppercase;font-weight:800}
+.flag-card p{font-size:14px;color:var(--muted);margin-top:10px;line-height:1.5}
+.flag-card b{color:var(--ink);font-weight:600;display:block;margin-top:8px;font-size:13px}
+.flag-path{margin-top:36px;background:linear-gradient(180deg,#fdfbf6,#f7f0e9);border:1px solid var(--line);border-radius:22px;padding:28px;display:flex;flex-direction:column;align-items:center;gap:12px;text-align:center;box-shadow:var(--shadow)}
+.flag-path .check{display:inline-flex;align-items:center;gap:8px;background:var(--paper);border:1px solid #d9e7d3;color:#3d7a4a;border-radius:999px;padding:8px 16px;font-size:12.5px;font-weight:600}
+.path-arrow{color:var(--brass);font-size:20px;animation:arrowPulse 2.4s ease-in-out infinite}
+.path-final{background:var(--ink);color:#fff;border-radius:999px;padding:12px 28px;font-size:12px;letter-spacing:.22em;text-transform:uppercase;font-weight:700}
+
+/* ROLES */
+.roles{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:28px}
+@media(max-width:880px){.roles{grid-template-columns:1fr}}
+.role-card{background:var(--paper);border:1px solid var(--line);border-radius:var(--radius);padding:26px;box-shadow:var(--shadow);transition:.22s}
+.role-card:hover{transform:translateY(-3px);box-shadow:var(--shadow-hover)}
+.role-card .role-icon{width:44px;height:44px;border-radius:12px;display:grid;place-items:center;font-size:20px;background:var(--bg-2);border:1px solid var(--line);margin-bottom:16px}
+.role-card h3{font-family:var(--serif);font-size:20px;margin-bottom:6px}
+.role-card .role-sub{font-size:11px;letter-spacing:.18em;text-transform:uppercase;font-weight:800;color:var(--muted);margin-bottom:14px}
+.role-card ul{list-style:none;display:grid;gap:8px}
+.role-card li{font-size:13.5px;color:var(--muted);padding-left:18px;position:relative;line-height:1.5}
+.role-card li::before{content:"•";position:absolute;left:2px;color:var(--brass)}
+
+/* WRONG */
+.wrong-list{display:grid;gap:12px;margin-top:24px;max-width:780px}
+.wrong-row{display:grid;grid-template-columns:180px 24px 1fr;background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:14px 18px;box-shadow:var(--shadow);align-items:center;transition:.2s}
+.wrong-row:hover{transform:translateY(-2px);box-shadow:var(--shadow-hover)}
+@media(max-width:640px){.wrong-row{grid-template-columns:1fr;gap:6px}.wrong-row .arrow{display:none}}
+.wrong-row b{font-size:13px;letter-spacing:.02em}
+.wrong-row .arrow{color:var(--brass-light);text-align:center}
+.wrong-row span{font-size:14px;color:var(--muted)}
+
+/* FINAL FLOW */
+.final-flow{margin-top:28px;background:var(--ink);border-radius:28px;padding:40px 24px;position:relative;overflow:hidden;box-shadow:var(--shadow-hover)}
+.final-flow::before{content:"";position:absolute;right:-80px;top:-80px;width:320px;height:320px;border-radius:50%;background:radial-gradient(circle,rgba(201,168,106,.22),transparent 70%)}
+.final-flow::after{content:"";position:absolute;left:-90px;bottom:-90px;width:360px;height:360px;border-radius:50%;background:radial-gradient(circle,rgba(255,255,255,.06),transparent 70%)}
+.final-flow h3{position:relative;font-family:var(--serif);color:#fff;text-align:center;font-size:clamp(24px,3vw,34px);font-weight:400}
+.final-track{position:relative;max-width:520px;margin:34px auto 0;display:flex;flex-direction:column;align-items:center;gap:0}
+.final-track::before{content:"";position:absolute;left:50%;top:12px;bottom:12px;width:1px;background:linear-gradient(180deg,rgba(201,168,106,.6),rgba(236,228,214,.12));transform:translateX(-50%)}
+.fnode{position:relative;z-index:1;background:#211a14;color:#f2e9dc;border:1px solid rgba(201,168,106,.28);border-radius:999px;padding:10px 20px;font-size:11.5px;letter-spacing:.18em;text-transform:uppercase;font-weight:700;display:inline-flex;align-items:center;gap:10px;min-width:220px;justify-content:center;box-shadow:0 4px 18px rgba(0,0,0,.22)}
+.fnode.light{background:#fff;color:var(--ink);border-color:var(--line)}
+.fnode .ico{font-size:16px}
+.f-arrow{color:var(--brass-light);font-size:18px;padding:8px 0;animation:arrowPulse 2.2s ease-in-out infinite}
+.final-tagline{text-align:center;color:#d8cfc0;margin-top:28px;font-family:var(--serif);font-style:italic;font-size:20px;position:relative}
+
+/* TECHNICAL DETAILS */
+.tech-wrap{margin-top:18px}
+details.tech{background:var(--paper);border:1px dashed var(--line);border-radius:14px;overflow:hidden}
+details.tech summary{cursor:pointer;padding:16px 20px;font-size:13px;font-weight:600;letter-spacing:.06em;display:flex;align-items:center;gap:10px;list-style:none}
+details.tech summary::-webkit-details-marker{display:none}
+details.tech summary::after{content:"+";margin-left:auto;font-family:var(--serif);font-size:22px;color:var(--brass)}
+details.tech[open] summary::after{transform:rotate(45deg)}
+.tech-body{padding:0 20px 18px;font-size:13px;color:var(--muted);line-height:1.7;border-top:1px solid var(--line);margin-top:-1px;padding-top:16px}
+
+/* REVEAL */
+.reveal{opacity:0;transform:translateY(16px);transition:opacity .6s ease,transform .6s ease}
 .reveal.in{opacity:1;transform:none}
-@media(prefers-reduced-motion:reduce){.reveal{opacity:1;transform:none;transition:none}.varrow{animation:none}}
-/* search dim */
-section.dimmed{display:none}
-mark{background:var(--brass-tint);color:inherit;padding:0 2px;border-radius:3px}
-.two-col{display:grid;grid-template-columns:1.05fr .95fr;gap:34px;align-items:start}
-@media(max-width:880px){.two-col{grid-template-columns:1fr}}
-.split-vs{display:grid;grid-template-columns:1fr auto 1fr;gap:18px;align-items:stretch}
-@media(max-width:760px){.split-vs{grid-template-columns:1fr;gap:10px}}
-.split-vs .vs{align-self:center;font-family:var(--serif);font-size:26px;color:var(--brass);text-align:center}
-.tagline-sep{height:1px;background:linear-gradient(90deg,transparent,var(--brass-soft),transparent);margin:30px auto;max-width:320px}
+
+/* footer */
+footer{padding:56px 0 72px;text-align:center;color:var(--muted);font-size:13px;border-top:1px solid var(--line);margin-top:24px}
+footer b{font-family:var(--serif);letter-spacing:.22em;text-transform:uppercase;color:var(--ink);font-weight:500;display:block;margin-bottom:8px}
+
+/* util */
+.btn{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--line);background:var(--paper);color:var(--muted);border-radius:999px;padding:9px 18px;font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;text-decoration:none;transition:.2s;cursor:pointer}
+.btn:hover{border-color:var(--brass);color:var(--brass);text-decoration:none}
+.hint{text-align:center;color:var(--muted);font-size:12.5px;margin-top:14px;letter-spacing:.04em}
 </style>
 </head>
 <body>
 
-<!-- ============ STICKY NAV ============ -->
 <nav id="topnav">
   <div class="bar">
     <div class="brand">PRATIKSHYA <b>FASHION</b></div>
-    <div id="navlinks">
-      <a href="#hero">Top</a>
-      <a href="#what-is-media">Media</a>
-      <a href="#master">Workflow</a>
-      <a href="#grouping">Grouping</a>
-      <a href="#review-queue">Review</a>
-      <a href="#publishing">Publish</a>
-      <a href="#hover">Hover</a>
-      <a href="#marketing">Marketing</a>
-      <a href="#exceptions">Exceptions</a>
-      <a href="#e2e">Example</a>
-      <a href="#glossary">Glossary</a>
-    </div>
-    <div id="searchbox" title="Search this guide">
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#8a7d6d" stroke-width="2.4"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.5" y2="16.5"/></svg>
-      <input id="search" type="text" placeholder="Search guide…" aria-label="Search this guide">
+    <div class="links" id="navlinks">
+      <a href="#overview">Overview</a>
+      <a href="#workflow">Workflow</a>
+      <a href="#product-images">Product Images</a>
+      <a href="#review">Review</a>
+      <a href="#roles">Roles</a>
+      <a href="#final-flow">Final Flow</a>
     </div>
   </div>
-  <div id="progress"></div>
 </nav>
 
-<!-- ============ FILTER / BEGINNER CONTROLS ============ -->
-<div id="controls" style="margin-top:58px">
-  <div class="row">
-    <span class="chip-label">Filter</span>
-    <button class="chip filter active" data-filter="all">All</button>
-    <button class="chip filter" data-filter="media">Media</button>
-    <button class="chip filter" data-filter="product">Product</button>
-    <button class="chip filter" data-filter="marketing">Marketing</button>
-    <button class="chip filter" data-filter="review">Review</button>
-    <button class="chip filter" data-filter="admin">Admin</button>
-    <button class="chip filter" data-filter="employee">Employee</button>
-    <span style="flex:1"></span>
-    <button class="chip beginner" id="beginnerToggle">✦ Beginner Mode</button>
-  </div>
-</div>
+<main>
 
-<!-- ============ 4. HERO ============ -->
-<section id="hero" data-topics="all media product marketing review admin employee">
+<!-- OVERVIEW + MAIN VISUAL JOURNEY -->
+<section id="overview">
   <div class="wrap">
-    <div class="kicker">Internal Operations Handbook · Verified against the repository</div>
-    <h1>Media Workflow
-      <span class="thin">From image upload to product, review, marketing and storefront.</span>
-    </h1>
-    <p class="sub">“Every image follows a controlled journey before it reaches the customer-facing storefront.”</p>
-    <p class="note">This guide explains — for anyone, even someone who has never seen this project — what happens to a photograph
-    inside Pratikshya Fashion: <b>what</b> happens, <b>why</b> it happens, <b>who</b> does it, what the <b>system checks</b>,
-    what happens <b>next</b>, what can <b>go wrong</b>, and how it gets <b>resolved</b>. Every step, status and rule below was
-    verified in the actual codebase. Nothing is invented; anything missing is marked <span class="badge b-not">Not Implemented</span>.</p>
+    <div class="eyebrow">Simple Guide — No Technical Knowledge Needed</div>
+    <h1>How an image<br>becomes a product <span class="thin">Anyone can understand this in 5 minutes</span></h1>
+    <p class="lead">Every product you see on Pratikshya Fashion started as <b>one photograph</b>. This page shows where that photo comes from, what happens to it, and how it finally appears to a customer. <b>That's it.</b></p>
 
-    <div class="flow-ribbon" aria-label="Workflow summary">
-      <div class="fnode"><div class="dot"></div><div class="fl">Media</div><span class="arrow">›</span></div>
-      <div class="fnode"><div class="dot"></div><div class="fl">Ingest</div><span class="arrow">›</span></div>
-      <div class="fnode"><div class="dot"></div><div class="fl">Classify</div><span class="arrow">›</span></div>
-      <div class="fnode"><div class="dot"></div><div class="fl">Group</div><span class="arrow">›</span></div>
-      <div class="fnode"><div class="dot"></div><div class="fl">Review</div><span class="arrow">›</span></div>
-      <div class="fnode"><div class="dot"></div><div class="fl">Map</div><span class="arrow">›</span></div>
-      <div class="fnode"><div class="dot"></div><div class="fl">Product / Marketing</div><span class="arrow">›</span></div>
-      <div class="fnode"><div class="dot"></div><div class="fl">Approval</div><span class="arrow">›</span></div>
-      <div class="fnode"><div class="dot"></div><div class="fl">Publish</div><span class="arrow">›</span></div>
-      <div class="fnode"><div class="dot"></div><div class="fl">Storefront</div></div>
+    <!-- MAIN VISUAL - BANGLE EXAMPLE -->
+    <div class="journey-hero reveal">
+      <div class="journey-hero-top">
+        <div class="journey-left">
+          <span class="badge gold">Main Visual — Follow One Product</span>
+          <h2>Women's Bangle — from camera to customer</h2>
+          <p>We will follow ONE example through the whole page, so nothing feels abstract.</p>
+
+          <div class="example-box">
+            <div class="ex-thumb">💍</div>
+            <div class="ex-meta">
+              <b>Women's Bangle</b>
+              <span>ID: BAN-001 · Product group: jewellery-bangle-001<br>3 views: front, side, back</span>
+            </div>
+          </div>
+
+          <p style="margin-top:16px;font-size:13px;color:var(--muted)"><b style="color:var(--ink)">Bangle image ↓</b> Media Library ↓ Mapped to BAN-001 ↓ Product information completed ↓ Employee checks it ↓ Admin approves it ↓ Customer sees it</p>
+        </div>
+
+        <!-- vertical journey -->
+        <div class="journey-right">
+          <div class="v-journey">
+            <div class="vj-item active">
+              <div class="side left">Original file<br><b>jewellery-bangle-001.webp</b></div>
+              <div class="vj-dot">📷<small>Image</small></div>
+              <div class="vj-card"><b>Bangle photograph taken</b><span>Front view of the product</span></div>
+            </div>
+            <div class="vj-arrow">▼</div>
+            <div class="vj-item">
+              <div class="side left"></div>
+              <div class="vj-dot">🗂️<small>Library</small></div>
+              <div class="vj-card"><b>Media Library</b><span>System registers the image</span></div>
+            </div>
+            <div class="vj-arrow">▼</div>
+            <div class="vj-item">
+              <div class="side left">Checked by system</div>
+              <div class="vj-dot">🔍<small>Review</small></div>
+              <div class="vj-card"><b>Review</b><span>Is it the correct product?</span></div>
+            </div>
+            <div class="vj-arrow">▼</div>
+            <div class="vj-item">
+              <div class="side left"></div>
+              <div class="vj-dot">🧩<small>Map</small></div>
+              <div class="vj-card"><b>Mapped to BAN-001</b><span>Front + Side + Back grouped</span></div>
+            </div>
+            <div class="vj-arrow">▼</div>
+            <div class="vj-item">
+              <div class="side left">Name, Price, Category</div>
+              <div class="vj-dot">📦<small>Product</small></div>
+              <div class="vj-card"><b>Product Created</b><span>Product ID BAN-001</span></div>
+            </div>
+            <div class="vj-arrow">▼</div>
+            <div class="vj-item">
+              <div class="side left">Assigned employee</div>
+              <div class="vj-dot">👤<small>Employee</small></div>
+              <div class="vj-card"><b>Employee completes info</b><span>Checks details</span></div>
+            </div>
+            <div class="vj-arrow">▼</div>
+            <div class="vj-item">
+              <div class="side left">Super Admin</div>
+              <div class="vj-dot">✅<small>Admin</small></div>
+              <div class="vj-card"><b>Admin approves</b><span>Final check</span></div>
+            </div>
+            <div class="vj-arrow">▼</div>
+            <div class="vj-item">
+              <div class="side left"></div>
+              <div class="vj-dot" style="background:var(--ink);color:#fff">🛍️<small style="color:var(--brass-light)">Website</small></div>
+              <div class="vj-card" style="background:var(--ink);color:#fff;border-color:var(--ink)"><b>Customer sees it</b><span style="color:#d8cfc0">Explore · Search · Product Page</span></div>
+            </div>
+          </div>
+          <p class="hint">This is the only journey you need to remember.</p>
+        </div>
+      </div>
     </div>
   </div>
 </section>
 
-<!-- ============ 32. VISUAL LEGEND (placed early so colors are learned first) ============ -->
-<section id="legend" data-topics="all media product marketing review admin employee">
+<!-- 7 STEPS WORKFLOW -->
+<section id="workflow">
   <div class="wrap">
-    <div class="eyebrow">Visual Legend</div>
-    <div class="section-head"><h2>How to read the colors in this guide</h2></div>
-    <div class="legend">
-      <div class="leg"><span class="sw" style="background:var(--sys)"></span> Blue — System action (automatic, deterministic)</div>
-      <div class="leg"><span class="sw" style="background:var(--ok)"></span> Green — Approved / completed</div>
-      <div class="leg"><span class="sw" style="background:var(--warn)"></span> Yellow — Needs review (a human must decide)</div>
-      <div class="leg"><span class="sw" style="background:var(--bad)"></span> Red — Blocked / conflict</div>
-      <div class="leg"><span class="sw" style="background:var(--mkt)"></span> Purple — Marketing media</div>
+    <div class="section-head reveal">
+      <div class="eyebrow">The Workflow</div>
+      <h2>7 steps from image to website</h2>
+      <p class="sub">Each card shows <b>what happens</b>, <b>who does it</b>, and <b>what happens next</b>. That's all you need.</p>
     </div>
-    <div class="legend" style="margin-top:14px">
-      <span class="badge b-impl">Implemented</span>
-      <span class="badge b-part">Partially Implemented</span>
-      <span class="badge b-not">Not Implemented</span>
-      <span class="muted" style="font-size:13px;align-self:center">— every claim in this guide carries one of these three verified statuses.</span>
+
+    <div class="workflow-wrap">
+      <div class="workflow-line"></div>
+      <div class="steps">
+
+        <!-- 01 -->
+        <div class="step-card reveal">
+          <div class="step-num">01<small>Step</small></div>
+          <div>
+            <div class="step-title">Image Enters</div>
+            <div class="step-grid">
+              <div><div class="k">What Happens</div><p>A product image is added to the Media Library.</p><p class="muted">System identifies: filename, image type, product group, image view.</p></div>
+              <div><div class="k">Who Does It</div><p>System automatically, or Admin / Employee uploads it.</p></div>
+              <div><div class="k">What Happens Next</div><p>Image goes to Media Review to check if it belongs to the correct product.</p></div>
+            </div>
+            <div class="next-badge"><i>NEXT →</i> 02 Media Review</div>
+          </div>
+        </div>
+        <div class="step-arrow"><span>▼</span></div>
+
+        <!-- 02 -->
+        <div class="step-card reveal">
+          <div class="step-num">02<small>Step</small></div>
+          <div>
+            <div class="step-title">Media Review</div>
+            <div class="step-grid">
+              <div><div class="k">What Happens</div><p>The image is checked to make sure it belongs to the correct product.</p><p class="muted">Possible results: ✓ Correct · ⚠ Needs review · ✕ Wrong / duplicate</p></div>
+              <div><div class="k">Who Does It</div><p>System flags it first, then Super Admin reviews it.</p></div>
+              <div><div class="k">What Happens Next</div><p>If correct, the image is connected to its product.</p></div>
+            </div>
+            <div class="next-badge"><i>NEXT →</i> 03 Product Mapping</div>
+          </div>
+        </div>
+        <div class="step-arrow"><span>▼</span></div>
+
+        <!-- 03 -->
+        <div class="step-card reveal">
+          <div class="step-num">03<small>Step</small></div>
+          <div>
+            <div class="step-title">Product Mapping</div>
+            <div class="step-grid">
+              <div><div class="k">What Happens</div><p>The image is connected to the correct product. Front, side and back images belonging to the same product are grouped together.</p></div>
+              <div><div class="k">Who Does It</div><p>System groups by filename, Admin confirms the mapping.</p></div>
+              <div><div class="k">What Happens Next</div><p>A product draft is created with its images.</p></div>
+            </div>
+            <div class="next-badge"><i>NEXT →</i> 04 Product Created</div>
+          </div>
+        </div>
+        <div class="step-arrow"><span>▼</span></div>
+
+        <!-- 04 -->
+        <div class="step-card reveal">
+          <div class="step-num">04<small>Step</small></div>
+          <div>
+            <div class="step-title">Product Created</div>
+            <div class="step-grid">
+              <div><div class="k">What Happens</div><p>The product receives its product ID and product information.</p><p class="muted">Example: Product ID BAN-001, Name Women's Bangle, Price, Category, Images.</p></div>
+              <div><div class="k">Who Does It</div><p>System creates the draft with a permanent ID.</p></div>
+              <div><div class="k">What Happens Next</div><p>The draft goes to the assigned employee for completion.</p></div>
+            </div>
+            <div class="next-badge"><i>NEXT →</i> 05 Employee Review</div>
+          </div>
+        </div>
+        <div class="step-arrow"><span>▼</span></div>
+
+        <!-- 05 -->
+        <div class="step-card reveal">
+          <div class="step-num">05<small>Step</small></div>
+          <div>
+            <div class="step-title">Employee Review</div>
+            <div class="step-grid">
+              <div><div class="k">What Happens</div><p>The assigned employee checks and completes the product information. They can update allowed product details and submit the product for review.</p></div>
+              <div><div class="k">Who Does It</div><p>Assigned Employee (only their products).</p></div>
+              <div><div class="k">What Happens Next</div><p>Product is submitted to Super Admin for final approval.</p></div>
+            </div>
+            <div class="next-badge"><i>NEXT →</i> 06 Admin Approval</div>
+          </div>
+        </div>
+        <div class="step-arrow"><span>▼</span></div>
+
+        <!-- 06 -->
+        <div class="step-card reveal">
+          <div class="step-num">06<small>Step</small></div>
+          <div>
+            <div class="step-title">Admin Approval</div>
+            <div class="step-grid">
+              <div><div class="k">What Happens</div><p>The Super Admin checks the final product. Before publishing, required review issues must be resolved: Name, Price, Taxonomy, Grouping, Media.</p></div>
+              <div><div class="k">Who Does It</div><p>Super Admin only.</p></div>
+              <div><div class="k">What Happens Next</div><p>If everything is correct, product is approved and published.</p></div>
+            </div>
+            <div class="next-badge"><i>NEXT →</i> 07 Website</div>
+          </div>
+        </div>
+        <div class="step-arrow"><span>▼</span></div>
+
+        <!-- 07 -->
+        <div class="step-card reveal" style="border-color:var(--brass-light);box-shadow:var(--shadow-hover)">
+          <div class="step-num">07<small>Step</small></div>
+          <div>
+            <div class="step-title">Website</div>
+            <div class="step-grid">
+              <div><div class="k">What Happens</div><p>Once approved and published, the product becomes visible to customers. It can appear in Explore, Category, Search, Product Page, Collections.</p></div>
+              <div><div class="k">Who Does It</div><p>System automatically shows only published products.</p></div>
+              <div><div class="k">What Happens Next</div><p>Customer can see and buy it. Journey complete.</p></div>
+            </div>
+            <div class="next-badge" style="background:var(--ink);color:#fff;border-color:var(--ink)">🛍 CUSTOMER SEES IT</div>
+          </div>
+        </div>
+
+      </div>
     </div>
-    <div class="beginner-note"><b>Beginner tip:</b> whenever you see a dotted underline like <span class="term" data-tip="A tooltip like this one appears when you hover a dotted term.">this</span>, hover (or tap) it for a plain-language explanation.</div>
   </div>
 </section>
 
-<!-- ============ 5. WHAT IS MEDIA? ============ -->
-<section id="what-is-media" data-topics="media product marketing">
+<!-- PRODUCT IMAGES EXPLANATION -->
+<section id="product-images">
   <div class="wrap">
-    <div class="eyebrow">Foundations</div>
-    <div class="section-head">
-      <h2>What is “media”?</h2>
-      <p class="lead">A <b>media asset</b> is simply an image or visual file used by Pratikshya Fashion — a saree photograph,
-      a kids-wear plate, a homepage banner. Before any image can appear in front of a customer, the system records it,
-      names it, classifies it, and a human reviews it.</p>
+    <div class="section-head reveal">
+      <div class="eyebrow">Product Images</div>
+      <h2>One product can have multiple views</h2>
+      <p class="sub">Different photos of the <b>same</b> bangle — not different products.</p>
     </div>
-    <div class="beginner-note"><b>In plain words:</b> think of media as a photograph with a passport. The passport says what the
-    photo is, which product (if any) it belongs to, and whether it has been approved for travel to the storefront.</div>
 
-    <div class="split-vs">
-      <div class="card" style="border-top:3px solid var(--sys)">
-        <span class="badge b-sys">Product Media</span>
-        <h3 style="margin-top:14px">Photography of a real product</h3>
-        <p class="muted" style="font-size:14px">Owned by exactly <b>one</b> product. Used for:</p>
-        <ul style="list-style:none;margin-top:10px;font-size:14px;color:var(--graphite)">
-          <li>▸ Product cards (the grid tiles customers browse)</li>
-          <li>▸ Product detail pages &amp; galleries</li>
-          <li>▸ Front view · Side view · Back view · Detail view</li>
-          <li>▸ Hover images (the second photo shown on mouse-over)</li>
+    <div class="views-visual reveal">
+      <div></div><div></div>
+      <div class="center-node"><div class="product-node">📦 PRODUCT <span style="opacity:.7;font-size:13px;margin-left:6px">BAN-001</span></div></div>
+      <div></div><div></div>
+    </div>
+
+    <div style="display:flex;justify-content:center;gap:60px;margin-top:6px" class="reveal">
+      <div class="connector"></div><div class="connector"></div><div class="connector"></div>
+    </div>
+
+    <div class="views-visual reveal" style="margin-top:0">
+      <div class="view-node">
+        <div class="view-icon">👁️</div>
+        <b>Front</b>
+        <span>main image<br>What customer sees first</span>
+      </div>
+      <div style="color:var(--brass-light);font-size:20px;text-align:center">—</div>
+      <div class="view-node">
+        <div class="view-icon">↗️</div>
+        <b>Side</b>
+        <span>additional view<br>Shows shape and side</span>
+      </div>
+      <div style="color:var(--brass-light);font-size:20px;text-align:center">—</div>
+      <div class="view-node">
+        <div class="view-icon">🔄</div>
+        <b>Back</b>
+        <span>additional view<br>Shows back design</span>
+      </div>
+    </div>
+
+    <p class="views-note reveal"><b style="color:var(--ink)">These are different views of ONE product.</b> Do NOT show them as separate products.<br>Front = main image. Side & Back = extra images in gallery and hover.</p>
+
+    <!-- Comparison PRODUCT vs MARKETING -->
+    <div class="section-head reveal" style="margin-top:86px">
+      <div class="eyebrow">Two Types of Images</div>
+      <h2>Product media vs Marketing media</h2>
+      <p class="sub">Both are images, but they are used in completely different places.</p>
+    </div>
+
+    <div class="compare reveal">
+      <div class="compare-card product">
+        <div class="ey">Product Media</div>
+        <h3>Shows a real product</h3>
+        <p style="color:var(--muted);font-size:14px;margin-top:6px">Belongs to exactly one product</p>
+        <ul class="compare-list">
+          <li>Product card (the small tile in shop)</li>
+          <li>Product page gallery</li>
+          <li>Hover image (second view on mouse)</li>
+          <li>Front / Side / Back views</li>
+        </ul>
+        <div class="simple-flow">
+          <div class="flow-node">📷 Product Image</div>
+          <span class="flow-arrow">→</span>
+          <div class="flow-node dark">Product</div>
+        </div>
+      </div>
+
+      <div class="compare-vs">≠</div>
+
+      <div class="compare-card marketing">
+        <div class="ey">Marketing Media</div>
+        <h3>Sells a mood</h3>
+        <p style="color:var(--muted);font-size:14px;margin-top:6px">Not linked to any product — linked to a place on site</p>
+        <ul class="compare-list">
+          <li>Homepage hero carousel</li>
+          <li>Banner / Sale section</li>
+          <li>Editorial story</li>
+          <li>Lookbook / collection cover</li>
+        </ul>
+        <div class="simple-flow">
+          <div class="flow-node">🖼️ Marketing Image</div>
+          <span class="flow-arrow">→</span>
+          <div class="flow-node dark">Homepage / Promotion</div>
+        </div>
+      </div>
+    </div>
+    <p class="hint reveal"><b style="color:var(--ink)">PRODUCT IMAGE → PRODUCT.</b> MARKETING IMAGE → HOMEPAGE / PROMOTION. One image can never be both.</p>
+  </div>
+</section>
+
+<!-- REVIEW FLAGS -->
+<section id="review">
+  <div class="wrap">
+    <div class="section-head reveal">
+      <div class="eyebrow">Publishing Rules</div>
+      <h2>Why can't some products be published?</h2>
+      <p class="sub">A small checklist keeps bad products away from customers. If any item fails, admin cannot publish.</p>
+    </div>
+
+    <div class="flags reveal">
+      <div class="flag-card">
+        <h4>📝 Name</h4>
+        <p>Product name needs review.</p>
+        <b>Example: name is still placeholder like “Uncatalogued Bangle · BAN-001”.</b>
+      </div>
+      <div class="flag-card">
+        <h4>💰 Price</h4>
+        <p>Product price needs review.</p>
+        <b>Example: price is 0 because system refused to guess it.</b>
+      </div>
+      <div class="flag-card">
+        <h4>🏷️ Taxonomy</h4>
+        <p>Category / classification needs review.</p>
+        <b>Example: category was guessed from filename, or subcategory missing.</b>
+      </div>
+      <div class="flag-card">
+        <h4>🖼️ Grouping</h4>
+        <p>Product images need grouping / identity review.</p>
+        <b>Example: system isn't sure if two photos show same product or two products.</b>
+      </div>
+    </div>
+
+    <div class="flag-path reveal">
+      <span class="check">✅ Name ok</span>
+      <span class="check">✅ Price ok</span>
+      <span class="check">✅ Category ok</span>
+      <span class="check">✅ Grouping ok</span>
+      <span class="check">✅ Media ok</span>
+      <div class="path-arrow">▼</div>
+      <div style="font-size:12px;letter-spacing:.18em;text-transform:uppercase;font-weight:800;color:var(--muted)">All Issues Resolved</div>
+      <div class="path-arrow">▼</div>
+      <div style="font-size:12px;letter-spacing:.18em;text-transform:uppercase;font-weight:800;color:var(--brass)">Admin Approves</div>
+      <div class="path-arrow">▼</div>
+      <div class="path-final">Product Goes Live</div>
+    </div>
+  </div>
+</section>
+
+<!-- WHO DOES WHAT -->
+<section id="roles">
+  <div class="wrap">
+    <div class="section-head reveal">
+      <div class="eyebrow">People & System</div>
+      <h2>Who does what?</h2>
+      <p class="sub">Only three roles. No confusion.</p>
+    </div>
+
+    <div class="roles reveal">
+      <div class="role-card">
+        <div class="role-icon">⚙️</div>
+        <h3>System</h3>
+        <div class="role-sub">Automatic</div>
+        <ul>
+          <li>Registers media — gives each image a permanent ID</li>
+          <li>Groups media based on filename rules</li>
+          <li>Maintains product / media relationships</li>
+          <li>Filters storefront to show only published products</li>
         </ul>
       </div>
-      <div class="vs">≠</div>
-      <div class="card" style="border-top:3px solid var(--mkt)">
-        <span class="badge b-mkt">Marketing Media</span>
-        <h3 style="margin-top:14px">Editorial &amp; promotional artwork</h3>
-        <p class="muted" style="font-size:14px">Owned by a <b>marketing placement</b>, never by a product. Used for:</p>
-        <ul style="list-style:none;margin-top:10px;font-size:14px;color:var(--graphite)">
-          <li>▸ Homepage hero carousel</li>
-          <li>▸ Banners &amp; sale campaigns</li>
-          <li>▸ Editorial storytelling plates</li>
-          <li>▸ Lookbook &amp; collection covers</li>
-          <li>▸ Homepage promotional sections</li>
+      <div class="role-card">
+        <div class="role-icon">👤</div>
+        <h3>Employee</h3>
+        <div class="role-sub">Works on assigned products</div>
+        <ul>
+          <li>Completes product information (name, price, category, description)</li>
+          <li>Reviews product media — does the photo match?</li>
+          <li>Submits product for approval when ready</li>
+          <li>Can only edit products assigned to them</li>
+        </ul>
+      </div>
+      <div class="role-card" style="border-color:var(--brass-light)">
+        <div class="role-icon">👑</div>
+        <h3>Super Admin</h3>
+        <div class="role-sub">Final control</div>
+        <ul>
+          <li>Reviews submitted products</li>
+          <li>Resolves important issues (name, price, grouping)</li>
+          <li>Approves / publishes products</li>
+          <li>Manages employees and media ownership</li>
         </ul>
       </div>
     </div>
-    <p style="margin-top:22px;text-align:center" class="muted"><b style="color:var(--ink)">PRODUCT MEDIA ≠ MARKETING MEDIA.</b>
-    A record physically cannot be both at once: assigning media to a marketing placement clears its product ownership, and vice-versa.
-    <span class="badge b-impl">Implemented</span></p>
-    <details class="tech acc" style="margin-top:18px"><summary>Technical implementation</summary>
-      <div class="acc-body">scope vocabulary: <code>MEDIA_SCOPES.PRODUCT / MARKETING / UNASSIGNED</code> — src/config/mediaTypes.js<br>
-      one-or-the-other rule: <code>assignToProduct()</code> nulls placement · <code>assignToPlacement()</code> nulls productId — src/services/media/mediaRepository.js</div>
-    </details>
   </div>
 </section>
 
-<!-- ============ 6. MASTER MEDIA FLOW ============ -->
-<section id="master" data-topics="media product review admin employee">
+<!-- WHAT HAPPENS IF SOMETHING IS WRONG -->
+<section>
   <div class="wrap">
-    <div class="eyebrow">The Journey</div>
-    <div class="section-head">
-      <h2>Master media flow — twelve steps, click each one</h2>
-      <p class="lead">Every image travels these twelve stations. Click any tile to see what happens,
-      who is responsible, what goes in, what comes out, the rules the system enforces, and what can go wrong.</p>
+    <div class="section-head reveal">
+      <div class="eyebrow">When Things Go Wrong</div>
+      <h2>What if something is wrong?</h2>
+      <p class="sub">Every problem has one clear fix.</p>
     </div>
-    <div id="master-steps" role="tablist"></div>
-    <div id="step-detail" role="tabpanel"></div>
-    <div class="beginner-note"><b>Beginner tip:</b> steps 1–5 are automatic (blue — the system does them).
-    Steps 6–11 involve people (yellow — review; green — approval). Nothing skips a station.</div>
+
+    <div class="wrong-list reveal">
+      <div class="wrong-row"><b>❌ Wrong image</b><div class="arrow">→</div><span>Send to media review — admin decides if it belongs or not.</span></div>
+      <div class="wrong-row"><b>🧩 Wrong product mapping</b><div class="arrow">→</div><span>Correct the mapping — re-assign image to right product.</span></div>
+      <div class="wrong-row"><b>📝 Missing product information</b><div class="arrow">→</div><span>Employee completes it — name, price, category, description.</span></div>
+      <div class="wrong-row"><b>⚠️ Name / price / category problem</b><div class="arrow">→</div><span>Resolve review flag — fix the data, flag clears automatically.</span></div>
+      <div class="wrong-row"><b>↩️ Product rejected</b><div class="arrow">→</div><span>Goes back for correction — employee fixes it and submits again.</span></div>
+    </div>
   </div>
 </section>
 
-<!-- ============ 7-8. LIBRARY + REGISTRATION ============ -->
-<section id="library" data-topics="media">
+<!-- FINAL FLOW -->
+<section id="final-flow">
   <div class="wrap">
-    <div class="eyebrow">Step 01 · 02 in depth</div>
-    <div class="section-head">
-      <h2>One library. One register. One identity per image.</h2>
+    <div class="section-head reveal" style="margin-bottom:0">
+      <div class="eyebrow">The Big Picture</div>
+      <h2>From one image to a customer-ready product</h2>
     </div>
-    <div class="two-col">
-      <div>
-        <h3>Step 1 — Media enters the library <span class="badge b-impl">Implemented</span></h3>
-        <p style="color:var(--graphite)">Every commercial image lives under <b>one canonical media root</b>:</p>
-        <div class="diagram" style="margin:14px 0"><span class="hl">public/library/</span>  ←  the single home for all photography (181 ingested assets)</div>
-        <p style="color:var(--graphite);font-size:14.5px"><b>Why one root?</b> The system deliberately <i>never</i> searches random
-        public folders. If images were scattered everywhere, no one could say which photo is official, reviewed, or owned by which
-        product. One root means one truth: “all commercial media flows through the central media architecture.” A build script
-        (<code>npm run media:optimize</code>) optimises files (80.2% size reduction on record) and writes the ingestion manifest.
-        Admins and employees can also add media at runtime through the upload pages — with one honest caveat: runtime uploads are
-        <b>browser-preview only</b> in the current demo (no server exists yet). <span class="badge b-part">Partially Implemented</span></p>
+
+    <div class="final-flow reveal">
+      <h3>📷 → 🛍 — The Complete Flow</h3>
+      <div class="final-track">
+        <div class="fnode"><span class="ico">📷</span> Image</div>
+        <div class="f-arrow">▼</div>
+        <div class="fnode light"><span class="ico">🗂️</span> Media Library</div>
+        <div class="f-arrow">▼</div>
+        <div class="fnode light"><span class="ico">🔍</span> Review</div>
+        <div class="f-arrow">▼</div>
+        <div class="fnode light"><span class="ico">🧩</span> Product Mapping</div>
+        <div class="f-arrow">▼</div>
+        <div class="fnode light"><span class="ico">📦</span> Product Draft</div>
+        <div class="f-arrow">▼</div>
+        <div class="fnode light"><span class="ico">👤</span> Employee Review</div>
+        <div class="f-arrow">▼</div>
+        <div class="fnode light"><span class="ico">👑</span> Admin Review</div>
+        <div class="f-arrow">▼</div>
+        <div class="fnode light"><span class="ico">✅</span> Approved</div>
+        <div class="f-arrow">▼</div>
+        <div class="fnode light"><span class="ico">🚀</span> Published</div>
+        <div class="f-arrow">▼</div>
+        <div class="fnode" style="background:#fff;color:var(--ink);border-color:#fff"><span class="ico">🛍</span> Customer</div>
       </div>
-      <div>
-        <h3>Step 2 — Media is registered <span class="badge b-impl">Implemented</span></h3>
-        <p style="color:var(--graphite);font-size:14.5px">Registration gives the image an <b>identity</b> the whole system can refer to.
-        A registered record carries (conceptually):</p>
-        <div class="tbl-scroll" style="margin-top:12px"><table class="tbl">
-          <tr><th>Field</th><th>Example</th><th>Meaning</th></tr>
-          <tr><td><b>Media ID</b></td><td><code>pm-lz3k9-0a4</code></td><td>Permanent identity, never reused</td></tr>
-          <tr><td><b>Filename</b></td><td><code>kids-021.webp</code></td><td>The deterministic name (see Step 3)</td></tr>
-          <tr><td><b>Path</b></td><td><code>/library/kids-021.webp</code></td><td>Where the file lives</td></tr>
-          <tr><td><b>Status</b></td><td><code>ACTIVE</code></td><td>DRAFT · PENDING_REVIEW · ACTIVE · REJECTED · ARCHIVED</td></tr>
-          <tr><td><b>Usage</b></td><td><code>PRODUCT_PRIMARY</code></td><td>Where it may appear (hero, category cover, gallery…)</td></tr>
-          <tr><td><b>Source</b></td><td><code>Ingested library</code></td><td>Provenance — who/what brought it in</td></tr>
-          <tr><td><b>GroupKey</b></td><td><code>kids-021</code></td><td>Which physical product-set it photographs</td></tr>
-          <tr><td><b>View</b></td><td><code>front</code></td><td>Which angle it shows</td></tr>
-          <tr><td><b>Product ID</b></td><td><code>KID-021</code> or empty</td><td>Ownership — the one product it belongs to</td></tr>
-          <tr><td><b>Mapping status</b></td><td><code>MAPPED</code></td><td>MAPPED · UNMAPPED · NEEDS_REVIEW</td></tr>
-        </table></div>
-      </div>
+      <div class="final-tagline">“From one image to a customer-ready product.”</div>
     </div>
-    <details class="tech acc" style="margin-top:20px"><summary>Technical implementation</summary>
-      <div class="acc-body">canonical root: <code>CANONICAL_MEDIA_ROOT = "/library"</code> — src/services/media/mediaPaths.js<br>
-      register &amp; normalisation: src/services/media/mediaStore.js (<code>normaliseMedia</code>, <code>createMediaId</code> → <code>pm-…</code>)<br>
-      the one read/write door: src/services/media/mediaRepository.js · manifest: src/data/media/ingestedManifest.json (181 assets)<br>
-      only ACTIVE media is ever shown to a customer: <code>MEDIA_STATUS</code> — src/config/mediaTypes.js</div>
-    </details>
-  </div>
-</section>
 
-<!-- ============ 9. FILENAME PARSING ============ -->
-<section id="filename" data-topics="media product">
-  <div class="wrap">
-    <div class="eyebrow">Step 03 in depth</div>
-    <div class="section-head">
-      <h2>The filename is the truth</h2>
-      <p class="lead">Pratikshya Fashion does not guess what a photo shows. The <b>filename convention</b> carries the facts,
-      and a deterministic parser reads them. Same input, same answer, every time. <span class="badge b-impl">Implemented</span></p>
-    </div>
-    <div class="diagram">
-<span class="hl">women-saree-001-front.webp</span>
-└──────┬──────┘ └─┬─┘
-       │          │
-<span class="b">women-saree-001</span>   <span class="g">front</span>
-       ↓          ↓
-   <span class="b">groupKey</span>       <span class="g">view</span>
-   (which product-set)   (which angle)
-
-<span class="hl">women-saree-001-back.webp</span>   →   <span class="b">same groupKey</span> · <span class="g">different view</span>
-
-therefore:                    ONE PRODUCT
-                              ├── FRONT
-                              └── BACK</div>
-    <div class="beginner-note"><b>In plain words:</b> the part before the view word is the product-set’s name tag (groupKey);
-    the last word says which angle it is. Two files with the same tag are two photos of the <i>same physical garment</i>.</div>
-    <p class="muted" style="margin-top:14px;font-size:14px">Full convention: <code>[department]-[category]-[style]-[number]-[view].webp</code>.
-    A file with no view word (like <code>kids-001.webp</code>) is a <b>standalone</b> — one photo, one product, no hover alternate.</p>
-    <details class="tech acc" style="margin-top:16px"><summary>Technical implementation</summary>
-      <div class="acc-body">parser: <code>parseMediaFilename()</code>, 17 recognised view suffixes (longest first) — src/services/media/mediaNaming.js<br>
-      view ordering: <code>getViewOrderScore()</code> (front 0 · side 1 · back 3 · detail 4 …)</div>
-    </details>
-  </div>
-</section>
-
-<!-- ============ 10. VIEW TYPES ============ -->
-<section id="views" data-topics="media product">
-  <div class="wrap">
-    <div class="eyebrow">Vocabulary</div>
-    <div class="section-head"><h2>The view types</h2>
-      <p class="lead">A “view” is the angle a photograph shows. Views decide the order of the gallery and which image
-      becomes the hover alternate.</p></div>
-    <div class="grid g4">
-      <div class="card view-card"><div class="frame"><svg viewBox="0 0 40 60" fill="none" stroke="#a07c3c" stroke-width="1.6"><path d="M20 6c5 0 8 4 8 9v8l6 20-6 3-2 8H14l-2-8-6-3 6-20v-8c0-5 3-9 8-9z"/><circle cx="20" cy="12" r="4"/></svg></div><h4>Front</h4><p>The primary, default product presentation. Leads the card and gallery.</p></div>
-      <div class="card view-card"><div class="frame"><svg viewBox="0 0 40 60" fill="none" stroke="#a07c3c" stroke-width="1.6"><path d="M17 6c4 0 7 4 7 9v9l5 19-4 3-2 8h-9l-1-8-4-3 4-19v-9c0-5 1-9 4-9z"/><circle cx="18" cy="12" r="4"/></svg></div><h4>Side</h4><p>The profile of the garment — drape, silhouette, fall of the fabric.</p></div>
-      <div class="card view-card"><div class="frame"><svg viewBox="0 0 40 60" fill="none" stroke="#a07c3c" stroke-width="1.6"><path d="M20 6c5 0 8 4 8 9v8l6 20-6 3-2 8H14l-2-8-6-3 6-20v-8c0-5 3-9 8-9z"/><path d="M20 8v12" stroke-dasharray="2 2"/></svg></div><h4>Back</h4><p>The rear view. The preferred hover alternate when it exists.</p></div>
-      <div class="card view-card"><div class="frame"><svg viewBox="0 0 40 60" fill="none" stroke="#a07c3c" stroke-width="1.6"><circle cx="20" cy="30" r="14"/><path d="M20 20v20M10 30h20" stroke-dasharray="2 3"/></svg></div><h4>Detail</h4><p>Close-up of weave, border, embroidery, finishing — the craft study.</p></div>
-      <div class="card view-card"><div class="frame"><svg viewBox="0 0 40 60" fill="none" stroke="#a07c3c" stroke-width="1.6"><circle cx="20" cy="26" r="11"/><line x1="28" y1="34" x2="36" y2="44"/></svg></div><h4>Close</h4><p>Macro texture and thread study (<code>close</code>, <code>closeup</code>, <code>front-close</code>).</p></div>
-      <div class="card view-card"><div class="frame"><svg viewBox="0 0 40 60" fill="none" stroke="#a07c3c" stroke-width="1.6"><path d="M26 8c-6 2-10 8-10 16s4 14 10 16"/><polyline points="20 14 14 24 20 34"/></svg></div><h4>Left</h4><p>Left profile (<code>left</code>, <code>left-side</code>, <code>left-side-detail</code>).</p></div>
-      <div class="card view-card"><div class="frame"><svg viewBox="0 0 40 60" fill="none" stroke="#a07c3c" stroke-width="1.6"><path d="M14 8c6 2 10 8 10 16s-4 14-10 16"/><polyline points="20 14 26 24 20 34"/></svg></div><h4>Right</h4><p>Right profile (<code>right</code>, <code>right-side</code>, <code>right-side-detail</code>).</p></div>
-      <div class="card view-card"><div class="frame"><svg viewBox="0 0 40 60" fill="none" stroke="#8a7d6d" stroke-width="1.6"><rect x="6" y="12" width="12" height="16" rx="2"/><rect x="22" y="12" width="12" height="16" rx="2"/><rect x="14" y="32" width="12" height="16" rx="2"/></svg></div><h4>Multiple</h4><p>Composite shots (<code>multiple</code>, <code>multiple-front</code>) — ranked last, never primary.</p></div>
-    </div>
-  </div>
-</section>
-
-<!-- ============ 11. MOST IMPORTANT RULE ============ -->
-<section id="rule" data-topics="media product review">
-  <div class="wrap">
-    <div class="warn-banner reveal">
-      <div class="rule-line">The Most Important Rule</div>
-      <h3>SIMILAR DOES NOT MEAN SAME PRODUCT</h3>
-      <p style="max-width:64ch;color:#d8cfc0">Two photographs may look almost identical — same colour, same model, same background.
-      That proves <b>nothing</b>. Two similar-looking kids outfits can be two different physical products. The system therefore
-      relies only on <b>deterministic</b> signals: the <b>groupKey</b>, the <b>filename convention</b>, <b>explicit ownership</b>
-      in the register, and <b>human review</b>. Visual similarity is treated as a <i>question for a human</i>, never as an answer.
-      The system will refuse to automatically merge visually similar products — and for the 21 confirmed Kids products
-      (KID-001 … KID-021) it refuses even when a human tries: <i>“Similar is not the same — they cannot be grouped as one product.”</i></p>
-      <div class="compare-visual">
-        <div class="imgbox"><svg width="34" height="46" viewBox="0 0 40 60" fill="none" stroke="#c9a86a" stroke-width="1.6"><path d="M20 6c5 0 8 4 8 9v8l6 20-6 3-2 8H14l-2-8-6-3 6-20v-8c0-5 3-9 8-9z"/></svg>IMAGE A</div>
-        <span style="color:#d8cfc0;font-size:12px;letter-spacing:.14em">SIMILAR<br>APPEARANCE</span>
-        <div class="imgbox"><svg width="34" height="46" viewBox="0 0 40 60" fill="none" stroke="#c9a86a" stroke-width="1.6"><path d="M20 6c5 0 8 4 8 9v8l6 20-6 3-2 8H14l-2-8-6-3 6-20v-8c0-5 3-9 8-9z"/></svg>IMAGE B</div>
-        <span class="neq">≠</span>
-        <div class="imgbox" style="border-color:#e19a95;color:#e19a95">SAME<br>PRODUCT</div>
-      </div>
-      <p style="margin-top:20px;font-size:12.5px;color:#b7ab99">Verified: <span class="badge b-impl">Implemented</span> — grouping is “No visual similarity,
-      no colour, no model, no approximate matching” (source comment), and confirmed-Kids merges are hard-refused.</p>
-    </div>
-    <details class="tech acc" style="margin-top:18px"><summary>Technical implementation</summary>
-      <div class="acc-body">no-merge guard: <code>wouldMergeConfirmedKids()</code> → <code>KIDS_MERGE_REFUSED_ERROR</code> — src/services/kidsProductIdentity.js<br>
-      deterministic grouping only: src/services/media/mediaGroups.js · duplicates are review candidates, never identity: <code>DUPLICATE_STATUS.POSSIBLE_DUPLICATE</code> → group review queue</div>
-    </details>
-  </div>
-</section>
-
-<!-- ============ 12. GROUPING ============ -->
-<section id="grouping" data-topics="media product">
-  <div class="wrap">
-    <div class="eyebrow">Step 05 in depth</div>
-    <div class="section-head"><h2>Grouping — one garment, many angles</h2>
-      <p class="lead">Grouping collects the photos that show the <b>same physical product</b> from different angles.
-      It is decided purely by the filename. <span class="badge b-impl">Implemented</span></p></div>
-    <div class="grid g2">
-      <div class="card">
-        <span class="badge b-impl">One group → one product</span>
-        <div class="diagram" style="margin-top:16px">
-saree-001-front.webp
-saree-001-side.webp
-saree-001-back.webp
-        ↓
-     <span class="b">GROUP</span>  <span class="hl">saree-001</span>
-        ↓
-   <span class="g">ONE PRODUCT</span> (3 views)</div>
-        <p class="muted" style="font-size:13.5px;margin-top:12px">Same groupKey ⇒ same garment. The group becomes one product with a front, side and back.</p>
-      </div>
-      <div class="card">
-        <span class="badge b-not" style="background:var(--bad-bg)">Never merged automatically</span>
-        <div class="diagram" style="margin-top:16px">
-saree-001-front.webp
-saree-002-front.webp
-        ↓
-   <span class="y">TWO GROUPS</span>  <span class="hl">saree-001 · saree-002</span>
-        ↓
-  <span class="r">TWO PRODUCTS</span> — always</div>
-        <p class="muted" style="font-size:13.5px;margin-top:12px"><code>001</code> and <code>002</code> are different numbers, not view words.
-        Different groupKeys are <b>never</b> auto-merged — only an explicit human “same product” decision can join them (and never for confirmed Kids).</p>
-      </div>
-    </div>
-    <details class="tech acc" style="margin-top:18px"><summary>Technical implementation</summary>
-      <div class="acc-body"><code>buildMediaGroups()</code> — src/services/media/mediaGroups.js · one group = files whose base matches after removing the view suffix<br>
-      primary = front-first (<code>group.primary</code>) · standalone vs multi-view: <code>isStandalone / isGrouped</code></div>
-    </details>
-  </div>
-</section>
-
-<!-- ============ 13. PRODUCT MAPPING ============ -->
-<section id="mapping" data-topics="media product marketing review">
-  <div class="wrap">
-    <div class="eyebrow">Step 06 in depth</div>
-    <div class="section-head"><h2>Product mapping — where does this image belong?</h2>
-      <p class="lead">After grouping, the system decides the destination of the media: an existing product, a brand-new
-      product draft, the marketing world, or the review queue. <span class="badge b-impl">Implemented</span></p></div>
-    <div class="diagram">
-                         MEDIA (a group of 1+ files)
-                              │
-              <span class="p">Is it marketing / house artwork?</span>
-                 ├── YES ──▶  <span class="p">MARKETING MEDIA</span>
-                 │            (never becomes a product — excluded from discovery)
-                 └── NO
-                      │
-              <span class="b">Does product ownership already exist?</span>
-              (register productId → product claim → source group → canonical map)
-                 ├── YES ──▶  <span class="g">EXISTING PRODUCT</span> (media attaches / already attached)
-                 └── NO
-                      │
-              <span class="y">Ingestion flags? duplicates? uncertainty?</span>
-                 ├── YES ──▶  <span class="y">REVIEW QUEUE</span> (a human decides)
-                 └── NO  ──▶  <span class="hl">CREATE / RECONCILE PRODUCT DRAFT</span>
-                              (one draft per group · permanent Product ID · never auto-published)</div>
-    <div class="beginner-note"><b>In plain words:</b> the system first checks “is this an advert, not a product photo?”
-    Then “do we already know whose photo this is?” Only when the answer is no-and-no does it create a new <i>draft</i>
-    product — and even then, a human must finish and approve it before customers ever see it.</div>
-    <details class="tech acc" style="margin-top:16px"><summary>Technical implementation</summary>
-      <div class="acc-body">ownership precedence: <code>resolveGroupOwnership()</code> — REGISTER → PRODUCT_CLAIM → SOURCE_GROUP → CANONICAL_ASSIGNMENT — src/services/media/mediaProductDiscovery.js<br>
-      draft minting for uncatalogued groups: <code>syncCatalogueReconciliation()</code> — src/services/catalogueReconciliation.js<br>
-      marketing/house exclusion: <code>isHouseMedia()</code> + scope filters (PRODUCT/UNASSIGNED only) · manual mapping desk: /admin/media/product-mapping</div>
-    </details>
-  </div>
-</section>
-
-<!-- ============ 14. MEDIA OWNERSHIP ============ -->
-<section id="ownership" data-topics="media product review admin">
-  <div class="wrap">
-    <div class="eyebrow">The Ownership Law</div>
-    <div class="section-head"><h2>Every photograph belongs to exactly one product</h2>
-      <p class="lead">Ownership is written on the media record itself (its <span class="term" data-tip="The productId field stored on the media record — the single source of truth for who owns the image.">register ownership</span>).
-      A product may also <span class="term" data-tip="A product can list media IDs it believes are its own (mediaIds / primaryMediaId / galleryMediaIds). If the register disagrees, that is a conflict a human must resolve.">claim</span> media —
-      and when a claim disagrees with the register, that is a <b>conflict</b>, reported loudly and never resolved silently. <span class="badge b-impl">Implemented</span></p></div>
-    <div class="grid g2">
-      <div class="card" style="border-top:3px solid var(--ok)">
-        <span class="badge b-impl">Correct</span>
-        <div class="diagram" style="margin-top:14px">
-Product <span class="g">KID-001</span>
-├── kids-001-front.webp   ✓ owned
-└── kids-001-back.webp    ✓ owned</div>
-      </div>
-      <div class="card" style="border-top:3px solid var(--bad)">
-        <span class="badge b-not">Never allowed</span>
-        <div class="diagram" style="margin-top:14px">
-Product <span class="r">KID-001</span>
-└── saree-003-back.webp   ✗ another
-                            product's photo</div>
-      </div>
-    </div>
-    <div class="grid g3" style="margin-top:18px">
-      <div class="card"><span class="badge b-not">Cross-product media</span><p style="font-size:14px;color:var(--graphite);margin-top:12px"><b>BLOCKED.</b> A product can never publish while it shows another product’s photograph. Card assembly drops foreign items outright and flags the set <code>CROSS_PRODUCT_REFERENCE</code>.</p></div>
-      <div class="card"><span class="badge b-part">Duplicate ownership</span><p style="font-size:14px;color:var(--graphite);margin-top:12px"><b>REVIEW.</b> The same file owned by two products is detected and counted in the workflow metrics; a human resolves it through the review actions. (Detection: implemented · guided auto-repair: not implemented.)</p></div>
-      <div class="card"><span class="badge b-part">Invalid ownership</span><p style="font-size:14px;color:var(--graphite);margin-top:12px"><b>REVIEW.</b> Media pointing at a product ID that no longer exists is reported as <i>orphaned</i> in the metrics. No automatic repair — a human re-maps it.</p></div>
-    </div>
-    <details class="tech acc" style="margin-top:18px"><summary>Technical implementation</summary>
-      <div class="acc-body">single-owner check: <code>validateMediaAssignment()</code> → <code>MEDIA_ALREADY_ASSIGNED</code> — src/services/productWorkflow.js<br>
-      claims vs register: <code>resolveProductMediaClaims()</code> — src/services/media/productMediaSet.js<br>
-      cross-product drop: <code>isProductOwnedMedia()</code> / <code>assembleProductMediaSet()</code> · Kids cross checks: <code>kidsMediaOwnershipIssues()</code><br>
-      duplicate/orphan detection: <code>getWorkflowMetrics().media.duplicateOwnership / orphaned</code></div>
-    </details>
-  </div>
-</section>
-
-<!-- ============ 15. MEDIA REVIEW QUEUE ============ -->
-<section id="review-queue" data-topics="media review admin employee">
-  <div class="wrap">
-    <div class="eyebrow">Step 07 in depth</div>
-    <div class="section-head"><h2>The Media Review Queue — your first day</h2>
-      <p class="lead">“You are new here and you open the review desks. What do you see?” There are actually <b>two</b> queues,
-      and it helps to know both. <span class="badge b-impl">Implemented</span></p></div>
-    <div class="grid g2">
-      <div class="card">
-        <h3>Queue A — Upload review <span class="mono" style="font-size:11px">/admin/media/review</span></h3>
-        <p style="font-size:14px;color:var(--graphite)">Every image an <b>employee</b> uploads lands here with status
-        <code>PENDING_REVIEW</code> (admin uploads go straight to <code>ACTIVE</code>). The reviewer — an admin — sees each
-        submission grouped by product/placement and uploader, and either <b>approves</b> it (→ ACTIVE, reviewer name and time
-        recorded) or <b>rejects</b> it with a written reason.</p>
-      </div>
-      <div class="card">
-        <h3>Queue B — Identity &amp; mapping review <span class="mono" style="font-size:11px">/admin/products/review</span></h3>
-        <p style="font-size:14px;color:var(--graphite)">The workflow desk. Its <b>Media Inbox</b> lists every asset that is
-        unassigned, in draft/review, flagged <code>NEEDS_REVIEW</code>/<code>UNMAPPED</code>, a possible duplicate, or claimed by an
-        unpublished product. Its <b>Group Review</b> asks the one human question that matters: <i>same product, or separate products?</i></p>
-      </div>
-    </div>
-    <h3 style="margin:30px 0 12px">What a reviewer sees on each row</h3>
-    <div class="tbl-scroll"><table class="tbl">
-      <tr><th>Column</th><th>What it tells you</th></tr>
-      <tr><td><b>Preview</b></td><td>A thumbnail of the actual image</td></tr>
-      <tr><td><b>Filename</b></td><td>e.g. <code>women-saree-banarasi-004-side.webp</code> — the deterministic name</td></tr>
-      <tr><td><b>Media ID</b></td><td>The permanent register identity</td></tr>
-      <tr><td><b>GroupKey · View</b></td><td>Which product-set and which angle</td></tr>
-      <tr><td><b>Current product</b></td><td>The owning product (ID + name), or “Unassigned”</td></tr>
-      <tr><td><b>Ownership / claims</b></td><td>Which drafts are claiming it, and whether the register disagrees</td></tr>
-      <tr><td><b>Conflict</b></td><td>e.g. MEDIA_ALREADY_ASSIGNED — who the current owner is</td></tr>
-      <tr><td><b>Status</b></td><td>DRAFT · PENDING_REVIEW · ACTIVE · REJECTED · ARCHIVED</td></tr>
-      <tr><td><b>Review flags / tags</b></td><td>DRAFT · REVIEW · UNASSIGNED · NEEDS_REVIEW · CLAIMED_BY_DRAFT</td></tr>
-      <tr><td><b>Assigned employee</b></td><td>Who is working the related product, if anyone</td></tr>
-    </table></div>
-    <details class="tech acc" style="margin-top:16px"><summary>Technical implementation</summary>
-      <div class="acc-body">upload queue: <code>getPendingReview()</code> / <code>approve()</code> / <code>reject()</code> — src/services/media/mediaRepository.js · page: src/pages/admin/media/AdminMediaReview.jsx<br>
-      inbox rows: <code>getMediaInbox()</code> — src/services/productWorkflow.js · card: src/components/admin/MediaInboxCard.jsx<br>
-      group candidates: <code>getPotentialProductGroups()</code> (filename groups + duplicate signals + stored decisions)</div>
-    </details>
-  </div>
-</section>
-
-<!-- ============ 16. REVIEW DECISIONS ============ -->
-<section id="decisions" data-topics="review admin">
-  <div class="wrap">
-    <div class="eyebrow">Human Decisions</div>
-    <div class="section-head"><h2>The five review decisions</h2>
-      <p class="lead">When media ownership is contested — most famously in the Kids reconciliation, where a draft’s photo is owned
-      by an existing published product — an admin picks one of five actions. Each is a single, logged, deliberate act.
-      <span class="badge b-impl">Implemented</span></p></div>
-    <div class="grid g3">
-      <div class="card decision-card"><h4 style="color:var(--ok)">Keep Existing</h4>
-        <dl><dt>When to use</dt><dd>The current owner is right; the new draft is redundant.</dd>
-        <dt>What it does</dt><dd>Clears the draft’s media claims and archives the draft.</dd>
-        <dt>What changes</dt><dd>Media stays with its current product; the draft leaves the queue.</dd>
-        <dt>Who can do it</dt><dd>Admin only.</dd><dt>What happens next</dt><dd>The existing product continues unchanged.</dd></dl></div>
-      <div class="card decision-card"><h4 style="color:var(--sys)">Transfer</h4>
-        <dl><dt>When to use</dt><dd>The photo genuinely belongs to the new (e.g. KID) product.</dd>
-        <dt>What it does</dt><dd>Moves ownership with explicit confirmation; strips the previous owner’s stale references and flags it <code>MEDIA_OWNERSHIP_MOVED</code>; a published kids owner left with no media is archived.</dd>
-        <dt>What changes</dt><dd>The media record’s productId; both product records; the activity diary.</dd>
-        <dt>Who can do it</dt><dd>Admin only.</dd><dt>What happens next</dt><dd>Conflict flags are removed; the draft can proceed.</dd></dl></div>
-      <div class="card decision-card"><h4 style="color:var(--brass)">Merge</h4>
-        <dl><dt>When to use</dt><dd>Draft and owner are the same real product; the draft holds better data.</dd>
-        <dt>What it does</dt><dd>Copies the draft’s real name/price/subcategory/descriptions onto the single owning product, then archives the draft.</dd>
-        <dt>What changes</dt><dd>The owner’s commercial fields; the draft’s status.</dd>
-        <dt>Who can do it</dt><dd>Admin only (requires exactly one owner).</dd><dt>What happens next</dt><dd>One product remains, enriched.</dd></dl></div>
-      <div class="card decision-card"><h4 style="color:var(--warn)">Create Separate Product</h4>
-        <dl><dt>When to use</dt><dd>They only <i>look</i> similar — they are different physical products.</dd>
-        <dt>What it does</dt><dd>The draft keeps its identity but releases the contested media and gains the <code>NEEDS_MEDIA</code> flag.</dd>
-        <dt>What changes</dt><dd>Draft claims cleared; new photography required before publish.</dd>
-        <dt>Who can do it</dt><dd>Admin only.</dd><dt>What happens next</dt><dd>Draft waits for its own media.</dd></dl></div>
-      <div class="card decision-card"><h4 style="color:var(--taupe)">Review Later</h4>
-        <dl><dt>When to use</dt><dd>The answer isn’t clear yet; defer honestly.</dd>
-        <dt>What it does</dt><dd>Records <code>CONFLICT_REVIEW_LATER</code>; the case stays open in the queue.</dd>
-        <dt>What changes</dt><dd>Nothing else — and that is the point.</dd>
-        <dt>Who can do it</dt><dd>Admin only.</dd><dt>What happens next</dt><dd><b>Publishing stays blocked</b> until a real decision is made. Deferral never unlocks anything.</dd></dl></div>
-      <div class="card decision-card" style="border-top-color:var(--bad)"><h4 style="color:var(--bad)">Why Transfer needs confirmation</h4>
-        <p style="font-size:13.5px;color:var(--graphite)">Reassigning media without confirmation is <b>refused by the repository itself</b> —
-        the call simply returns nothing unless the caller passes an explicit confirm flag. This makes silent theft of another product’s
-        photograph impossible: every transfer is a conscious human act, recorded in the activity diary with actor, source and destination.</p></div>
-    </div>
-    <details class="tech acc" style="margin-top:18px"><summary>Technical implementation</summary>
-      <div class="acc-body">actions: <code>KIDS_CONFLICT_ACTIONS</code> / <code>reconcileKidsConflict()</code> — src/services/productWorkflow.js<br>
-      confirmation gate: <code>assignToProduct(…, {confirmReassign:true})</code> · one-door transfer: <code>transferMediaOwnership()</code><br>
-      group decisions (SAME_PRODUCT / SEPARATE_PRODUCTS / REVIEW_LATER): <code>decideProductGroup()</code> + src/services/media/productMediaGroups.js</div>
-    </details>
-  </div>
-</section>
-
-<!-- ============ 17. PRODUCT CREATION ============ -->
-<section id="creation" data-topics="product review admin">
-  <div class="wrap">
-    <div class="eyebrow">Step 08 in depth</div>
-    <div class="section-head"><h2>From media group to product draft</h2>
-      <p class="lead">An unowned media group becomes a <b>product draft</b> — a record that exists but is invisible to customers.
-      The system fills in only what it can <i>prove</i>; it never invents uncertain business information. <span class="badge b-impl">Implemented</span></p></div>
-    <div class="vflow">
-      <div class="vnode sys">Media Group <span class="mono" style="font-size:11px">women-saree-cotton-005 (front·side·back)</span></div><div class="varrow">▼</div>
-      <div class="vnode">Product Draft <span class="mono" style="font-size:11px">status DRAFT</span></div><div class="varrow">▼</div>
-      <div class="vnode">Product ID <span class="mono" style="font-size:11px">SAR-005 — permanent, deterministic, never from the name</span></div><div class="varrow">▼</div>
-      <div class="vnode warn">Name <span class="mono" style="font-size:11px">safe placeholder: “Uncatalogued Saree · SAR-005” → flag</span></div><div class="varrow">▼</div>
-      <div class="vnode warn">Price <span class="mono" style="font-size:11px">0 — never guessed → flag</span></div><div class="varrow">▼</div>
-      <div class="vnode warn">Taxonomy <span class="mono" style="font-size:11px">category from metadata/filename; flagged if inferred</span></div><div class="varrow">▼</div>
-      <div class="vnode">Media <span class="mono" style="font-size:11px">claims: 3 media IDs · primary = front</span></div><div class="varrow">▼</div>
-      <div class="vnode warn">Review <span class="mono" style="font-size:11px">flags block publishing until humans resolve them</span></div>
-    </div>
-    <div class="beginner-note"><b>Why placeholders?</b> Guessing a name or price from a photograph would be fabricating business
-    data. The draft honestly says “I don’t know yet” with a placeholder name and a zero price — and those very placeholders are
-    what keep it locked out of the storefront until a person fills them in.</div>
-    <details class="tech acc" style="margin-top:16px"><summary>Technical implementation</summary>
-      <div class="acc-body">manual mint: <code>createProductDraftFromMedia()</code> — src/services/productWorkflow.js<br>
-      automatic mint: <code>draftRecordForGroup()</code> / <code>syncCatalogueReconciliation()</code> — src/services/catalogueReconciliation.js<br>
-      stable IDs: <code>nextStableProductId()</code> · prefixes SAR/LEH/BRD/MEN/KID/JEW/BAN/INN/KUR/DUP — src/config/productIdPrefixes.js<br>
-      placeholder detection: <code>isPlaceholderProductName()</code> — src/services/productReviewFlags.js</div>
-    </details>
-  </div>
-</section>
-
-<!-- ============ 18. REVIEW FLAGS / PUBLISHING GATE ============ -->
-<section id="flags" data-topics="product review admin employee">
-  <div class="wrap">
-    <div class="eyebrow">The Publishing Gate — part one</div>
-    <div class="section-head"><h2>Review flags: honest sticky notes on a draft</h2>
-      <p class="lead">A flag says “a human must look at this”. Flags are review signals — never a second status system.
-      While a <b>blocking</b> flag stands, the product cannot publish. <span class="badge b-impl">Implemented</span></p></div>
-    <div class="grid g4">
-      <div class="card" style="border-top:3px solid var(--warn)"><span class="badge b-part" style="background:var(--warn-bg)">NAME REVIEW REQUIRED</span>
-        <p style="font-size:13.5px;color:var(--graphite);margin-top:12px">The name is a placeholder (“Uncatalogued Saree · SAR-005”) or reads like another department’s product. <b>Fix:</b> type a real product name — the flag is then recognised as satisfied.</p></div>
-      <div class="card" style="border-top:3px solid var(--warn)"><span class="badge b-part" style="background:var(--warn-bg)">PRICE REVIEW REQUIRED</span>
-        <p style="font-size:13.5px;color:var(--graphite);margin-top:12px">The price is still zero because the system refused to guess one. <b>Fix:</b> enter a real selling price greater than zero.</p></div>
-      <div class="card" style="border-top:3px solid var(--warn)"><span class="badge b-part" style="background:var(--warn-bg)">TAXONOMY REVIEW REQUIRED</span>
-        <p style="font-size:13.5px;color:var(--graphite);margin-top:12px">Category was inferred from the filename, or the subcategory is missing. <b>Fix:</b> choose the correct category and subcategory from the existing taxonomy.</p></div>
-      <div class="card" style="border-top:3px solid var(--warn)"><span class="badge b-part" style="background:var(--warn-bg)">GROUPING REVIEW REQUIRED</span>
-        <p style="font-size:13.5px;color:var(--graphite);margin-top:12px">Ingestion flagged the media group (possible duplicate, unmapped, needs-review). <b>Fix:</b> an admin answers the identity question in Group Review — same product or separate products. <span class="mono" style="font-size:10.5px">stored as GROUP_REVIEW_REQUIRED</span></p></div>
-    </div>
-    <p class="muted" style="margin-top:16px;font-size:13.5px">Five more blocking flags exist for media problems — <code>VARIANT_REVIEW_REQUIRED</code>, <code>NEEDS_MEDIA</code>, <code>MEDIA_OWNERSHIP_REVIEW</code>, <code>CONFLICT_UNRESOLVED</code>, <code>KIDS_MIGRATION_REVIEW</code> — plus three purely informational history flags. Flags auto-clear when the underlying fact becomes true, or an admin clears them explicitly (logged).</p>
-    <div class="vflow" style="margin-top:26px">
-      <div class="vnode ok">All required flags resolved</div><div class="varrow">▼</div>
-      <div class="vnode">Ready for review</div><div class="varrow">▼</div>
-      <div class="vnode ok">Approval</div><div class="varrow">▼</div>
-      <div class="vnode ok">Publish</div>
-    </div>
-    <details class="tech acc"><summary>Technical implementation</summary>
-      <div class="acc-body">vocabulary: <code>REVIEW_FLAGS</code> · blockers: <code>PUBLISH_BLOCKING_FLAGS</code> (9 of 12) — src/services/productReviewFlags.js<br>
-      auto-satisfaction: <code>flagsSatisfiedByProduct()</code> · explicit clear: <code>clearReviewFlags()</code> (admin, logged) — src/services/productWorkflow.js</div>
-    </details>
-  </div>
-</section>
-
-<!-- ============ 19. EMPLOYEE REVIEW ============ -->
-<section id="employee" data-topics="product review employee">
-  <div class="wrap">
-    <div class="eyebrow">Step 09 in depth</div>
-    <div class="section-head"><h2>Employee review — finishing the draft</h2>
-      <p class="lead">An admin assigns each draft to one <b>active</b> employee. The employee’s job: make the draft true and complete,
-      then hand it back. <span class="badge b-impl">Implemented</span></p></div>
-    <div class="two-col">
-      <div class="vflow" style="align-items:flex-start">
-        <div class="vnode">Assigned product <span class="mono" style="font-size:11px">only yours, never others’</span></div><div class="varrow" style="padding-left:100px">▼</div>
-        <div class="vnode">Open product <span class="mono" style="font-size:11px">/employee/products/review</span></div><div class="varrow" style="padding-left:100px">▼</div>
-        <div class="vnode sys">Preview media <span class="mono" style="font-size:11px">mandatory — full group, hover state, conflicts</span></div><div class="varrow" style="padding-left:100px">▼</div>
-        <div class="vnode">Review information</div><div class="varrow" style="padding-left:100px">▼</div>
-        <div class="vnode">Edit allowed fields <span class="mono" style="font-size:11px">30 whitelisted fields</span></div><div class="varrow" style="padding-left:100px">▼</div>
-        <div class="vnode warn">Resolve review issues</div><div class="varrow" style="padding-left:100px">▼</div>
-        <div class="vnode">Save Draft</div><div class="varrow" style="padding-left:100px">▼</div>
-        <div class="vnode ok">Submit for Review</div>
-      </div>
-      <div>
-        <div class="card">
-          <h3>The employee’s responsibility</h3>
-          <ul style="list-style:none;font-size:14px;color:var(--graphite);margin-top:10px">
-            <li style="padding:5px 0">✓ Real name, real price, correct category &amp; subcategory</li>
-            <li style="padding:5px 0">✓ Description, attributes (fabric, colours, sizes, occasion…)</li>
-            <li style="padding:5px 0">✓ Stock / availability</li>
-            <li style="padding:5px 0">✓ Check the photos actually show this product</li>
-            <li style="padding:5px 0">✓ Submit when honest and complete</li>
+    <!-- Technical details collapsed -->
+    <div class="tech-wrap reveal" style="margin-top:56px">
+      <details class="tech">
+        <summary>Technical Details — For Developers <span style="margin-left:8px;font-weight:400;text-transform:none;letter-spacing:0;color:var(--muted)">(click to expand — normal users don't need this)</span></summary>
+        <div class="tech-body">
+          <p><b>This section contains the old complex documentation.</b> The simple guide above is the main experience. Everything below is implementation detail preserved for developers.</p>
+          <ul style="margin-top:12px;padding-left:18px;display:grid;gap:6px">
+            <li>Glossary, API contract, backend entities, storage keys (pratikshya_products, pratikshya_media, etc.), localStorage explanation</li>
+            <li>JavaScript filenames: mediaRepository.js, mediaStore.js, productWorkflow.js, catalogueReconciliation.js, productMediaSet.js, kidsProductIdentity.js</li>
+            <li>Function names: parseMediaFilename(), buildMediaGroups(), getProductMediaSet(), transferMediaOwnership(), approveProduct(), publishProduct()</li>
+            <li>13 marketing placements, 12 review flags, 4 product statuses, view suffixes (front, side, back, detail, close, left, right, multiple)</li>
+            <li>Authentication: AdminAuthContext, EmployeeAuthContext, AuthContext — three portals</li>
+            <li>Seed data: 99 products + 181 ingested media + 21 confirmed Kids identities (KID-001 … KID-021)</li>
+            <li>Deterministic rules: similar ≠ same product, one product owns one media file, hero reserve, no random image selection, no cross-product hover</li>
+            <li>Original deep audit files: docs/product-media-workflow.md and docs/backend/ handoff package</li>
           </ul>
-          <h3 style="margin-top:20px">What an employee can <u>not</u> do</h3>
-          <ul style="list-style:none;font-size:14px;color:var(--graphite);margin-top:10px">
-            <li style="padding:5px 0">✗ Edit a product not assigned to them</li>
-            <li style="padding:5px 0">✗ Change the Product ID, status or media ownership</li>
-            <li style="padding:5px 0">✗ Approve or publish anything</li>
-            <li style="padding:5px 0">✗ Manage employee accounts (admin-domain only)</li>
-          </ul>
-          <p class="muted" style="font-size:13px;margin-top:14px">Authorisation = active account + <code>products.manage</code> permission + assignment to <i>this</i> product. Any field outside the whitelist is silently dropped from the save.</p>
+          <p style="margin-top:14px">The previous version of this HTML (1479 lines) contained tables, exception matrices, and developer vocabularies. That content is now intentionally collapsed here to keep the main page beginner-friendly.</p>
         </div>
-      </div>
+      </details>
     </div>
-    <details class="tech acc" style="margin-top:16px"><summary>Technical implementation</summary>
-      <div class="acc-body">gate: <code>employeeCanEditProduct()</code> · whitelist: <code>EMPLOYEE_EDITABLE_FIELDS</code> (30) · save: <code>saveEmployeeDraft()</code> · submit: <code>submitProductForReview()</code> — src/services/productWorkflow.js<br>
-      page: src/pages/employee/EmployeeProductReview.jsx · permissions: src/config/employeePermissions.js + src/services/employees/authorization.js</div>
-    </details>
-  </div>
-</section>
 
-<!-- ============ 20. ADMIN REVIEW ============ -->
-<section id="admin-review" data-topics="product review admin">
-  <div class="wrap">
-    <div class="eyebrow">Step 10 in depth</div>
-    <div class="section-head"><h2>Admin review — the last human gate</h2>
-      <p class="lead">Submitted products (status <code>PENDING_REVIEW</code>) land in the Super Admin’s review queue.
-      The admin verifies everything, then chooses. <span class="badge b-impl">Implemented</span></p></div>
-    <div class="two-col">
-      <div class="card">
-        <h3>What the admin checks</h3>
-        <div class="grid g2" style="gap:8px;margin-top:12px;font-size:13.5px;color:var(--graphite)">
-          <div>✓ Product identity (permanent ID)</div><div>✓ Name (real, right department)</div>
-          <div>✓ Price (&gt; 0, pricing engine clean)</div><div>✓ Taxonomy (category, subcategory)</div>
-          <div>✓ Grouping (no open identity question)</div><div>✓ Media (primary exists, views correct)</div>
-          <div>✓ Ownership (no conflicts)</div><div>✓ Inventory (Kids: stock or made-to-order)</div>
-          <div>✓ Required fields (SKU, description)</div><div>✓ Review flags (all blockers gone)</div>
-        </div>
-      </div>
-      <div class="card">
-        <h3>Then one of three outcomes</h3>
-        <div style="margin-top:12px;display:flex;flex-direction:column;gap:10px">
-          <div style="display:flex;gap:12px;align-items:flex-start"><span class="badge b-not">RETURN</span><p style="font-size:13.5px;color:var(--graphite)">Back to DRAFT with a written reason (stored as a rejection). The assigned employee continues work.</p></div>
-          <div style="display:flex;gap:12px;align-items:flex-start"><span class="badge b-impl">APPROVE</span><p style="font-size:13.5px;color:var(--graphite)"><b>General products:</b> approve <i>and</i> publish in one act (the button honestly says “Approve &amp; Publish”). <b>Kids products:</b> approval is recorded first, publish is a separate second act.</p></div>
-          <div style="display:flex;gap:12px;align-items:flex-start"><span class="badge b-impl">PUBLISH</span><p style="font-size:13.5px;color:var(--graphite)">The final act — re-validates every blocker at the moment of publishing. Kids products additionally require the recorded approval.</p></div>
-        </div>
-        <p class="muted" style="font-size:12.5px;margin-top:12px">Note (verified quirk): a separate approve-then-publish step for <i>non-Kids</i> products is <span class="badge b-not">Not Implemented</span> — general approval publishes immediately.</p>
-      </div>
-    </div>
-    <details class="tech acc" style="margin-top:16px"><summary>Technical implementation</summary>
-      <div class="acc-body">queue &amp; actions: src/pages/admin/AdminProductReview.jsx · <code>approveProduct()</code> / <code>rejectProduct()</code> / <code>publishProduct()</code> — src/services/catalogRepository.js + productWorkflow.js<br>
-      Kids two-step: <code>approveKidsProduct()</code> → <code>publishKidsProduct()</code> (requires review.state APPROVED) — src/services/kidsProductFinalization.js</div>
-    </details>
-  </div>
-</section>
-
-<!-- ============ 21. PUBLISHING ============ -->
-<section id="publishing" data-topics="product admin">
-  <div class="wrap">
-    <div class="eyebrow">Step 11 in depth</div>
-    <div class="section-head"><h2>The publishing gate</h2>
-      <p class="lead">Publishing is a checklist, not a button. Every line below is enforced in code and re-checked at the
-      moment of publication — nothing publishes silently. <span class="badge b-impl">Implemented</span></p></div>
-    <div class="gate reveal">
-      <div style="font-family:var(--serif);font-size:22px;letter-spacing:.1em">PRODUCT</div>
-      <div class="checks">
-        <span class="check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="4 13 9 18 20 6"/></svg> Name</span>
-        <span class="check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="4 13 9 18 20 6"/></svg> Price</span>
-        <span class="check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="4 13 9 18 20 6"/></svg> Taxonomy</span>
-        <span class="check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="4 13 9 18 20 6"/></svg> Grouping</span>
-        <span class="check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="4 13 9 18 20 6"/></svg> Media</span>
-        <span class="check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="4 13 9 18 20 6"/></svg> Ownership</span>
-        <span class="check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="4 13 9 18 20 6"/></svg> Required review</span>
-      </div>
-      <div class="gate-arrow">▼</div>
-      <div style="font-size:13px;letter-spacing:.22em;color:var(--ok);font-weight:700">APPROVED</div>
-      <div class="gate-arrow">▼</div>
-      <div class="final">Published</div>
-      <p class="muted" style="margin-top:20px;font-size:13.5px;max-width:64ch;margin-left:auto;margin-right:auto">
-        Full checklist as coded: Product ID · real non-placeholder name · SKU · category · selling price &gt; 0 · a description ·
-        a primary/cover image · zero ownership conflicts · zero blocking review flags · zero open grouping decisions · a clean
-        pricing engine. Kids products add: kidswear category, kid-appropriate name and subcategory, confirmed identity,
-        the correct confirmed plate, and a deliberate inventory state.</p>
-    </div>
-    <p style="margin-top:24px;color:var(--graphite)"><b>Only published products enter the customer storefront.</b> Draft and
-    in-review products cannot leak into Explore, category pages, collections, search, the homepage, recommendations or the
-    product detail page — all of these read one shared list that filters <code>status === "PUBLISHED"</code> (and the product’s
-    category must be active in the taxonomy). Verified in the storefront access layer and its tests. <span class="badge b-impl">Implemented</span></p>
-    <details class="tech acc" style="margin-top:14px"><summary>Technical implementation</summary>
-      <div class="acc-body">gate: <code>getPublishIssues()</code> — src/services/catalogRepository.js · Kids: <code>getKidsPublishBlockers()</code><br>
-      storefront filter: <code>getLiveStorefrontProducts()</code> / <code>isCustomerVisible()</code> — src/data/products/index.js · test: tests/storefrontVisibility.test.js</div>
-    </details>
-  </div>
-</section>
-
-<!-- ============ 22. HOVER IMAGE WORKFLOW ============ -->
-<section id="hover" data-topics="media product">
-  <div class="wrap">
-    <div class="eyebrow">Storefront Detail</div>
-    <div class="section-head"><h2>The hover image — try it yourself</h2>
-      <p class="lead">When a shopper moves the mouse over a product card, the photo may change to a second view.
-      Which one? A fixed priority decides: <b>back → side → detail</b> — and if the product owns no second view, the card
-      simply does not swap. Hover the cards below. <span class="badge b-impl">Implemented</span></p></div>
-    <div class="hover-demo">
-      <div class="hd-card">
-        <div class="hd-frame"><div class="hd-face"><span class="big">Front</span>primary view</div>
-          <div class="hd-face alt"><span class="big">Back</span>hover view</div></div>
-        <p class="hd-caption"><b>Front + Back</b><br>hover shows the <b>back</b></p>
-      </div>
-      <div class="hd-card">
-        <div class="hd-frame"><div class="hd-face"><span class="big">Front</span>primary view</div>
-          <div class="hd-face alt"><span class="big">Side</span>hover view</div></div>
-        <p class="hd-caption"><b>Front + Side</b><br>hover shows the <b>side</b></p>
-      </div>
-      <div class="hd-card">
-        <div class="hd-frame"><div class="hd-face"><span class="big">Front</span>primary view</div>
-          <div class="hd-face alt"><span class="big">Back</span>hover view</div></div>
-        <p class="hd-caption"><b>Front + Side + Back</b><br>hover shows the <b>back</b> (back outranks side)</p>
-      </div>
-      <div class="hd-card">
-        <div class="hd-frame static"><div class="hd-face"><span class="big">Front</span>primary view</div>
-          <div class="hd-face alt"></div></div>
-        <p class="hd-caption"><b>Front only</b><br><b>no replacement</b> — the frame stays still</p>
-      </div>
-    </div>
-    <div class="warn-banner" style="margin-top:30px;padding:28px 30px">
-      <div class="rule-line">Hover guarantees</div>
-      <p style="color:#d8cfc0;font-size:15px">The hover image is <b>never</b> a random image · <b>never</b> another product’s image ·
-      <b>never</b> another category’s image · <b>never</b> another group’s image. The candidate pool is strictly the
-      product’s <i>own</i> media — anything carrying a different product ID is dropped before selection even begins.</p>
-    </div>
-    <details class="tech acc" style="margin-top:16px"><summary>Technical implementation</summary>
-      <div class="acc-body">source of truth: <code>getProductCardMedia()</code> → <code>getProductMediaSet()</code> → <code>pickHover()</code> — src/services/media/productMediaSet.js<br>
-      priority list: <code>HOVER_VIEW_PRIORITY = [back, side, left-side, right-side, left, right, detail, close, …]</code><br>
-      no-swap case: <code>hasAlternate=false</code> → <code>hoverImage: undefined</code> — consumed by src/design-system/components/ProductCard.jsx</div>
-    </details>
-  </div>
-</section>
-
-<!-- ============ 23. MARKETING MEDIA ============ -->
-<section id="marketing" data-topics="marketing media admin">
-  <div class="wrap">
-    <div class="eyebrow">The Other Branch</div>
-    <div class="section-head"><h2>Marketing media — imagery that is not a product</h2>
-      <p class="lead">Some images sell a mood, not a garment: the homepage hero, a festive banner, an editorial plate.
-      These take a completely separate branch. <span class="badge b-impl">Implemented</span></p></div>
-    <div class="vflow">
-      <div class="vnode sys">MEDIA</div><div class="varrow">▼</div>
-      <div class="vnode mkt">MARKETING MEDIA <span class="mono" style="font-size:11px">scope MARKETING · assigned to a placement</span></div>
-    </div>
-    <div class="grid g3" style="margin-top:10px">
-      <div class="card" style="border-top:3px solid var(--mkt)"><h4 style="font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:var(--mkt)">Placements (where)</h4>
-        <p style="font-size:13.5px;color:var(--graphite);margin-top:10px">13 real storefront surfaces: <b>HOME_HERO</b>, saree/lehenga/bridal/groom/kids/bangles/jewellery/festive/women sections, <b>NEW_ARRIVALS</b>, <b>EDITORIAL</b>, <b>PROMOTION</b>. One active record per placement reaches customers — the first in order.</p></div>
-      <div class="card" style="border-top:3px solid var(--mkt)"><h4 style="font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:var(--mkt)">Usage roles (what for)</h4>
-        <p style="font-size:13.5px;color:var(--graphite);margin-top:10px">HERO · BANNER · SALE · EDITORIAL · LOOKBOOK · COLLECTION_COVER · CATEGORY_COVER and more — the labels the central resolver reads when choosing artwork for a section.</p></div>
-      <div class="card" style="border-top:3px solid var(--mkt)"><h4 style="font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:var(--mkt)">How it reaches the site</h4>
-        <p style="font-size:13.5px;color:var(--graphite);margin-top:10px">Admin uploads or assigns from the library on <code>/admin/media/marketing</code> → the record becomes ACTIVE on a placement → the storefront seam reads it through the resolver. If no usable override exists, the authored house artwork stays — a seam can never render empty.</p></div>
-    </div>
-    <div class="card" style="margin-top:18px;border-left:4px solid var(--mkt)">
-      <h3>Why marketing media can never accidentally become a product</h3>
-      <p style="font-size:14px;color:var(--graphite);margin-top:8px">Three independent locks, all verified:
-      ① assigning to a placement <b>clears the product ID</b> — one record cannot be both;
-      ② product discovery and catalogue reconciliation pool only PRODUCT/UNASSIGNED-scope media and explicitly exclude house artwork;
-      ③ the homepage hero additionally requires <i>no product ID</i>, the HERO role, and the dedicated hero register mark —
-      product photography is structurally barred from that slot.</p>
-    </div>
-    <details class="tech acc" style="margin-top:16px"><summary>Technical implementation</summary>
-      <div class="acc-body">placements: <code>MARKETING_PLACEMENTS</code> — src/config/mediaTypes.js · assignment: <code>assignToPlacement()</code> — mediaRepository.js<br>
-      exclusion: <code>isHouseMedia()</code> — catalogueReconciliation.js · hero lock: <code>resolveHomepageHeroMedia()</code> (placement + HERO role + <code>mappingMethod HOMEPAGE_HERO_REGISTER</code> + no productId) — mediaResolver.js</div>
-    </details>
-  </div>
-</section>
-
-<!-- ============ 24. COMPARISON TABLE ============ -->
-<section id="compare" data-topics="media product marketing">
-  <div class="wrap">
-    <div class="eyebrow">Side by Side</div>
-    <div class="section-head"><h2>Product media vs marketing media</h2></div>
-    <div class="tbl-scroll"><table class="tbl">
-      <tr><th style="width:50%;background:var(--sys)">Product Media</th><th style="background:var(--mkt)">Marketing Media</th></tr>
-      <tr><td><b>Product-owned</b> — one productId on the record</td><td><b>Marketing-owned</b> — a placement, never a productId</td></tr>
-      <tr><td>Product gallery (front · side · back · detail)</td><td>Hero / banner / editorial plates</td></tr>
-      <tr><td>Product detail page</td><td>Homepage &amp; section seams</td></tr>
-      <tr><td>Product hover image (deterministic view priority)</td><td>Promotional content (campaign, sale, lookbook)</td></tr>
-      <tr><td>Identified by <b>Product ID</b> + groupKey + view</td><td>Identified by <b>marketing usage</b> (placement + usage roles)</td></tr>
-      <tr><td>Product lifecycle: draft → review → approval → publish</td><td>Marketing lifecycle: upload → activate on placement → archive</td></tr>
-      <tr><td>Visible only while the owning product is <b>PUBLISHED</b></td><td>Visible only while <b>ACTIVE</b> on a live placement</td></tr>
-    </table></div>
-  </div>
-</section>
-
-<!-- ============ 25. HOMEPAGE CONNECTION ============ -->
-<section id="homepage" data-topics="marketing media">
-  <div class="wrap">
-    <div class="eyebrow">Connections</div>
-    <div class="section-head"><h2>How the homepage gets its imagery</h2>
-      <p class="lead">Homepage sections never hard-code image paths. Every plate is requested from the <b>central media
-      resolver</b>, which ranks candidates deterministically (preferred role → featured → quality → stable order) — a page
-      refresh never reshuffles imagery. <span class="badge b-impl">Implemented</span></p></div>
-    <div class="vflow">
-      <div class="vnode sys">MEDIA LIBRARY</div><div class="varrow">▼</div>
-      <div class="vnode sys">MEDIA RESOLVER <span class="mono" style="font-size:11px">single distribution door</span></div><div class="varrow">▼</div>
-      <div class="vnode">HOMEPAGE SECTION</div>
-    </div>
-    <div class="grid g3">
-      <div class="card"><h4 style="font-size:12px;letter-spacing:.16em;text-transform:uppercase">Hero</h4><p style="font-size:13px;color:var(--graphite);margin-top:8px">Strictest slot: only the dedicated HOME_HERO register (5 plates, fixed order). Fallback can only ever be another non-product HERO record.</p></div>
-      <div class="card"><h4 style="font-size:12px;letter-spacing:.16em;text-transform:uppercase">Shop by Category</h4><p style="font-size:13px;color:var(--graphite);margin-top:8px">Each active category resolves its cover: managed banner → category-cover media → a member product’s own photo → house artwork. Never another category’s image.</p></div>
-      <div class="card"><h4 style="font-size:12px;letter-spacing:.16em;text-transform:uppercase">Editorial / Festive</h4><p style="font-size:13px;color:var(--graphite);margin-top:8px">Placement override first, then themed editorial media, then the authored plate. Every choice carries a recorded <i>reason</i> for audits.</p></div>
-      <div class="card"><h4 style="font-size:12px;letter-spacing:.16em;text-transform:uppercase">New Arrivals</h4><p style="font-size:13px;color:var(--graphite);margin-top:8px">Product-driven, not artwork: the five best-covered <b>published</b> products, ranked by their own media quality.</p></div>
-      <div class="card"><h4 style="font-size:12px;letter-spacing:.16em;text-transform:uppercase">Sale</h4><p style="font-size:13px;color:var(--graphite);margin-top:8px">The offer text comes from the live offer register (never hardcoded); the backdrop resolves through SALE/BANNER media with a house fallback.</p></div>
-      <div class="card"><h4 style="font-size:12px;letter-spacing:.16em;text-transform:uppercase">Collections</h4><p style="font-size:13px;color:var(--graphite);margin-top:8px">Managed hero/thumbnail media → collection-cover roles → a member product’s photo → authored artwork.</p></div>
-    </div>
-    <p class="muted" style="font-size:13px;margin-top:14px">The hero reserves its images first; later sections exclude those IDs so the same photograph never appears twice in one viewport. Sections do <b>not</b> all work the same way — product seams read products, artwork seams read the resolver.</p>
-    <details class="tech acc" style="margin-top:14px"><summary>Technical implementation</summary>
-      <div class="acc-body">resolver: src/services/media/mediaResolver.js — <code>selectMedia()</code>, <code>resolveCategoryCover()</code>, <code>resolveCollectionCover()</code>, <code>resolveHeroSlideImages()</code>, <code>resolveSaleBackdrop()</code>, <code>resolveFestiveCampaignImage()</code><br>
-      page: src/pages/AtelierDesign.jsx · selection reasons: <code>FALLBACK_REASONS</code> (DIRECT · TAXONOMY_PRODUCT · HOUSE_FALLBACK …)</div>
-    </details>
-  </div>
-</section>
-
-<!-- ============ 26. PRODUCT PAGE CONNECTION ============ -->
-<section id="pdp" data-topics="product media">
-  <div class="wrap">
-    <div class="eyebrow">Connections</div>
-    <div class="section-head"><h2>How a product page gets its imagery</h2></div>
-    <div class="vflow">
-      <div class="vnode">PRODUCT <span class="mono" style="font-size:11px">a PUBLISHED record</span></div><div class="varrow">▼</div>
-      <div class="vnode sys">PRODUCT MEDIA SET <span class="mono" style="font-size:11px">only provably-owned media, assembled per product</span></div><div class="varrow">▼</div>
-      <div class="vnode">PRODUCT CARD <span class="mono" style="font-size:11px">primary + optional hover</span></div><div class="varrow">▼</div>
-      <div class="vnode">PRODUCT DETAIL PAGE <span class="mono" style="font-size:11px">gallery: front · side · back · detail</span></div>
-    </div>
-    <p style="color:var(--graphite);max-width:76ch">The <b>product media set</b> is the one shared answer for “what images does this
-    product own?” — <b>primary</b> (cover-role first, else the front view), <b>hover</b> (by the view priority), the ordered
-    <b>gallery</b>, and the named <b>front / side / back / detail</b> slots. Cards and the detail page both read it, so a
-    photograph that isn’t provably owned can appear on neither. <span class="badge b-impl">Implemented</span></p>
-    <details class="tech acc" style="margin-top:14px"><summary>Technical implementation</summary>
-      <div class="acc-body"><code>getProductMediaSet()</code> / <code>getProductCardMedia()</code> / <code>applyProductMediaSet()</code> — src/services/media/productMediaSet.js<br>
-      gallery slides: <code>getProductSlides()</code> — src/services/media/productMediaSource.js · pages: ProductCard.jsx · ProductGallery.jsx · ProductDetail.jsx</div>
-    </details>
-  </div>
-</section>
-
-<!-- ============ 27. EXCEPTION HANDLING ============ -->
-<section id="exceptions" data-topics="review admin employee product media">
-  <div class="wrap">
-    <div class="eyebrow">When Things Go Wrong</div>
-    <div class="section-head"><h2>What if something goes wrong?</h2>
-      <p class="lead">Every exception below shows the exact chain: <b>problem → system response → human action → final state</b>.
-      All behaviors verified against the code.</p></div>
-    <div class="exc" id="exc-list"></div>
-  </div>
-</section>
-
-<!-- ============ 28. WHO DOES WHAT ============ -->
-<section id="matrix" data-topics="admin employee review">
-  <div class="wrap">
-    <div class="eyebrow">Responsibility Matrix</div>
-    <div class="section-head"><h2>Who does what?</h2>
-      <p class="lead">Only permissions verified from the actual authorization code. “If permitted” means the specific
-      permission key an employee’s role must carry.</p></div>
-    <div class="tbl-scroll"><table class="tbl">
-      <tr><th>Task</th><th>Super Admin</th><th>Employee</th><th>System</th></tr>
-      <tr><td>Register media (identity, normalisation)</td><td class="no">—</td><td class="no">—</td><td class="yes">✓ automatic</td></tr>
-      <tr><td>Parse filename (groupKey, view)</td><td class="no">—</td><td class="no">—</td><td class="yes">✓ automatic</td></tr>
-      <tr><td>Detect group (multi-view / standalone)</td><td class="no">—</td><td class="no">—</td><td class="yes">✓ automatic</td></tr>
-      <tr><td>Upload media</td><td class="yes">✓ (→ ACTIVE)</td><td class="yes">✓ if <code>media.upload</code> (→ PENDING_REVIEW)</td><td class="no">—</td></tr>
-      <tr><td>Approve / reject uploaded media</td><td class="yes">✓</td><td class="no">— (admin queue only)</td><td class="no">—</td></tr>
-      <tr><td>Review mapping / assign media &amp; covers</td><td class="yes">✓</td><td class="yes">✓ if <code>media.assign</code></td><td class="no">—</td></tr>
-      <tr><td>Decide media groups (same / separate)</td><td class="yes">✓</td><td class="no">—</td><td class="no">—</td></tr>
-      <tr><td>Create product draft (from media)</td><td class="yes">✓</td><td class="no">—</td><td class="yes">✓ reconciliation mints drafts</td></tr>
-      <tr><td>Create product (editor form)</td><td class="yes">✓</td><td class="yes">✓ if <code>products.manage</code> (draft only)</td><td class="no">—</td></tr>
-      <tr><td>Edit product</td><td class="yes">✓</td><td class="yes">✓ if <code>products.manage</code> <b>and</b> assigned (whitelisted fields)</td><td class="no">—</td></tr>
-      <tr><td>Resolve review flags</td><td class="yes">✓ (explicit clear)</td><td class="yes">✓ indirectly, by fixing the data</td><td class="yes">✓ auto-satisfies when facts are true</td></tr>
-      <tr><td>Submit for review</td><td class="yes">✓</td><td class="yes">✓ if assigned</td><td class="no">—</td></tr>
-      <tr><td>Approve product</td><td class="yes">✓</td><td class="no">—</td><td class="no">—</td></tr>
-      <tr><td>Publish / unpublish / archive product</td><td class="yes">✓</td><td class="no">—</td><td class="no">—</td></tr>
-      <tr><td>Resolve media ownership (transfer / keep / merge)</td><td class="yes">✓</td><td class="no">—</td><td class="no">—</td></tr>
-      <tr><td>Manage marketing placements</td><td class="yes">✓</td><td class="yes">✓ if <code>media.manage</code></td><td class="no">—</td></tr>
-      <tr><td>Manage employees (accounts, roles, status)</td><td class="yes">✓ <code>employees.manage</code></td><td class="no">— never (admin-domain only)</td><td class="no">—</td></tr>
-      <tr><td>Filter storefront to PUBLISHED only</td><td class="no">—</td><td class="no">—</td><td class="yes">✓ automatic</td></tr>
-    </table></div>
-    <p class="muted" style="font-size:13px;margin-top:12px">Verified in: src/config/adminAccess.js · src/config/employeePermissions.js · src/config/employeeRoles.js · src/services/employees/authorization.js · src/services/media/mediaAccess.js · src/services/productWorkflow.js. Note: employee-account permission keys are hard-denied to employees in code — no role or custom grant can ever include them.</p>
-  </div>
-</section>
-
-<!-- ============ 29. END-TO-END EXAMPLE ============ -->
-<section id="e2e" data-topics="product media review admin employee">
-  <div class="wrap">
-    <div class="eyebrow">The Complete Journey</div>
-    <div class="section-head"><h2>End-to-end: a kids image becomes a live product</h2>
-      <p class="lead">A realistic walk-through using the real IDs from the repository — <code>kids-021.webp</code> → <b>KID-021</b>.
-      Every stage is the actual implemented behavior.</p></div>
-    <div class="timeline">
-      <div class="tl-item sys"><h4>1 · kids-021.webp — enters the library</h4><p>The photograph lands in <code>public/library</code>, the single canonical media root, via the ingestion pipeline.</p></div>
-      <div class="tl-item sys"><h4>2 · Register</h4><p>The system records it: a permanent Media ID, path, checksum, dimensions, and status. The image now has an identity.</p></div>
-      <div class="tl-item sys"><h4>3 · Classify</h4><p>The filename parser reads <code>kids-021</code>: groupKey <code>kids-021</code>, no view word → a standalone plate (one photo, no hover alternate).</p></div>
-      <div class="tl-item sys"><h4>4 · Group</h4><p>One file, one group. The confirmed Kids identity table says this plate maps to exactly one permanent Product ID — and may never merge with any other kids plate, however similar they look.</p></div>
-      <div class="tl-item sys"><h4>5 · KID-021 — draft is minted</h4><p>The Kids draft migration creates product <b>KID-021</b>: status DRAFT, category kidswear, the plate claimed as primary. Customers cannot see it.</p></div>
-      <div class="tl-item warn"><h4>6 · Review flags raised</h4><p>Anything the system could not prove is flagged: name review, price review, taxonomy review — and a conflict flag if the plate is currently owned by a different published product.</p></div>
-      <div class="tl-item warn"><h4>7 · Employee review</h4><p>An admin assigns an active employee. The employee opens <i>My Product Review</i>, sees the mandatory media preview, types the real name (“Boys’ Festive Kurta Set”), sets the price, subcategory and stock, saves the draft, and presses <b>Submit for Review</b>.</p></div>
-      <div class="tl-item warn"><h4>8 · Admin review</h4><p>KID-021 appears in the admin queue with the 9-item Kids checklist: correct media, name, category, subcategory, price, employee reviewed, admin reviewed, ready, published. Any remaining conflict is resolved with keep / transfer / merge / separate.</p></div>
-      <div class="tl-item ok"><h4>9 · Approval</h4><p>The admin approves — the approval is recorded, but the product is <i>still not live</i>. Kids products require a separate, explicit publish.</p></div>
-      <div class="tl-item ok"><h4>10 · Publish</h4><p>The admin publishes. The gate re-checks every blocker at this exact moment. Status becomes PUBLISHED; the publisher’s name and the time are stamped; the diary records it.</p></div>
-      <div class="tl-item ok"><h4>11 · /category/kidswear</h4><p>The shared storefront list now includes KID-021. It appears in Explore (deduped by Product ID), the kids category page, and its own detail page at <code>/product/kid-021</code>.</p></div>
-      <div class="tl-item ok"><h4>12 · Customer</h4><p>A shopper sees the card — the kids-021 plate, no hover swap (standalone) — opens the page, and adds it to the cart. The journey is complete.</p></div>
-    </div>
-  </div>
-</section>
-
-<!-- ============ 33. FINAL ARCHITECTURE ============ -->
-<section id="architecture" data-topics="media product marketing review admin">
-  <div class="wrap">
-    <div class="eyebrow">The Whole Picture</div>
-    <div class="section-head"><h2>Final architecture</h2></div>
-    <div class="diagram" style="line-height:1.75">
-                     <span class="hl">MEDIA LIBRARY</span>  (public/library — one canonical root)
-                            │
-                            ▼
-                     <span class="b">REGISTRATION</span>   (identity: Media ID · path · status)
-                            │
-                            ▼
-                     <span class="b">CLASSIFICATION</span> (groupKey · view · scope · flags)
-                            │
-                ┌───────────┴─────────────┐
-                │                         │
-                ▼                         ▼
-        <span class="b">PRODUCT MEDIA</span>            <span class="p">MARKETING MEDIA</span>
-                │                         │
-                ▼                         ▼
-            <span class="b">GROUPING</span>              <span class="p">HERO / BANNER</span>
-                │                  <span class="p">EDITORIAL / SALE</span>
-                ▼                  <span class="p">COLLECTION COVERS</span>
-        <span class="b">PRODUCT MAPPING</span>                 │
-                │                         │
-                ▼                         │
-         <span class="y">PRODUCT DRAFT</span>  (invisible)     │
-                │                         │
-                ▼                         │
-        <span class="y">EMPLOYEE REVIEW</span>                  │
-                │                         │
-                ▼                         │
-          <span class="y">ADMIN REVIEW</span>                   │
-                │                         │
-                ▼                         │
-            <span class="g">APPROVAL</span>                     │
-                │                         │
-                ▼                         │
-             <span class="g">PUBLISH</span>                     │
-                │                         │
-                └────────────┬────────────┘
-                             ▼
-                       <span class="g">STOREFRONT</span>
-        (Explore · Category · Collection · Search · Homepage · PDP)</div>
-    <p class="muted" style="text-align:center;margin-top:20px;font-size:14px;max-width:74ch;margin-left:auto;margin-right:auto">
-      One sentence: an image enters deterministically named, is classified and reviewed by humans, becomes exactly one
-      draft product per physical group with a permanent ID, is completed by an assigned employee, is approved and published
-      only by a Super Admin after every blocker is provably clear — and only then does a customer ever see it.</p>
-  </div>
-</section>
-
-<!-- ============ 31. GLOSSARY ============ -->
-<section id="glossary" data-topics="all media product marketing review">
-  <div class="wrap">
-    <div class="eyebrow">Plain Language</div>
-    <div class="section-head"><h2>Glossary</h2>
-      <p class="lead">Every term in this guide, explained in one or two simple sentences.</p></div>
-    <dl class="glossary">
-      <div class="gl-item"><dt>Media</dt><dd>Any image or visual file the business uses — product photos and marketing artwork.</dd></div>
-      <div class="gl-item"><dt>Asset</dt><dd>One individual media file, together with its recorded information.</dd></div>
-      <div class="gl-item"><dt>Media ID</dt><dd>The permanent identity code of one media record (e.g. <code>pm-lz3k9-0a4</code>). It never changes.</dd></div>
-      <div class="gl-item"><dt>Product ID</dt><dd>The permanent identity code of one product (e.g. <code>KID-021</code>, <code>SAR-005</code>). It is never derived from the product’s name.</dd></div>
-      <div class="gl-item"><dt>GroupKey</dt><dd>The part of a filename before the view word (e.g. <code>women-saree-001</code>). All files sharing it photograph the same physical product.</dd></div>
-      <div class="gl-item"><dt>View</dt><dd>The angle a photo shows: front, side, back, detail, close, left, right.</dd></div>
-      <div class="gl-item"><dt>Primary</dt><dd>The main image of a product — the one every card and listing shows first.</dd></div>
-      <div class="gl-item"><dt>Gallery</dt><dd>The ordered set of all images a product owns, shown on its detail page.</dd></div>
-      <div class="gl-item"><dt>Product Mapping</dt><dd>The decision of which product (if any) a media asset belongs to.</dd></div>
-      <div class="gl-item"><dt>Ownership</dt><dd>The product ID written on a media record — the single truth of who the photo belongs to.</dd></div>
-      <div class="gl-item"><dt>Claim</dt><dd>A product saying “this media is mine”. If the media record disagrees, that is a conflict a human must resolve.</dd></div>
-      <div class="gl-item"><dt>Taxonomy</dt><dd>The category tree of the shop: categories (Sarees, Kids Wear…) and their subcategories.</dd></div>
-      <div class="gl-item"><dt>Review Flag</dt><dd>A sticky note on a draft saying a human must check something (name, price, taxonomy, grouping). Blocking flags stop publication.</dd></div>
-      <div class="gl-item"><dt>Draft</dt><dd>A product that exists internally but is invisible to customers. Every new product starts here.</dd></div>
-      <div class="gl-item"><dt>Published</dt><dd>The only product state customers can see. Reached only through review and approval.</dd></div>
-      <div class="gl-item"><dt>Marketing Media</dt><dd>Promotional artwork (hero, banner, editorial) owned by a placement on the site — never by a product.</dd></div>
-      <div class="gl-item"><dt>Media Resolver</dt><dd>The one system component that chooses which artwork each homepage/section slot shows, using fixed, repeatable rules.</dd></div>
-      <div class="gl-item"><dt>Product Media Set</dt><dd>The assembled answer to “which images does this product provably own?” — primary, hover, gallery and named views.</dd></div>
-      <div class="gl-item"><dt>Review Queue</dt><dd>The waiting rooms where uploads and identity questions sit until a human decides.</dd></div>
-      <div class="gl-item"><dt>Product Workflow</dt><dd>The controlled pipeline every product travels: media → draft → employee review → admin review → approval → publish.</dd></div>
-      <div class="gl-item"><dt>Placement</dt><dd>A named slot on the storefront that marketing media can occupy (e.g. HOME_HERO, EDITORIAL).</dd></div>
-      <div class="gl-item"><dt>Standalone</dt><dd>A media file with no view word — one photo representing one product, with no hover alternate.</dd></div>
-    </dl>
-  </div>
-</section>
-
-<!-- ============ IMPLEMENTATION REFERENCE ============ -->
-<section id="reference" data-topics="all">
-  <div class="wrap">
-    <div class="eyebrow">For Developers</div>
-    <div class="section-head"><h2>Source &amp; implementation reference</h2>
-      <p class="lead">The services this guide was verified against. Beginners can safely ignore this section.</p></div>
-    <details class="tech acc"><summary>All audited services &amp; pages</summary>
-      <div class="acc-body">
-      <b>Media:</b> mediaRepository.js · mediaStore.js · mediaResolver.js · mediaNaming.js · mediaGroups.js · productMediaSet.js · productMediaGroups.js · mediaProductDiscovery.js · ingestedMedia.js · mediaAccess.js · marketingMediaSource.js · productMediaSource.js · mediaPaths.js · mediaMigration.js · mediaValidation.js · mediaExposure.js · mediaAudit.js<br><br>
-      <b>Products &amp; workflow:</b> catalogRepository.js · productWorkflow.js · catalogueReconciliation.js · productDraftMigration.js · productReviewFlags.js · kidsProductIdentity.js · kidsProductFinalization.js · taxonomyRepository.js<br><br>
-      <b>People &amp; access:</b> employees/employeeService.js · employees/authorization.js · employees/activityService.js · config/adminAccess.js · config/employeePermissions.js · config/employeeRoles.js<br><br>
-      <b>Pages:</b> AdminMediaLibrary · AdminMediaUpload · AdminMediaReview · AdminMarketingMedia · AdminMediaProductMapping · AdminMediaDetail · AdminProductMedia · AdminProductReview · EmployeeProductReview · EmployeeMediaDashboard · EmployeeMediaUpload · AtelierDesign (homepage) · Explore · CatalogueListing · ProductDetail · ProductCard · ProductGallery<br><br>
-      <b>Storefront data:</b> data/products/index.js · data/products/explore.js · data/products/query.js<br><br>
-      A deeper written audit lives beside this file: <code>docs/product-media-workflow.md</code> and the <code>docs/backend/</code> handoff package.</div>
-    </details>
-    <div class="grid g3" style="margin-top:18px">
-      <div class="card"><span class="badge b-impl">Implemented &amp; verified</span><p style="font-size:13px;color:var(--graphite);margin-top:10px">Everything shown as the normal flow: naming, grouping, ownership, review queues, decisions, flags, publish gate, hover rule, marketing separation, storefront filter.</p></div>
-      <div class="card"><span class="badge b-part">Partially implemented</span><p style="font-size:13px;color:var(--graphite);margin-top:10px">Runtime uploads (browser-preview only, no server storage) · duplicate-ownership &amp; orphaned-media auto-repair (detected, not auto-fixed) · variant review desk · marketing campaign date windows (stored, not enforced) · deactivated employees keep old assignments.</p></div>
-      <div class="card"><span class="badge b-not">Not implemented</span><p style="font-size:13px;color:var(--graphite);margin-top:10px">A backend/database (everything persists in the browser) · a separate approve-then-publish step for non-Kids products · automatic visual-similarity detection (deliberately absent) · notifications or escalation for deferred reviews.</p></div>
-    </div>
   </div>
 </section>
 
 <footer>
-  <div class="fbrand">Pratikshya Fashion</div>
-  <p>Media Workflow — internal operations handbook · generated from a verified repository audit · self-contained HTML, no external dependencies</p>
-  <div class="backlinks" style="justify-content:center;margin-top:18px">
-    <a class="btn" href="#hero">↑ Back to top</a>
-    <a class="btn" href="#master">Back to workflow</a>
+  <b>Pratikshya Fashion</b>
+  Media → Product → Review → Approval → Website<br>
+  Simple visual workflow guide · self-contained HTML · no application code was changed
+  <div style="margin-top:16px;display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
+    <a class="btn" href="#overview">↑ Back to top</a>
+    <a class="btn" href="#workflow">View workflow</a>
   </div>
 </footer>
 
-<button id="totop" title="Back to top" aria-label="Back to top">↑</button>
-
 <script>
-/* ============================================================
-   Vanilla JS — no dependencies.
-   ============================================================ */
-
-/* ---------- 1. Master workflow steps (data verified against repo) ---------- */
-var STEPS = [
- {n:"01",t:"Media Enters Library",badge:"b-impl",bl:"Implemented",
-  what:["An image file is placed in the canonical media root, public/library — via the build-time ingestion pipeline, or previewed via the runtime upload pages (browser-only demo)."],
-  who:["Photographer / content team (files)","Build script npm run media:optimize","Admin & permitted employees (runtime upload)"],
-  io:["INPUT — an image or video file, named by the convention","OUTPUT — a file address under /library"],
-  rules:["One canonical root; the system never scans unrelated public folders","Filename convention: [dept]-[category]-[style]-[number]-[view].webp","Upload limits: images ≤ 10 MB (jpg/png/webp), videos ≤ 100 MB (mp4/webm)"],
-  probs:["Wrong filename → wrong group detection later","Runtime uploads are preview-only: no server stores the real file yet (PARTIALLY IMPLEMENTED)"]},
- {n:"02",t:"Media Is Registered",badge:"b-impl",bl:"Implemented",
-  what:["The file becomes a record in the one media register: a permanent Media ID plus every fact the system knows — path, type, status, provenance, dimensions, checksum."],
-  who:["System — mediaStore.normaliseMedia() / mediaRepository.create()"],
-  io:["INPUT — the file + upload/ingestion metadata","OUTPUT — a media record (id pm-… or manifest id), status DRAFT / PENDING_REVIEW / ACTIVE"],
-  rules:["Admin uploads become ACTIVE; employee uploads always start PENDING_REVIEW","Ephemeral blob/data URLs are refused as production addresses (flagged demoPlaceholder)","Only ACTIVE media is ever shown to a customer"],
-  probs:["Corrupted rows are discarded during normalisation","A record without a real URL is metadata only — it can never render"]},
- {n:"03",t:"Filename Is Analyzed",badge:"b-impl",bl:"Implemented",
-  what:["The deterministic parser reads the filename and extracts the groupKey (which product-set) and the view (which angle). No guessing, no image analysis."],
-  who:["System — parseMediaFilename() in mediaNaming.js"],
-  io:["INPUT — women-saree-001-front.webp","OUTPUT — groupKey women-saree-001 · view front · standalone flag"],
-  rules:["17 recognised view suffixes, matched longest-first for a deterministic result","A file with no view word is a standalone (one photo = one product)"],
-  probs:["A typo in the number or view word silently creates a different group — the review queue is the safety net"]},
- {n:"04",t:"Media Is Classified",badge:"b-impl",bl:"Implemented",
-  what:["The record gains its classification: scope (PRODUCT / MARKETING / UNASSIGNED), taxonomy metadata (category, subcategory, collection), usage roles, mapping status and duplicate status."],
-  who:["System — ingestion manifest + mediaStore normalisation"],
-  io:["INPUT — the registered record","OUTPUT — a classified record, e.g. scope PRODUCT · category kidswear · mappingStatus MAPPED"],
-  rules:["Scope is derived: has productId → PRODUCT; has placement → MARKETING; else UNASSIGNED","Duplicates are marked (DUPLICATE / POSSIBLE_DUPLICATE) but never auto-deleted"],
-  probs:["Uncertain assets are marked UNMAPPED or NEEDS_REVIEW — they go to a human, never to the trash"]},
- {n:"05",t:"Images Are Grouped",badge:"b-impl",bl:"Implemented",
-  what:["Files sharing one groupKey are collected into one media group — one physical product photographed from several angles. Grouping uses the filename ONLY."],
-  who:["System — buildMediaGroups() in mediaGroups.js"],
-  io:["INPUT — classified records","OUTPUT — groups: { groupKey, files sorted by view order, primary = front-first }"],
-  rules:["No visual similarity, no colour, no model, no approximate matching (verbatim source rule)","Different groupKeys are NEVER auto-merged","saree-001 + saree-002 = two groups = two products, always"],
-  probs:["Genuinely identical products with different numbers stay separate until a human says otherwise — by design"]},
- {n:"06",t:"Product Mapping",badge:"b-impl",bl:"Implemented",
-  what:["The system determines the destination: an existing product (four ownership signals checked in fixed order), the marketing branch, the review queue, or a brand-new product draft."],
-  who:["System — resolveGroupOwnership() precedence; Admin — manual mapping desk /admin/media/product-mapping"],
-  io:["INPUT — a media group","OUTPUT — EXISTING PRODUCT · MARKETING MEDIA · REVIEW QUEUE · NEW DRAFT"],
-  rules:["Ownership precedence: register productId → product claim → source group → canonical assignment","Marketing/house artwork is excluded from product discovery entirely","Existing ownership is never stolen: an owned file is left alone"],
-  probs:["Two products claiming one file → conflict reported, publication blocked until a human resolves it"]},
- {n:"07",t:"Review / Conflict Resolution",badge:"b-impl",bl:"Implemented",
-  what:["Humans answer what the system refused to guess. Queue A approves/rejects employee uploads. Queue B answers identity: SAME PRODUCT or SEPARATE PRODUCTS. Ownership conflicts get one of five actions: keep existing, transfer, merge, create separate, review later."],
-  who:["Super Admin (all review desks)","System (assembles the queues, enforces refusals)"],
-  io:["INPUT — pending uploads, flagged groups, contested claims","OUTPUT — ACTIVE/REJECTED media · recorded group decisions · resolved ownership"],
-  rules:["Transfer requires explicit confirmation — silent reassignment is refused by the repository","Two confirmed Kids plates can NEVER be merged, even by an admin","REVIEW LATER keeps the case open — deferral never unblocks publishing"],
-  probs:["Deferred cases never escalate automatically (no reminders) — they simply wait in the queue"]},
- {n:"08",t:"Product Creation / Update",badge:"b-impl",bl:"Implemented",
-  what:["An unowned group becomes ONE product draft with a permanent Product ID (KID-021, SAR-005…). The draft carries a safe placeholder name, price 0, the media claims, and honest review flags. Nothing is auto-published."],
-  who:["Admin — createProductDraftFromMedia()","System — catalogue reconciliation mints drafts for every uncatalogued group"],
-  io:["INPUT — a media group with no owner","OUTPUT — a DRAFT product, invisible to customers"],
-  rules:["Product IDs are deterministic and permanent — never random, never from the name","The system never invents a name, price or classification","Contested media is reported as a conflict, never silently taken"],
-  probs:["A draft minted over owned media starts life with an ownership conflict to resolve"]},
- {n:"09",t:"Employee Review",badge:"b-impl",bl:"Implemented",
-  what:["An admin assigns the draft to one ACTIVE employee. The employee completes the truth: real name, price, taxonomy, description, attributes, stock — with a mandatory visual preview of the full media group — then submits."],
-  who:["Admin (assignment)","Assigned employee (editing + submit)"],
-  io:["INPUT — an assigned DRAFT","OUTPUT — a submitted product: status PENDING_REVIEW"],
-  rules:["Authorisation = active account + products.manage + assignment to THIS product","Only 30 whitelisted fields are editable — never identity, status, ownership or flags","Save Draft and Submit for Review are the only two actions"],
-  probs:["Deactivating an employee blocks new assignments but does not clear old ones (PARTIALLY IMPLEMENTED)"]},
- {n:"10",t:"Admin Approval",badge:"b-impl",bl:"Implemented",
-  what:["The Super Admin verifies identity, name, price, taxonomy, grouping, media, ownership, inventory and flags — then RETURNS the product with a reason, or APPROVES it."],
-  who:["Super Admin only"],
-  io:["INPUT — a PENDING_REVIEW product","OUTPUT — approval recorded, or back to DRAFT with a written reason"],
-  rules:["Approval is gated by the full publish checklist — a blocked product cannot be approved","Kids: approval and publish are two separate acts","General products: approval publishes in the same act (verified quirk)"],
-  probs:["Any single blocker → refusal with the exact list of reasons"]},
- {n:"11",t:"Publish",badge:"b-impl",bl:"Implemented",
-  what:["The final human act. The complete gate is re-checked at this exact moment; then the product becomes PUBLISHED, stamped with who published it and when, and the change is written to the shared activity diary."],
-  who:["Super Admin only"],
-  io:["INPUT — an approved product","OUTPUT — status PUBLISHED · publishedBy/At stamped · storefront cache refreshed"],
-  rules:["Nothing publishes silently — every blocker is re-validated","Kids additionally require the recorded approval before publish"],
-  probs:["Publishing into an archived category succeeds but the product stays invisible (documented gap)"]},
- {n:"12",t:"Storefront",badge:"b-impl",bl:"Implemented",
-  what:["Customers finally see the product. Every surface — Explore, categories, collections, search, homepage, detail page, recommendations, AI shopping — reads ONE shared list that contains only PUBLISHED products in ACTIVE categories."],
-  who:["System — getLiveStorefrontProducts()"],
-  io:["INPUT — the product register","OUTPUT — the live customer catalogue"],
-  rules:["Draft / review / archived products can never leak through — one filter guards every surface","Explore dedupes by Product ID so a 3-view group is one card, never three","Cards show only product-owned media; hover follows the fixed view priority"],
-  probs:["None at this stage — everything wrong was stopped earlier. That is the point of the pipeline."]}
-];
-
-var stepsEl=document.getElementById('master-steps');
-var detailEl=document.getElementById('step-detail');
-STEPS.forEach(function(s,i){
-  var b=document.createElement('button');
-  b.className='step-tile'+(i===0?' active':'');
-  b.setAttribute('role','tab');
-  b.innerHTML='<div class="num">'+s.n+'</div><div class="tl">'+s.t+'</div>';
-  b.addEventListener('click',function(){
-    document.querySelectorAll('.step-tile').forEach(function(x){x.classList.remove('active');});
-    b.classList.add('active');
-    renderStep(i);
-    detailEl.scrollIntoView({behavior:'smooth',block:'nearest'});
-  });
-  stepsEl.appendChild(b);
-});
-function li(arr){return arr.map(function(x){return '<li>'+x+'</li>';}).join('');}
-function renderStep(i){
-  var s=STEPS[i];
-  detailEl.innerHTML=
-   '<div class="sd-head"><div><span class="sd-num">STEP '+s.n+' / 12</span><h3>'+s.t+'</h3></div>'+
-   '<span class="badge '+s.badge+'">'+s.bl+'</span></div>'+
-   '<div class="sd-body">'+
-   '<div class="sd-cell"><div class="sd-label">What happens</div><ul>'+li(s.what)+'</ul></div>'+
-   '<div class="sd-cell"><div class="sd-label">Who is responsible</div><ul>'+li(s.who)+'</ul></div>'+
-   '<div class="sd-cell"><div class="sd-label">Input → Output</div><ul>'+li(s.io)+'</ul></div>'+
-   '<div class="sd-cell rules"><div class="sd-label">Important rules</div><ul>'+li(s.rules)+'</ul></div>'+
-   '<div class="sd-cell problems" style="grid-column:1/-1"><div class="sd-label">Possible problems</div><ul>'+li(s.probs)+'</ul></div>'+
-   '</div>';
-  detailEl.style.animation='none';detailEl.offsetHeight;detailEl.style.animation='';
-}
-renderStep(0);
-
-/* ---------- 2. Exceptions (verified behaviors) ---------- */
-var EXCEPTIONS=[
- {t:"No product mapping",b:"b-impl",p:"An image has no owner and no group decision.",s:"It stays honestly UNASSIGNED / UNMAPPED and appears in the Media Inbox; catalogue reconciliation may mint a draft for its group.",h:"Admin maps it to a product, or completes the minted draft.",f:"Owned media on a reviewable draft."},
- {t:"Wrong product mapping",b:"b-impl",p:"A photo is owned by the wrong product.",s:"Reassignment without confirmation is refused; the conflict is reported with the current owner's name.",h:"Admin uses TRANSFER (confirmed) — the old owner's stale references are stripped and flagged.",f:"Correct ownership; both products flagged with honest history."},
- {t:"Duplicate ownership",b:"b-part",p:"The same file appears owned by two products.",s:"Detected and counted in workflow metrics; both rows surface in review.",h:"Admin decides who keeps it (keep / transfer / merge).",f:"One owner remains. (Auto-repair: not implemented.)"},
- {t:"Similar products",b:"b-impl",p:"Two photos look nearly identical.",s:"Similarity is treated as a QUESTION: the pair enters group review as a candidate. Confirmed Kids pairs cannot be merged at all.",h:"Admin answers: same product or separate products.",f:"Recorded decision; never an automatic merge."},
- {t:"Missing front image",b:"b-impl",p:"The group has no front view.",s:"The media set falls back: cover role → best-ranked view becomes primary. If nothing usable exists, publishing is blocked (cover required).",h:"Add/assign a front plate or set a primary explicitly.",f:"A deliberate primary image."},
- {t:"Missing back image",b:"b-impl",p:"No back view exists.",s:"Hover priority falls through: side → left/right → detail. With no alternate at all, the card simply never swaps.",h:"Nothing required — this is a supported state.",f:"A still card; no random image is ever substituted."},
- {t:"Missing price",b:"b-impl",p:"Price is 0 because the system refused to guess.",s:"PRICE_REVIEW_REQUIRED flag + publish blocker 'Selling price must be greater than zero.'",h:"Employee or admin enters the real price.",f:"Flag auto-satisfied; blocker gone."},
- {t:"Missing name",b:"b-impl",p:"The draft still carries its safe placeholder name.",s:"Placeholder names are recognised and block publishing; NAME_REVIEW_REQUIRED stands.",h:"Employee or admin types the real product name.",f:"Flag auto-satisfied; blocker gone."},
- {t:"Missing taxonomy",b:"b-impl",p:"Category was inferred or subcategory absent.",s:"TAXONOMY_REVIEW_REQUIRED flag; 'Category is required.' blocks publish; Kids also validate the subcategory.",h:"Pick the correct category and subcategory.",f:"Flag auto-satisfied; blocker gone."},
- {t:"Unresolved grouping",b:"b-impl",p:"An identity question (same vs separate) is still open.",s:"The open group decision blocks publication of every product claiming that media.",h:"Admin decides in Group Review; REVIEW LATER keeps it blocked on purpose.",f:"Decision recorded; publishing unblocked."},
- {t:"Employee deactivated",b:"b-part",p:"An account is set INACTIVE while holding assigned products.",s:"Login is blocked; edits fail; NEW assignments to them are refused. Existing assignments are NOT cleared automatically.",h:"Admin manually reassigns the products.",f:"Work continues under a new assignee. (Auto-reassignment: not implemented.)"},
- {t:"Product rejected",b:"b-impl",p:"Admin finds problems at review.",s:"Status returns to DRAFT; the review state records REJECTED with the written reason.",h:"The assigned employee fixes the issues and resubmits.",f:"Back in the normal pipeline."},
- {t:"Product returned",b:"b-impl",p:"Admin sends a submission back for more work.",s:"Same mechanism as rejection — one code path with a default reason 'Returned for further review.'",h:"Employee revises and resubmits.",f:"Back in the normal pipeline."},
- {t:"Product archived",b:"b-impl",p:"A product is retired.",s:"Status ARCHIVED; invisible on every customer surface; nothing is hard-deleted. Its media stays owned (no automatic release — documented gap).",h:"Admin may restore it to DRAFT at any time, or manually free its media.",f:"Retired but recoverable."}
-];
-var excEl=document.getElementById('exc-list');
-EXCEPTIONS.forEach(function(e){
-  var d=document.createElement('details');d.className='acc';
-  d.innerHTML='<summary>'+e.t+'<span class="badge '+e.b+'">'+(e.b==='b-impl'?'Implemented':'Partially Implemented')+'</span></summary>'+
-  '<div class="acc-body"><div class="exc-flow">'+
-  '<span class="st p">PROBLEM · '+e.p+'</span><span class="a">→</span>'+
-  '<span class="st s">SYSTEM · '+e.s+'</span><span class="a">→</span>'+
-  '<span class="st h">HUMAN · '+e.h+'</span><span class="a">→</span>'+
-  '<span class="st f">FINAL · '+e.f+'</span></div></div>';
-  excEl.appendChild(d);
-});
-
-/* ---------- 3. Beginner mode ---------- */
-var bt=document.getElementById('beginnerToggle');
-bt.addEventListener('click',function(){
-  document.body.classList.toggle('beginner');
-  bt.classList.toggle('active');
-});
-
-/* ---------- 4. Topic filters ---------- */
-document.querySelectorAll('.chip.filter').forEach(function(ch){
-  ch.addEventListener('click',function(){
-    document.querySelectorAll('.chip.filter').forEach(function(x){x.classList.remove('active');});
-    ch.classList.add('active');
-    var f=ch.getAttribute('data-filter');
-    document.querySelectorAll('section[data-topics]').forEach(function(sec){
-      var topics=(sec.getAttribute('data-topics')||'').split(' ');
-      sec.classList.toggle('dimmed', f!=='all' && topics.indexOf(f)===-1 && topics.indexOf('all')===-1);
-    });
-  });
-});
-
-/* ---------- 5. Search ---------- */
-var searchInput=document.getElementById('search');
-var searchTimer=null;
-searchInput.addEventListener('input',function(){
-  clearTimeout(searchTimer);
-  searchTimer=setTimeout(function(){
-    var q=searchInput.value.trim().toLowerCase();
-    document.querySelectorAll('section[data-topics]').forEach(function(sec){
-      if(!q){sec.classList.remove('dimmed');return;}
-      var hit=sec.textContent.toLowerCase().indexOf(q)!==-1;
-      sec.classList.toggle('dimmed',!hit);
-      if(hit){sec.querySelectorAll('details.acc').forEach(function(dd){
-        if(dd.textContent.toLowerCase().indexOf(q)!==-1 && !dd.classList.contains('tech')) dd.open=true;
-      });}
-    });
-  },180);
-});
-
-/* ---------- 6. Progress bar + back-to-top ---------- */
-var prog=document.getElementById('progress');
-var totop=document.getElementById('totop');
-window.addEventListener('scroll',function(){
-  var h=document.documentElement;
-  var pct=h.scrollTop/(h.scrollHeight-h.clientHeight)*100;
-  prog.style.width=pct+'%';
-  totop.classList.toggle('show',h.scrollTop>700);
-},{passive:true});
-totop.addEventListener('click',function(){window.scrollTo({top:0,behavior:'smooth'});});
-
-/* ---------- 7. Reveal on scroll ---------- */
+// reveal on scroll
 if('IntersectionObserver' in window){
-  var io=new IntersectionObserver(function(entries){
-    entries.forEach(function(en){if(en.isIntersecting){en.target.classList.add('in');io.unobserve(en.target);}});
-  },{threshold:.15});
-  document.querySelectorAll('.reveal').forEach(function(el){io.observe(el);});
-  document.querySelectorAll('section .card, section .vflow, section .diagram').forEach(function(el){
-    el.classList.add('reveal');io.observe(el);
-  });
+  const io=new IntersectionObserver((entries)=>{
+    entries.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target);}});
+  },{threshold:.14});
+  document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
 }else{
-  document.querySelectorAll('.reveal').forEach(function(el){el.classList.add('in');});
+  document.querySelectorAll('.reveal').forEach(el=>el.classList.add('in'));
+}
+
+// simple active nav highlight
+const links=document.querySelectorAll('#navlinks a');
+const sections=document.querySelectorAll('section[id]');
+if('IntersectionObserver' in window){
+  const navIo=new IntersectionObserver((entries)=>{
+    entries.forEach(en=>{
+      if(en.isIntersecting){
+        links.forEach(l=>l.classList.toggle('active', l.getAttribute('href')==='#'+en.target.id));
+      }
+    });
+  },{rootMargin:'-30% 0px -70% 0px',threshold:0});
+  sections.forEach(s=>navIo.observe(s));
 }
 </script>
 </body>
