@@ -754,8 +754,23 @@ const noteProduct = (action, product, actor, summary) => {
 /**
  * The single writer. Merges a draft onto the stored record, computes
  * derived truth (price mapping, flags, history) and signs the change.
+ *
+ * Phase 3E — ONE USER ACTION → ONE ACTIVITY EVENT. The `activity` option
+ * now has three meanings:
+ *   · undefined (not passed)  → default diary event (created / edited)
+ *   · null (passed explicitly)→ SUPPRESSED — the calling canonical command
+ *                               owns and records the lifecycle event itself,
+ *                               so the writer must not add a generic
+ *                               PRODUCT_EDITED beside it
+ *   · { action, summary }     → the caller's explicit event replaces the
+ *                               default one (unchanged behaviour)
+ * Field-level events (price change, variants) are facts about the data and
+ * still fire regardless — they are not lifecycle events.
  */
-const writeProduct = (draft, actor, { activity = null, existingId = null } = {}) => {
+const writeProduct = (draft, actor, options = {}) => {
+  const { activity, existingId = null } = options;
+  const suppressDefaultActivity =
+    Object.prototype.hasOwnProperty.call(options, "activity") && activity == null;
   const items = read();
   const lookupId = existingId ?? draft.id;
   const index = items.findIndex((p) => String(p.id) === String(lookupId));
@@ -873,7 +888,10 @@ const writeProduct = (draft, actor, { activity = null, existingId = null } = {})
     noteProduct(ACTIVITY_ACTIONS.PRODUCT_VARIANT_UPDATED, merged, actor, `${merged.name} · variants updated`);
   }
   if (activity) noteProduct(activity.action, merged, actor, activity.summary);
-  else if (!existing) {
+  else if (suppressDefaultActivity) {
+    /* Phase 3E — the calling canonical command owns the lifecycle event.
+       Recording a generic PRODUCT_EDITED here would double-log the action. */
+  } else if (!existing) {
     noteProduct(ACTIVITY_ACTIONS.PRODUCT_CREATED, merged, actor, `Created product ${merged.name}`);
   } else {
     noteProduct(ACTIVITY_ACTIONS.PRODUCT_EDITED, merged, actor, `Edited product ${merged.name}`);
@@ -978,11 +996,17 @@ export const catalogRepository = {
     return { ok: true, product };
   },
 
-  /** Update an existing product by id. Returns `{ ok, product }`. */
-  updateProduct: (id, patch, actor = null) => {
+  /**
+   * Update an existing product by id. Returns `{ ok, product }`.
+   *
+   * Phase 3E — a canonical workflow command that records its own lifecycle
+   * event passes `{ activity: null }` so the writer does not add a generic
+   * PRODUCT_EDITED beside it (one user action → one activity event).
+   */
+  updateProduct: (id, patch, actor = null, options = undefined) => {
     const existing = findNormalised(id);
     if (!existing) return { ok: false, error: "Product not found." };
-    const product = writeProduct({ ...patch, id: existing.id }, actor);
+    const product = writeProduct({ ...patch, id: existing.id }, actor, options ?? {});
     return { ok: true, product };
   },
 
@@ -1044,10 +1068,13 @@ export const catalogRepository = {
       actor,
       {
         existingId: existing.id,
-        activity: {
-          action: ACTIVITY_ACTIONS.PRODUCT_RENAMED_ID,
-          summary: `Changed Product ID ${existing.id} → ${target}`,
-        },
+        /* Phase 3E — the PRODUCT_RENAMED_ID lifecycle event is owned by the
+           canonical workflow command (productWorkflow.changeProductId),
+           which validates and moves media ownership around this persistence
+           primitive. Recording it here too double-logged every rename (and
+           logged a spurious rename on the workflow's rollback path). The
+           field-level history entry ("id" changed) is still written above. */
+        activity: null,
       }
     );
     return { ok: true, product };
