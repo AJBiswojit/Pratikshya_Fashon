@@ -29,7 +29,11 @@
 
 import catalogRepository, { PRODUCT_STATUS, getPublishIssues } from "./catalogRepository";
 import { commands as workflowCommands } from "./workflow/productWorkflowCommands";
-import { transferMediaOwnership as safeTransferOwnership, unassignMediaFromProduct as safeUnassignMedia } from "./media/mediaOwnershipService";
+import {
+  transferMediaOwnership as safeTransferOwnership,
+  unassignMediaFromProduct as safeUnassignMedia,
+  validateMediaOwnershipTransfer as validateOwnershipTransfer,
+} from "./media/mediaOwnershipService";
 import mediaRepository from "./media/mediaRepository";
 import { getProductMediaSet, resolveProductMediaClaims } from "./media/productMediaSet";
 import { buildMediaGroups } from "./media/mediaGroups";
@@ -331,24 +335,104 @@ export const publishProduct = (productId, actor = null) =>
 export const archiveProduct = (productId, actor = null) =>
   workflowCommands.archiveProduct(productId, actor);
 
-/** Admin-only Product ID change, with the media register kept in sync. */
+/**
+ * Admin-only Product ID change — Phase 3C canonical ownership path.
+ *
+ *   validate new Product ID (pure)
+ *     ↓
+ *   canonical media ownership service — preflight EVERY owned asset
+ *     ↓  (any refusal aborts before a single byte is written)
+ *   persist the new Product ID
+ *     ↓
+ *   canonical media ownership service — transfer each asset
+ *     ↓
+ *   activity event
+ *
+ * The workflow no longer calls `mediaRepository.assignToProduct` directly,
+ * so the confirmed Kids plate lock, marketing isolation and contested-
+ * ownership rules apply to a rename exactly as they apply to any other
+ * ownership change. Old-ID media can never end up silently attached to an
+ * unrelated product: the transfer target is the renamed record itself, and
+ * the rename is rolled back if any asset refuses to follow.
+ */
 export const changeProductId = (productId, newProductId, actor = null) => {
+  /* 1. Validate the rename itself WITHOUT writing anything. */
+  const check = catalogRepository.validateProductIdChange(productId, newProductId);
+  if (!check.ok) return check;
+  const targetId = check.target;
+
+  const owned = mediaRepository
+    .getAll()
+    .filter((media) => String(media.productId) === String(productId));
+
+  /* 2. Preflight every asset through the canonical ownership service. The
+     target record does not exist yet, so product existence is checked by
+     step 1 instead of the service's own target lookup. */
+  for (const media of owned) {
+    const preflight = validateOwnershipTransfer({
+      mediaId: media.id,
+      targetProductId: targetId,
+      principal: actor,
+      confirm: true,
+      requireTargetProduct: false,
+    });
+    if (!preflight.ok) {
+      return {
+        ok: false,
+        error: preflight.message ?? preflight.error,
+        code: preflight.code ?? null,
+        mediaId: media.id,
+        blockedBy: "MEDIA_OWNERSHIP",
+      };
+    }
+  }
+
+  /* 3. Persist the new Product ID. */
   const result = catalogRepository.changeProductId(productId, newProductId, actor);
   if (!result.ok) return result;
-  /* Keep the media register's ownership references pointing at the truth. */
-  mediaRepository
-    .getAll()
-    .filter((media) => String(media.productId) === String(productId))
-    .forEach((media) => {
-      mediaRepository.assignToProduct(media.id, result.product.id, null, { confirmReassign: true });
+
+  /* 4. Move ownership through the canonical service — validated again there. */
+  const moved = [];
+  const refused = [];
+  owned.forEach((media) => {
+    const transfer = safeTransferOwnership({
+      mediaId: media.id,
+      targetProductId: result.product.id,
+      principal: actor,
+      confirm: true,
+      actor,
     });
+    if (transfer.ok) moved.push(media.id);
+    else refused.push({ mediaId: media.id, error: transfer.message ?? transfer.error });
+  });
+
+  if (refused.length) {
+    /* Never leave media stranded on a Product ID that no longer exists. */
+    catalogRepository.changeProductId(result.product.id, productId, actor);
+    moved.forEach((mediaId) => {
+      safeTransferOwnership({
+        mediaId,
+        targetProductId: productId,
+        principal: actor,
+        confirm: true,
+        actor,
+      });
+    });
+    return {
+      ok: false,
+      error: refused[0].error ?? "Media ownership could not follow the new Product ID.",
+      blockedBy: "MEDIA_OWNERSHIP",
+      refused,
+    };
+  }
+
   note(
     ACTIVITY_ACTIONS.PRODUCT_RENAMED_ID,
     `Changed Product ID ${productId} → ${result.product.id}`,
     actor,
     result.product.id
   );
-  return result;
+  return { ...result, mediaTransferred: moved.length };
 };
 
 /* ------------------------------------------------------------------ */

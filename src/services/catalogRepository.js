@@ -883,6 +883,50 @@ const writeProduct = (draft, actor, { activity = null, existingId = null } = {})
 };
 
 /* ------------------------------------------------------------------ */
+/* Legacy status → canonical command map (Phase 3C)                    */
+/* ------------------------------------------------------------------ */
+
+/**
+ * The compatibility `updateStatus(id, status)` adapter owns no workflow
+ * rules of its own — it only names the canonical command that implements
+ * the requested transition.
+ *
+ * DRAFT is deliberately absent: reaching DRAFT is not one transition but
+ * three distinct, separately authorized commands (restoreProduct from the
+ * archive, unpublishProduct from the storefront, returnProduct with a
+ * mandatory reason). A legacy caller must choose the right one instead of
+ * silently mutating a product back to DRAFT.
+ */
+const LEGACY_STATUS_COMMANDS = {
+  [PRODUCT_STATUS.PUBLISHED]: "publishProduct",
+  [PRODUCT_STATUS.ARCHIVED]: "archiveProduct",
+  [PRODUCT_STATUS.PENDING_REVIEW]: "submitProduct",
+};
+
+/* ------------------------------------------------------------------ */
+/* Product ID rename validation (pure)                                 */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Phase 3C — the ONE Product ID rename rule. Pure: reads the register and
+ * returns either the resolved { existing, target } pair or a structured
+ * error. Both the repository writer and the workflow ownership path use it,
+ * so a rename can be fully validated BEFORE any media ownership moves.
+ */
+const validateProductIdChange = (id, newProductId) => {
+  const existing = findNormalised(id);
+  if (!existing) return { ok: false, error: "Product not found." };
+  const target = String(newProductId || "").trim().toUpperCase();
+  if (!/^[A-Z0-9][A-Z0-9-]{1,14}$/.test(target)) {
+    return { ok: false, error: "Product ID must be letters, digits and dashes (2–15 characters)." };
+  }
+  if (findNormalised(target) || findNormalised(String(newProductId).trim())) {
+    return { ok: false, error: "That Product ID is already in use." };
+  }
+  return { ok: true, existing, target };
+};
+
+/* ------------------------------------------------------------------ */
 /* Public repository                                                   */
 /* ------------------------------------------------------------------ */
 
@@ -975,20 +1019,26 @@ export const catalogRepository = {
   },
 
   /**
+   * Phase 3C — the Product ID validation rule, exposed read-only so the
+   * workflow layer can validate a rename BEFORE it moves media ownership.
+   * Pure: it inspects the register and never writes.
+   */
+  validateProductIdChange: (id, newProductId) => validateProductIdChange(id, newProductId),
+
+  /**
    * Phase 22 — change the permanent Product ID. Admin-only, requires the
    * new id to be free and well-formed; history records the change and the
    * media register is kept in sync by the workflow layer.
+   *
+   * Phase 3C: this is the PERSISTENCE primitive for a rename. Media
+   * ownership is NOT touched here — `productWorkflow.changeProductId`
+   * validates and moves ownership through `mediaOwnershipService` around
+   * this call.
    */
   changeProductId: (id, newProductId, actor = null) => {
-    const existing = findNormalised(id);
-    if (!existing) return { ok: false, error: "Product not found." };
-    const target = String(newProductId || "").trim().toUpperCase();
-    if (!/^[A-Z0-9][A-Z0-9-]{1,14}$/.test(target)) {
-      return { ok: false, error: "Product ID must be letters, digits and dashes (2–15 characters)." };
-    }
-    if (findNormalised(target) || findNormalised(String(newProductId).trim())) {
-      return { ok: false, error: "That Product ID is already in use." };
-    }
+    const check = validateProductIdChange(id, newProductId);
+    if (!check.ok) return check;
+    const { existing, target } = check;
     const product = writeProduct(
       { ...existing, id: target, productId: target },
       actor,
@@ -1061,15 +1111,32 @@ export const catalogRepository = {
       workflow command service (productWorkflowCommands.restoreProduct). */
   restoreProduct: (id, actor = null) => catalogRepository._workflowCommand("restoreProduct", id, actor),
 
-  /** Legacy status switch — Phase 11 callers keep working; publication and
-      archival route through the canonical workflow commands. */
+  /**
+   * Legacy status switch — Phase 11 compatibility ADAPTER only.
+   *
+   * Phase 3C: this method owns NO workflow rules. Every lifecycle status is
+   * mapped to the canonical command that already implements authorization,
+   * validation, the transition and the activity event. There is no residual
+   * `writeProduct({ status })` branch, so a caller can no longer publish,
+   * approve, archive, return or submit a product without the canonical
+   * lifecycle. An unknown status is refused rather than written blindly.
+   */
   updateStatus: (id, status, actor = null) => {
-    if (status === PRODUCT_STATUS.PUBLISHED) return catalogRepository._workflowCommand("publishProduct", id, actor);
-    if (status === PRODUCT_STATUS.ARCHIVED) return catalogRepository._workflowCommand("archiveProduct", id, actor);
-    const existing = findNormalised(id);
-    if (!existing) return { ok: false, error: "Product not found." };
-    const product = writeProduct({ id, status }, actor);
-    return { ok: true, product };
+    const target = normaliseProductStatus(status);
+    if (!target) {
+      return {
+        ok: false,
+        error: `Unknown product status "${status}" — use a canonical workflow command.`,
+      };
+    }
+    const command = LEGACY_STATUS_COMMANDS[target];
+    if (!command) {
+      return {
+        ok: false,
+        error: `Status ${target} is not a direct transition — use the canonical workflow command for it.`,
+      };
+    }
+    return catalogRepository._workflowCommand(command, id, actor);
   },
 
   /**
@@ -1148,20 +1215,78 @@ export const catalogRepository = {
    * product (authorize → lifecycle → product/media/category validation →
    * publish). A product that is not APPROVED is skipped with its errors —
    * there is no second, faster publishing implementation.
+   *
+   * Phase 3C: EVERY lifecycle status in the patch — not just PUBLISHED —
+   * now runs the canonical command per product, and the lifecycle key is
+   * stripped from the merchandising patch so no direct status write can
+   * survive alongside it. A product is only mutated after its own command
+   * authorized and validated it, so one invalid product can never cause
+   * another to transition incorrectly. Non-lifecycle merchandising fields
+   * (featured / bestseller / new arrival) keep using the ordinary writer.
    */
   bulkUpdate: (ids, patch, actor = null, summary = "Bulk product update") => {
     const snap = getNormalizedSnapshot();
     const targets = snap.list.filter((product) => ids.includes(product.id));
+    const requested = patch && Object.prototype.hasOwnProperty.call(patch, "status")
+      ? normaliseProductStatus(patch.status)
+      : null;
+
+    /* A lifecycle status is never written through the merchandising path. */
+    const { status: _lifecycleStatus, ...merchandising } = patch ?? {};
+    const lifecycleCommand = requested ? LEGACY_STATUS_COMMANDS[requested] : null;
+    if (requested && !lifecycleCommand) {
+      return {
+        ok: false,
+        applied: 0,
+        skipped: targets.length,
+        error: `Status ${requested} is not a bulk transition — use the canonical workflow command for it.`,
+      };
+    }
+    const hasMerchandising = Object.keys(merchandising).length > 0;
+
+    /* Bulk publication has exactly ONE implementation: the canonical
+       bulkPublish command. It authorizes once, then runs the canonical
+       publishProduct per product (lifecycle + full revalidation) and emits
+       the single bulk activity event — this adapter adds none of its own. */
+    if (requested === PRODUCT_STATUS.PUBLISHED) {
+      const bulk = catalogRepository._workflowCommand(
+        "bulkPublish",
+        targets.map((product) => product.id),
+        actor
+      );
+      if (!bulk.ok) return { ok: false, applied: 0, skipped: targets.length, error: bulk.error };
+      if (hasMerchandising) {
+        (bulk.results ?? [])
+          .filter((entry) => entry.ok)
+          .forEach((entry) => writeProduct({ ...merchandising, id: entry.id }, actor, { activity: null }));
+      }
+      return { ok: true, applied: bulk.applied, skipped: bulk.skipped, results: bulk.results ?? [] };
+    }
+
     let applied = 0;
     let skipped = 0;
+    const results = [];
     targets.forEach((product) => {
-      if (patch.status === PRODUCT_STATUS.PUBLISHED) {
-        const result = catalogRepository._workflowCommand("publishProduct", product.id, actor);
-        if (result.ok) applied += 1;
-        else skipped += 1;
+      if (lifecycleCommand) {
+        const result = catalogRepository._workflowCommand(lifecycleCommand, product.id, actor);
+        results.push({
+          id: product.id,
+          ok: Boolean(result.ok),
+          errors: result.errors ?? (result.error ? [result.error] : []),
+        });
+        if (!result.ok) {
+          /* INVALID → the product stays exactly as it was. */
+          skipped += 1;
+          return;
+        }
+        /* Only a successfully transitioned product takes the rest of the
+           merchandising patch; the transition itself already persisted. */
+        if (hasMerchandising) writeProduct({ ...merchandising, id: product.id }, actor, { activity: null });
+        applied += 1;
         return;
       }
-      writeProduct({ ...patch, id: product.id }, actor, { activity: null });
+      writeProduct({ ...merchandising, id: product.id }, actor, { activity: null });
+      results.push({ id: product.id, ok: true, errors: [] });
       applied += 1;
     });
     if (applied > 0) {
@@ -1177,7 +1302,7 @@ export const catalogRepository = {
         /* Diary failures never block. */
       }
     }
-    return { ok: true, applied, skipped };
+    return { ok: true, applied, skipped, results };
   },
 
   /* ---------------- validation helpers ----------------------------- */

@@ -28,6 +28,7 @@
     "audit:workflow-foundation": "node --import ./scripts/node-loader/register.mjs scripts/audit-workflow-foundation.mjs",
     "audit:read-only-workflow": "node --import ./scripts/node-loader/register.mjs scripts/audit-read-only-workflow.mjs",
     "audit:explicit-migrations": "node --import ./scripts/node-loader/register.mjs scripts/audit-explicit-migrations.mjs",
+    "audit:canonical-lifecycle": "node --import ./scripts/node-loader/register.mjs scripts/audit-canonical-lifecycle.mjs",
     "audit-product-performance": "node --import ./scripts/node-loader/register.mjs scripts/audit-product-performance.mjs"
   },
   "dependencies": {
