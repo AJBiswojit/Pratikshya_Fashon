@@ -1,112 +1,118 @@
 /**
- * Phase 3A — Audit: READ = READ ONLY
- * Scans read paths for direct mutation calls.
+ * Phase 3A — Audit: READ = READ ONLY.
+ *
+ * Uses persisted-state snapshots around the public read API and a focused
+ * static check of catalogRepository.read(). Definitions of write commands
+ * elsewhere in the same modules are intentionally not treated as read calls.
  */
 
-import { readFileSync, readdirSync, statSync } from "fs";
-import { fileURLToPath } from "url";
-import { dirname, join } from "path";
+import { readFileSync } from "node:fs";
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
+import catalogRepository, { productsRegisterRaw } from "../src/services/catalogRepository.js";
+import mediaRepository from "../src/services/media/mediaRepository.js";
+import { queryCatalogue } from "../src/data/products/query.js";
+import { getLiveStorefrontProducts } from "../src/data/products/index.js";
+import { getProductMediaSet } from "../src/services/media/productMediaSet.js";
+import { loadActivity } from "../src/services/employees/activityService.js";
+import { getAllGroups } from "../src/services/media/productMediaGroups.js";
+import { setupBaseState } from "../tests/helpers/workflowTestState.js";
 
-const MUTATION_SIGNATURES = [
-  "writeProduct",
-  "writeMedia",
-  "assignToProduct",
-  "unassignFromProduct",
-  "transferMediaOwnership",
-  "archiveProduct",
-  "publishProduct",
-  "updateStatus",
-  "updateProduct",
-  "recordActivity",
-  "syncProductDraftRecords",
-  "syncCatalogueReconciliation",
-  "syncCanonicalMediaAssignment",
-  "syncKidswearRegister",
+const failures = [];
+const pass = (label) => console.log(`PASS: ${label}`);
+const fail = (label) => {
+  failures.push(label);
+  console.log(`FAIL: ${label}`);
+};
+
+const extractArrowBody = (source, declaration) => {
+  const start = source.indexOf(declaration);
+  if (start < 0) return null;
+  const brace = source.indexOf("{", start + declaration.length);
+  if (brace < 0) return null;
+  let depth = 0;
+  let quote = null;
+  let escaped = false;
+  for (let index = brace; index < source.length; index += 1) {
+    const char = source[index];
+    if (quote) {
+      if (escaped) escaped = false;
+      else if (char === "\\") escaped = true;
+      else if (char === quote) quote = null;
+      continue;
+    }
+    if (char === '"' || char === "'" || char === "`") {
+      quote = char;
+      continue;
+    }
+    if (char === "{") depth += 1;
+    if (char === "}") {
+      depth -= 1;
+      if (depth === 0) return source.slice(brace + 1, index);
+    }
+  }
+  return null;
+};
+
+const stateSnapshot = () =>
+  JSON.stringify({
+    products: productsRegisterRaw(),
+    media: mediaRepository
+      .getAll()
+      .map((media) => [media.id, media.productId, media.scope, media.role, media.status])
+      .sort((a, b) => String(a[0]).localeCompare(String(b[0]))),
+    activity: loadActivity(),
+    groups: getAllGroups(),
+  });
+
+console.log("# READ-ONLY WORKFLOW AUDIT — Phase 3A\n");
+setupBaseState();
+
+const readChecks = [
+  ["catalogRepository.all()", () => catalogRepository.all()],
+  ["catalogRepository.find()", () => catalogRepository.find("pf-001")],
+  ["queryCatalogue()", () => queryCatalogue({ search: "silk" })],
+  ["getLiveStorefrontProducts()", () => getLiveStorefrontProducts()],
+  ["getProductMediaSet()", () => getProductMediaSet(catalogRepository.find("pf-001"))],
 ];
 
-function scanFile(path) {
-  const content = readFileSync(path, "utf8");
-  const lines = content.split("\n");
-  const hits = [];
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
-    for (const sig of MUTATION_SIGNATURES) {
-      if (line.includes(sig) && !line.includes("//") && !line.includes("/*")) {
-        hits.push({ line: i + 1, sig, snippet: line.trim().slice(0, 120) });
-      }
-    }
-  }
-  return hits;
-}
+readChecks.forEach(([label, read]) => {
+  const before = stateSnapshot();
+  read();
+  const after = stateSnapshot();
+  if (after === before) pass(`${label} leaves persisted workflow state unchanged`);
+  else fail(`${label} mutated persisted workflow state`);
+});
 
-function scanDir(dir) {
-  const results = [];
-  const entries = readdirSync(dir, { withFileTypes: true });
-  for (const entry of entries) {
-    const fp = join(dir, entry.name);
-    if (entry.isDirectory() && entry.name !== "node_modules") {
-      results.push(...scanDir(fp));
-    } else if (entry.isFile() && entry.name.endsWith(".js")) {
-      const hits = scanFile(fp);
-      if (hits.length) results.push({ file: fp, hits });
-    }
-  }
-  return results;
-}
-
-async function main() {
-  const readPaths = [
-    "src/services/catalogRepository.js",
-    "src/services/media/mediaRepository.js",
-    "src/services/catalogueReconciliation.js",
-    "src/services/productDraftMigration.js",
-    "src/services/workflow/explicitMigrations.js",
+const catalogueSource = readFileSync("src/services/catalogRepository.js", "utf8");
+const readBody = extractArrowBody(catalogueSource, "const read = () =>");
+if (!readBody) {
+  fail("catalogRepository.read() body could not be inspected");
+} else {
+  const executableReadBody = readBody
+    .replace(/\/\*[\s\S]*?\*\//g, "")
+    .replace(/\/\/.*$/gm, "");
+  const forbidden = [
+    "runExplicitMigrations",
+    "syncProductDraftRecords",
+    "syncCatalogueReconciliation",
+    "syncCanonicalMediaAssignment",
+    "syncKidswearRegister",
+    "writeProduct(",
+    "persistCatalogueState(",
+    "assignToProduct(",
+    "recordActivity(",
   ];
-
-  console.log("# READ-ONLY WORKFLOW AUDIT — Phase 3A\n");
-  let dangerous = 0;
-
-  for (const rp of readPaths) {
-    const hits = scanFile(rp);
-    const mutationHits = hits.filter((h) =>
-      ["writeProduct", "writeMedia", "assignToProduct", "unassignFromProduct",
-       "transferMediaOwnership", "archiveProduct", "publishProduct",
-       "updateStatus", "updateProduct", "recordActivity",
-       "syncProductDraftRecords", "syncCatalogueReconciliation",
-       "syncCanonicalMediaAssignment", "syncKidswearRegister"].includes(h.sig)
-    );
-    // Filter out hits inside mutation functions (e.g., assignToProduct definition)
-    const readHits = mutationHits.filter((h) => {
-      const snippet = h.snippet;
-      // Exclude hits inside mutation function definitions or compatibility adapters
-      if (snippet.includes("archiveProduct:") || snippet.includes("updateStatus:") || snippet.includes("publishProduct:") || snippet.includes("writeProduct({")) return false;
-      if (snippet.includes("function sync") || snippet.includes("export const sync")) return false;
-      if (snippet.includes("export const assignToProduct")) return false;
-      if (snippet.includes("writeMedia(")) return false;
-      if (snippet.includes("recordActivity")) return false; // inside command
-      return true;
-    });
-    if (readHits.length) {
-      dangerous += readHits.length;
-      console.log("FILE:", rp);
-      for (const h of readHits) {
-        console.log("  line", h.line, "->", h.sig, "|", h.snippet);
-      }
-    } else {
-      console.log("PASS:", rp, "— no dangerous read→mutation paths detected.");
-    }
-  }
-
-  console.log("\n# SUMMARY");
-  console.log("Read paths scanned:", readPaths.length);
-  console.log("Dangerous read→mutation hits in read paths:", dangerous);
-  if (dangerous === 0) {
-    console.log("RESULT: PASS — READ = READ ONLY (no automatic mutation paths found).");
-  } else {
-    console.log("RESULT: FAIL — mutation paths still present in read paths (see above).");
-  }
+  const hits = forbidden.filter((signature) => executableReadBody.includes(signature));
+  if (hits.length) fail(`catalogRepository.read() calls mutation paths: ${hits.join(", ")}`);
+  else pass("catalogRepository.read() contains no migration, reconciliation, ownership or activity writes");
 }
 
-main();
+setupBaseState();
+console.log("\n# SUMMARY");
+console.log(`Checks: ${readChecks.length + 1} | Failures: ${failures.length}`);
+if (failures.length) {
+  console.log("RESULT: FAIL — read-side mutation detected.");
+  process.exitCode = 1;
+} else {
+  console.log("RESULT: PASS — READ = READ ONLY (no automatic mutation paths found).");
+}

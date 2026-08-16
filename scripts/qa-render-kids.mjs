@@ -60,6 +60,10 @@ const renderAt = (element, path) =>
 
 const imagesIn = (html) => [...html.matchAll(/<img[^>]+src="([^"]+)"/g)].map((m) => m[1]);
 
+/* Render QA targets the persisted migrated workflow state explicitly. */
+const { setupMigratedState } = await import("../tests/helpers/workflowTestState.js");
+setupMigratedState();
+
 /* ------------------------------------------------------------------ */
 console.log("\n# 1. ADMIN — /admin/products/review");
 /* ------------------------------------------------------------------ */

@@ -14,8 +14,9 @@
  * surface is altered for any other test.
  */
 
-import test from "node:test";
+import test, { beforeEach, afterEach } from "node:test";
 import assert from "node:assert/strict";
+import { setupBaseState, setupMigratedState } from "./helpers/workflowTestState.js";
 import { readFileSync, existsSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -61,6 +62,15 @@ const fillDraft = (id, patch = {}) =>
     },
     ADMIN
   );
+
+
+beforeEach(() => {
+  setupMigratedState();
+});
+
+afterEach(() => {
+  setupBaseState();
+});
 
 test("a reconciled draft is DRAFT and invisible until published", () => {
   const drafts = reconciliationDraftRecords();

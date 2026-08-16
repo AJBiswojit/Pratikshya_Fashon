@@ -16,6 +16,9 @@ import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { extname, join, relative } from "node:path";
 
 import { auditMediaLibrary } from "../src/services/media/mediaAudit.js";
+import { setupMigratedState } from "../tests/helpers/workflowTestState.js";
+
+setupMigratedState();
 
 const ROOT = process.cwd();
 const COMPONENT_ROOTS = [

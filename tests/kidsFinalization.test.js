@@ -14,14 +14,16 @@
  *   · every lifecycle event lands in the shared activity diary
  */
 
-import test from "node:test";
+import test, { beforeEach, afterEach } from "node:test";
 import assert from "node:assert/strict";
+import { setupBaseState, setupMigratedState } from "./helpers/workflowTestState.js";
 
 import catalogRepository, {
   PRODUCT_STATUS,
   REVIEW_STATE,
 } from "../src/services/catalogRepository.js";
 import mediaRepository from "../src/services/media/mediaRepository.js";
+import { assignMediaToProduct } from "../src/services/media/mediaOwnershipService.js";
 import { getProductMediaSet, getProductCardMedia } from "../src/services/media/productMediaSet.js";
 import {
   CONFIRMED_KIDS_IDENTITIES,
@@ -87,6 +89,15 @@ const mediaByFile = (fileName) =>
 /* ------------------------------------------------------------------ */
 /* 1. Confirmed identity — 21 separate products                        */
 /* ------------------------------------------------------------------ */
+
+
+beforeEach(() => {
+  setupMigratedState();
+});
+
+afterEach(() => {
+  setupBaseState();
+});
 
 test("exactly 21 confirmed Kids product identities, one media each", () => {
   assert.equal(CONFIRMED_KIDS_IDENTITIES.length, 21);
@@ -420,7 +431,12 @@ const createScratchKid = () => {
     },
     ADMIN
   );
-  mediaRepository.assignToProduct(media.id, created.product.id, null, { confirmReassign: true });
+  assert.ok(assignMediaToProduct({
+    mediaId: media.id,
+    productId: created.product.id,
+    principal: ADMIN,
+    actor: ADMIN,
+  }).ok);
   return { media, product: catalogRepository.find(created.product.id) };
 };
 
@@ -755,6 +771,9 @@ test("admin authorization: assignment, approval and publishing stay with the adm
 /* ------------------------------------------------------------------ */
 
 test("every Kids lifecycle event is logged in the shared activity diary", () => {
+  /* This assertion covers both the identity decision and lifecycle events,
+     so establish the decision explicitly instead of relying on an earlier test. */
+  confirmKidsProductIdentities(ADMIN);
   const scratch = createScratchKid();
   const id = scratch.product.id;
 
@@ -817,7 +836,12 @@ test("media transfers are explicit and logged — never silent", () => {
     },
     ADMIN
   );
-  mediaRepository.assignToProduct(media.id, owner.id, null);
+  assert.ok(assignMediaToProduct({
+    mediaId: media.id,
+    productId: owner.id,
+    principal: ADMIN,
+    actor: ADMIN,
+  }).ok);
 
   const draft = catalogRepository.createDraftProduct(
     {

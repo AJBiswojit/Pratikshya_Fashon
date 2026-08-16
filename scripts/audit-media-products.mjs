@@ -23,6 +23,9 @@ import catalogRepository from "../src/services/catalogRepository.js";
 import { buildMediaGroups } from "../src/services/media/mediaGroups.js";
 import { getPotentialProductGroups, getWorkflowMetrics } from "../src/services/productWorkflow.js";
 import { MEDIA_SCOPES, MEDIA_STATUS, DUPLICATE_STATUS } from "../src/config/mediaTypes.js";
+import { setupMigratedState } from "../tests/helpers/workflowTestState.js";
+
+setupMigratedState();
 
 const line = (text = "") => console.log(text);
 

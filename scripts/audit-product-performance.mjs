@@ -24,6 +24,10 @@ import { getProductMediaSet, getProductMediaIndex } from "../src/services/media/
 import { getMediaInbox, getPotentialProductGroups, getKidsReconciliationRows, getWorkflowMetrics } from "../src/services/productWorkflow.js";
 import { getKidsFinalizationRows } from "../src/services/kidsProductFinalization.js";
 
+import { setupMigratedState } from "../tests/helpers/workflowTestState.js";
+
+setupMigratedState();
+
 let failures = 0;
 let warnings = 0;
 

@@ -28,6 +28,9 @@ import {
   PRODUCT_MEDIA_STATUS,
 } from "../src/services/media/productMediaSet.js";
 import mediaRepository from "../src/services/media/mediaRepository.js";
+import { setupMigratedState } from "../tests/helpers/workflowTestState.js";
+
+setupMigratedState();
 
 const line = (text = "") => console.log(text);
 const pad = (value, width) => String(value ?? "—").padEnd(width);

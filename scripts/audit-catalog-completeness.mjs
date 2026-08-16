@@ -32,6 +32,9 @@ import {
 import { MEDIA_SCOPES, DUPLICATE_STATUS } from "../src/config/mediaTypes.js";
 import { getWorkflowMetrics } from "../src/services/productWorkflow.js";
 import { getProductMediaSet } from "../src/services/media/productMediaSet.js";
+import { setupMigratedState } from "../tests/helpers/workflowTestState.js";
+
+setupMigratedState();
 
 const line = (text = "") => console.log(text);
 const pad = (value, width) => String(value ?? "—").padEnd(width);

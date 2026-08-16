@@ -14,11 +14,13 @@
  *   · only PUBLISHED Kids products reach the storefront
  */
 
-import test from "node:test";
+import test, { beforeEach, afterEach } from "node:test";
 import assert from "node:assert/strict";
+import { setupBaseState, setupMigratedState } from "./helpers/workflowTestState.js";
 
 import catalogRepository from "../src/services/catalogRepository.js";
 import mediaRepository from "../src/services/media/mediaRepository.js";
+import { assignMediaToProduct } from "../src/services/media/mediaOwnershipService.js";
 import { getProductMediaSet } from "../src/services/media/productMediaSet.js";
 import { buildMediaGroups } from "../src/services/media/mediaGroups.js";
 import {
@@ -70,6 +72,15 @@ const mediaByFile = (fileName) =>
 /* ------------------------------------------------------------------ */
 /* 1. Inventory & deterministic grouping                               */
 /* ------------------------------------------------------------------ */
+
+
+beforeEach(() => {
+  setupMigratedState();
+});
+
+afterEach(() => {
+  setupBaseState();
+});
 
 test("21 kids assets → 21 deterministic standalone groups, never merged", () => {
   const kidsMedia = mediaRepository
@@ -196,7 +207,12 @@ const createConflictPair = () => {
     },
     ADMIN
   );
-  mediaRepository.assignToProduct(media.id, owner.id, null);
+  assert.ok(assignMediaToProduct({
+    mediaId: media.id,
+    productId: owner.id,
+    principal: ADMIN,
+    actor: ADMIN,
+  }).ok);
   const draft = catalogRepository.createDraftProduct(
     {
       id: `KID-9${n}`,
