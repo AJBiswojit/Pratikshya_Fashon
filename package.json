@@ -25,7 +25,9 @@
     "media:analyze": "node scripts/optimize-media.mjs --dry-run",
     "media:optimize": "node scripts/optimize-media.mjs",
     "audit:employee-management": "node --import ./scripts/node-loader/register.mjs scripts/audit-employee-management.mjs",
-    "audit:workflow-foundation": "node --import ./scripts/node-loader/register.mjs scripts/audit-workflow-foundation.mjs"
+    "audit:workflow-foundation": "node --import ./scripts/node-loader/register.mjs scripts/audit-workflow-foundation.mjs",
+    "audit:read-only-workflow": "node --import ./scripts/node-loader/register.mjs scripts/audit-read-only-workflow.mjs",
+    "audit:explicit-migrations": "node --import ./scripts/node-loader/register.mjs scripts/audit-explicit-migrations.mjs"
   },
   "dependencies": {
     "clsx": "2.1.1",

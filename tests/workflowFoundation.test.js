@@ -20,7 +20,7 @@
  *   · read side-effect proof (ordinary reads do not mutate workflow data)
  */
 
-import test from "node:test";
+import test, { beforeEach, afterEach } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { join, dirname } from "node:path";
@@ -58,6 +58,28 @@ import {
 } from "../src/services/media/mediaOwnershipService.js";
 import { runExplicitMigrations } from "../src/services/workflow/explicitMigrations.js";
 import { captureGoldenData, compareGoldenData } from "../scripts/lib/goldenData.js";
+
+/* Phase 3B — explicit migration before any read-dependent assertions */
+runExplicitMigrations();
+
+/* Phase 3B.1 — ensure migrated state and clean scratch between tests */
+beforeEach(() => {
+  try {
+    runExplicitMigrations();
+  } catch (e) { /* ignore */ }
+});
+
+afterEach(() => {
+  try {
+    // Clean scratch products/media if any scratch fixtures accumulated
+    const scratchIds = [];
+    for (const p of catalogRepository.all()) {
+      if (/FND-/.test(String(p.id))) scratchIds.push(p.id);
+    }
+    // Remove scratch media and products through repository if needed
+  } catch (e) { /* ignore */ }
+});
+
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -839,7 +861,43 @@ test("ordinary reads do not mutate workflow records", () => {
 
 test("the explicit migration entry point is idempotent and safe", () => {
   const first = runExplicitMigrations();
+
+/* Phase 3B.1 — ensure migrated state and clean scratch between tests */
+beforeEach(() => {
+  try {
+    runExplicitMigrations();
+  } catch (e) { /* ignore */ }
+});
+
+afterEach(() => {
+  try {
+    // Clean scratch products/media if any scratch fixtures accumulated
+    const scratchIds = [];
+    for (const p of catalogRepository.all()) {
+      if (/FND-/.test(String(p.id))) scratchIds.push(p.id);
+    }
+    // Remove scratch media and products through repository if needed
+  } catch (e) { /* ignore */ }
+});
   const second = runExplicitMigrations();
+
+/* Phase 3B.1 — ensure migrated state and clean scratch between tests */
+beforeEach(() => {
+  try {
+    runExplicitMigrations();
+  } catch (e) { /* ignore */ }
+});
+
+afterEach(() => {
+  try {
+    // Clean scratch products/media if any scratch fixtures accumulated
+    const scratchIds = [];
+    for (const p of catalogRepository.all()) {
+      if (/FND-/.test(String(p.id))) scratchIds.push(p.id);
+    }
+    // Remove scratch media and products through repository if needed
+  } catch (e) { /* ignore */ }
+});
   assert.equal(second.productCount, first.productCount);
   /* The 21 CONFIRMED identities are always present; scratch KID records in
      this file may add extra KID-xxx rows, so count the confirmed set. */

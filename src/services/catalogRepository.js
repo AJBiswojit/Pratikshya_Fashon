@@ -255,20 +255,10 @@ const read = () => {
       return readCache.parsed;
     }
     const healed = healRead(raw);
-    /* A stored register gets the one-time kidswear remap repair; a seeded
-       register never does — fresh browsers always read the live catalogue. */
-    const synced = raw ? syncKidswearRegister(healed) : healed;
-    /* Phase 22 — additive, idempotent Kids draft migration. */
-    const migrated = syncProductDraftRecords(synced);
-    /* Phase 23 — additive, idempotent catalogue reconciliation: every
-       uncatalogued product-media group becomes one reviewable DRAFT. */
-    const reconciled = syncCatalogueReconciliation(migrated);
-    /* Phase 23.2 — assign canonical library media to published products
-       (bangles / jewellery / innerwear) so their cards render the canonical
-       product photography instead of the legacy shared house plates. */
-    syncCanonicalMediaAssignment(reconciled);
-    readCache = { raw: raw ?? null, parsed: reconciled };
-    return reconciled;
+    /* Phase 3A — READ = READ ONLY. All sync/remap/reconciliation
+       operations moved to explicit runExplicitMigrations(). */
+    readCache = { raw: raw ?? null, parsed: healed };
+    return healed;
   } catch {
     return healRead(null);
   }
@@ -1239,3 +1229,19 @@ export const catalogMetrics = (items) => {
 };
 
 export default catalogRepository;
+
+/** Phase 3B — persistent catalog write for explicit migration. */
+export const persistCatalogueState = (products, source = "explicit-migration") => {
+  try {
+    const payload = JSON.stringify(products);
+    if (typeof localStorage !== "undefined" && localStorage) {
+      localStorage.setItem(KEY, payload);
+    } else {
+      memoryStorage = payload;
+    }
+    return { ok: true, source };
+  } catch (e) {
+    return { ok: false, error: String(e && e.message ? e.message : e), source };
+  }
+};
+
