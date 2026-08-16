@@ -326,6 +326,13 @@ export const submitProductForReview = (productId, actor = null) =>
 export const approveProduct = (productId, actor = null) =>
   workflowCommands.approveProduct(productId, actor);
 
+/** Return — COMPATIBILITY WRAPPER around the universal workflow command.
+    Phase 3D: the unified Admin review workspace returns products through the
+    same canonical command every category uses. A reason is REQUIRED — the
+    command refuses an empty one. Never a raw `status = RETURNED` write. */
+export const returnProduct = (productId, reason = "", actor = null) =>
+  workflowCommands.returnProduct(productId, reason, actor);
+
 /** Publish — COMPATIBILITY WRAPPER around the universal workflow command.
     Requires the APPROVED stage and a full fresh validation. */
 export const publishProduct = (productId, actor = null) =>
@@ -1363,6 +1370,7 @@ export default {
   assignProductToEmployee,
   submitProductForReview,
   approveProduct,
+  returnProduct,
   publishProduct,
   archiveProduct,
   changeProductId,

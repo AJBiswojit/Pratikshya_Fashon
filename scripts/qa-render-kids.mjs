@@ -1,12 +1,14 @@
 /**
- * PRATIKSHYA FASHON — PHASE 22.2 RENDER QA
+ * PRATIKSHYA FASHON — PHASE 22.2 RENDER QA (Phase 3D update)
  *
  * Server-renders the three surfaces the phase touches and asserts on the real
  * output. A route returning 200 only proves the SPA shell loaded; this proves
  * the components actually render — a broken import, a bad prop, an undefined
  * map or a crashing selector fails here instead of in front of the user.
  *
- *   1. /admin/products/review    — the Kids finalization desk
+ *   1. /admin/products/review    — the UNIFIED Admin Product Review
+ *                                  workspace (Phase 3D): one queue, one
+ *                                  detail, Kids as a category section
  *   2. /employee/products/review — the assigned-products desk (authenticated)
  *   3. /category/kids            — the storefront cards
  *
@@ -65,60 +67,115 @@ const { setupMigratedState } = await import("../tests/helpers/workflowTestState.
 setupMigratedState();
 
 /* ------------------------------------------------------------------ */
-console.log("\n# 1. ADMIN — /admin/products/review");
+console.log("\n# 1. ADMIN — /admin/products/review (Phase 3D unified workspace)");
 /* ------------------------------------------------------------------ */
 
-let adminHtml = "";
+/* 1a. The unified queue is ONE projection over the ONE register — Kids
+       rows live in the same queue, and there is no second review register. */
 try {
-  const Panel = (await import("../src/components/admin/AdminKidsFinalizationPanel.jsx")).default;
-  adminHtml = renderAt(
-    React.createElement(Panel, {
-      actor: { adminId: "PF-ADM-00001", name: "House Admin" },
-      onNotice: () => {},
-      focusId: null,
-    }),
+  const { getUnifiedReviewQueue } = await import("../src/services/unifiedProductReview.js");
+  const catalogRepository = (await import("../src/services/catalogRepository.js")).default;
+  const queue = getUnifiedReviewQueue();
+  const registerIds = new Set(catalogRepository.all().map((product) => String(product.id)));
+  const queueIds = new Set(queue.map((row) => String(row.productId)));
+  check(
+    "one unified queue covers the whole register",
+    queue.length === registerIds.size && [...queueIds].every((id) => registerIds.has(id)),
+    `${queue.length} rows / ${registerIds.size} products`
+  );
+  const { CONFIRMED_KIDS_IDENTITIES } = await import("../src/services/kidsProductIdentity.js");
+  const kidsRows = queue.filter((row) => row.isKids);
+  const kidIds = new Set(kidsRows.map((row) => String(row.productId)));
+  const confirmedPresent = CONFIRMED_KIDS_IDENTITIES.every((identity) => kidIds.has(identity.productId));
+  check(
+    "all 21 confirmed Kids identities in the SAME queue (Kids = a filter, not a second queue)",
+    confirmedPresent && kidsRows.length >= 21,
+    `${kidsRows.length} Kids rows · 21 confirmed identities ${confirmedPresent ? "present" : "MISSING"}`
+  );
+} catch (error) {
+  check("one unified queue covers the whole register", false, error.message);
+}
+
+/* 1b. The queue UI renders with its lenses, filters and search. */
+let queueHtml = "";
+try {
+  const Queue = (await import("../src/components/admin/UnifiedReviewQueue.jsx")).default;
+  queueHtml = renderAt(
+    React.createElement(Queue, { focusId: null, onSelect: () => {}, initialQuickFilter: "KIDS" }),
     "/admin/products/review"
   );
-  check("finalization panel renders", adminHtml.length > 5000, `${adminHtml.length} chars`);
+  check("unified review queue renders", queueHtml.length > 5000, `${queueHtml.length} chars`);
 } catch (error) {
-  check("finalization panel renders", false, error.message);
+  check("unified review queue renders", false, error.message);
   console.error(error.stack?.split("\n").slice(0, 6).join("\n"));
 }
 
-if (adminHtml) {
-  const ids = new Set([...adminHtml.matchAll(/KID-0\d{2}/g)].map((m) => m[0]));
-  check("all 21 products in one place", ids.size === 21, `${ids.size} distinct Product IDs`);
-
-  const files = new Set([...adminHtml.matchAll(/kids-0\d{2}\.webp/g)].map((m) => m[0]));
-  check("every media filename shown", files.size === 21, `${files.size} distinct filenames`);
-
-  const kidImages = imagesIn(adminHtml).filter((src) => /kids-0\d{2}/.test(src));
-  check("every card shows its image", kidImages.length >= 21, `${kidImages.length} images`);
-  check(
-    "no image reused across cards",
-    new Set(kidImages).size === kidImages.length,
-    `${new Set(kidImages).size}/${kidImages.length} distinct`
+if (queueHtml) {
+  const ids = new Set([...queueHtml.matchAll(/KID-0\d{2}/g)].map((m) => m[0]));
+  check("Kids lens shows all 21 products in one place", ids.size === 21, `${ids.size} distinct Product IDs`);
+  check("search present", /type="search"/.test(queueHtml));
+  ["Kids", "Draft", "Submitted", "Pending approval", "Review flags", "Ready to publish"].forEach((label) =>
+    check(`lens “${label}”`, queueHtml.includes(label))
   );
-
-  check("search present", /type="search"/.test(adminHtml));
-  ["Ready to publish", "Needs review", "Assigned", "Unassigned"].forEach((label) =>
-    check(`filter “${label}”`, adminHtml.includes(label))
+  ["Workflow state", "Category", "Assignment", "Review flags", "Media status", "Taxonomy status", "Price status", "Name status", "Grouping status", "Missing information"].forEach((label) =>
+    check(`filter “${label}”`, queueHtml.includes(label))
   );
-  check("21-product checklist present", /21-product checklist/.test(adminHtml));
-  ["Keep Existing", "Transfer to KID-", "Create Separate Product", "Review Later"].forEach(
-    (label) => check(`conflict action “${label.replace("KID-", "KID-xxx")}”`, adminHtml.includes(label))
-  );
-  check("publish blockers listed with reasons", /Publishing blocked/.test(adminHtml));
-  check(
-    "explicit-decision warning shown",
-    /Nothing is transferred, deleted or replaced silently/.test(adminHtml)
-  );
-  check("hover state reported", /Hover:/.test(adminHtml));
-  check("media ownership reported", /Media ownership:/.test(adminHtml));
+  check("one-queue statement shown", /One queue over one lifecycle/.test(queueHtml));
   check(
     "no placeholder/undefined leaked",
-    !/\[object Object\]|>undefined<|>NaN</.test(adminHtml)
+    !/\[object Object\]|>undefined<|>NaN</.test(queueHtml)
   );
+}
+
+/* 1c. The unified review detail renders a Kids product with its category
+       validation section — conditional UI, not a separate workflow. */
+let detailHtml = "";
+try {
+  const Detail = (await import("../src/components/admin/ProductReviewDetail.jsx")).default;
+  detailHtml = renderAt(
+    React.createElement(Detail, {
+      productId: "KID-001",
+      actor: { adminId: "PF-ADM-00001", name: "House Admin" },
+      onNotice: () => {},
+    }),
+    "/admin/products/review?product=KID-001"
+  );
+  check("unified review detail renders", detailHtml.length > 3000, `${detailHtml.length} chars`);
+} catch (error) {
+  check("unified review detail renders", false, error.message);
+  console.error(error.stack?.split("\n").slice(0, 6).join("\n"));
+}
+
+if (detailHtml) {
+  check("Kids validation section present", /Kids validation/.test(detailHtml));
+  check("Kids is described as a category layer", /category-specific validation layer/.test(detailHtml));
+  check("assigned Kids plate named", /kids-001\.webp/.test(detailHtml));
+  check("identity confirmation shown", /Separate product · confirmed|Identity unconfirmed/.test(detailHtml));
+  check("21-plate lock status shown", /21-plate lock/.test(detailHtml));
+  check("media ownership reported", /Media ownership/.test(detailHtml));
+  check("canonical action bar present", /Review actions — canonical workflow commands/.test(detailHtml));
+  check("approve ≠ publish stated", /Approve ≠ Publish/.test(detailHtml));
+  check("no silent media transfer", /never from this review desk|nothing is transferred silently/i.test(detailHtml));
+  const kidImages = imagesIn(detailHtml).filter((src) => /kids-0\d{2}/.test(src));
+  check("Kids product shows its own image", kidImages.length >= 1, `${kidImages.length} images`);
+  check(
+    "no placeholder/undefined leaked",
+    !/\[object Object\]|>undefined<|>NaN</.test(detailHtml)
+  );
+}
+
+/* 1d. The retired surfaces are gone — no second Kids review UI remains. */
+try {
+  await import("../src/components/admin/AdminKidsFinalizationPanel.jsx");
+  check("AdminKidsFinalizationPanel retired", false, "the module still exists");
+} catch {
+  check("AdminKidsFinalizationPanel retired", true);
+}
+try {
+  await import("../src/components/admin/AdminKidsReviewPanel.jsx");
+  check("AdminKidsReviewPanel retired", false, "the module still exists");
+} catch {
+  check("AdminKidsReviewPanel retired", true);
 }
 
 /* ------------------------------------------------------------------ */
