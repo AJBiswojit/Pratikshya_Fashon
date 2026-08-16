@@ -24,7 +24,8 @@
     "audit:hero-runtime": "node --import ./scripts/node-loader/register.mjs scripts/audit-hero-runtime.mjs",
     "media:analyze": "node scripts/optimize-media.mjs --dry-run",
     "media:optimize": "node scripts/optimize-media.mjs",
-    "audit:employee-management": "node --import ./scripts/node-loader/register.mjs scripts/audit-employee-management.mjs"
+    "audit:employee-management": "node --import ./scripts/node-loader/register.mjs scripts/audit-employee-management.mjs",
+    "audit:workflow-foundation": "node --import ./scripts/node-loader/register.mjs scripts/audit-workflow-foundation.mjs"
   },
   "dependencies": {
     "clsx": "2.1.1",

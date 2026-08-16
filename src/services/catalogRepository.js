@@ -48,6 +48,7 @@ import {
   isPlaceholderProductName,
 } from "./productReviewFlags";
 import { unresolvedGroupConflictsFor } from "./media/productMediaGroups";
+import { getWorkflowCommands } from "./workflow/workflowCommandRegistry";
 
 
 
@@ -1013,147 +1014,68 @@ export const catalogRepository = {
   },
 
   /* ---------------- workflow -------------------------------------- */
-
-  submitForReview: (id, actor = null) => {
-    const existing = findNormalised(id);
-    if (!existing) return { ok: false, error: "Product not found." };
-    const product = writeProduct(
-      {
-        id,
-        status: PRODUCT_STATUS.PENDING_REVIEW,
-        review: {
-          ...existing.review,
-          state: REVIEW_STATE.PENDING,
-          submittedBy: actorLabel(actor),
-          submittedAt: nowIso(),
-          rejectionReason: "",
-          reviewedBy: null,
-          reviewedAt: null,
-        },
-      },
-      actor,
-      {
-        activity: {
-          action: ACTIVITY_ACTIONS.PRODUCT_SUBMITTED_FOR_REVIEW,
-          summary: `Submitted ${existing.name} for review`,
-        },
-      }
-    );
-    return { ok: true, product };
+  /**
+   * Compatibility adapters — every canonical transition lives in the
+   * universal workflow command service (productWorkflowCommands). These
+   * methods fail loudly if the command layer is not loaded rather than
+   * bypassing the lifecycle.
+   */
+  _workflowCommand: (name, ...args) => {
+    const commands = getWorkflowCommands();
+    if (!commands?.[name]) {
+      return {
+        ok: false,
+        error: `The workflow command layer is not loaded — ${name} cannot run.`,
+      };
+    }
+    return commands[name](...args);
   },
 
-  approveProduct: (id, actor = null) => {
-    const existing = findNormalised(id);
-    if (!existing) return { ok: false, error: "Product not found." };
-    const issues = getPublishIssues(existing);
-    if (issues.length) return { ok: false, errors: issues };
-    const product = writeProduct(
-      {
-        id,
-        status: PRODUCT_STATUS.PUBLISHED,
-        review: {
-          ...existing.review,
-          state: REVIEW_STATE.APPROVED,
-          reviewedBy: actorLabel(actor),
-          reviewedAt: nowIso(),
-          rejectionReason: "",
-        },
-      },
-      actor,
-      {
-        activity: {
-          action: ACTIVITY_ACTIONS.PRODUCT_APPROVED,
-          summary: `Approved and published ${existing.name}`,
-        },
-      }
-    );
-    return { ok: true, product };
-  },
+  submitForReview: (id, actor = null) => catalogRepository._workflowCommand("submitProduct", id, actor),
 
-  rejectProduct: (id, reason = "", actor = null) => {
-    const existing = findNormalised(id);
-    if (!existing) return { ok: false, error: "Product not found." };
-    const product = writeProduct(
-      {
-        id,
-        status: PRODUCT_STATUS.DRAFT,
-        review: {
-          ...existing.review,
-          state: REVIEW_STATE.REJECTED,
-          reviewedBy: actorLabel(actor),
-          reviewedAt: nowIso(),
-          rejectionReason: reason,
-        },
-      },
-      actor,
-      {
-        activity: {
-          action: ACTIVITY_ACTIONS.PRODUCT_REJECTED,
-          summary: `Rejected ${existing.name}${reason ? ` — ${reason}` : ""}`,
-        },
-      }
-    );
-    return { ok: true, product };
-  },
+  /**
+   * Compatibility adapter — the canonical transition lives in the universal
+   * workflow command service (productWorkflowCommands.approveProduct).
+   *
+   * Phase 2 FIX: approval no longer publishes. Approving moves the product
+   * to the APPROVED canonical stage; an explicit, separately authorized
+   * publishProduct is required to reach the storefront (same rule for every
+   * category, including Kids).
+   */
+  approveProduct: (id, actor = null) => catalogRepository._workflowCommand("approveProduct", id, actor),
 
-  publishProduct: (id, actor = null) => {
-    const existing = findNormalised(id);
-    if (!existing) return { ok: false, error: "Product not found." };
-    const issues = getPublishIssues(existing);
-    if (issues.length) return { ok: false, errors: issues };
-    const product = writeProduct(
-      { id, status: PRODUCT_STATUS.PUBLISHED },
-      actor,
-      {
-        activity: {
-          action: ACTIVITY_ACTIONS.PRODUCT_PUBLISHED,
-          summary: `Published ${existing.name}`,
-        },
-      }
-    );
-    return { ok: true, product };
-  },
+  /**
+   * Compatibility adapter — the canonical transition lives in the universal
+   * workflow command service (productWorkflowCommands.returnProduct).
+   * A return reason is required.
+   */
+  rejectProduct: (id, reason = "", actor = null) =>
+    catalogRepository._workflowCommand("returnProduct", id, reason || "Returned for further review.", actor),
 
-  unpublishProduct: (id, actor = null) => {
-    const existing = findNormalised(id);
-    if (!existing) return { ok: false, error: "Product not found." };
-    const product = writeProduct({ id, status: PRODUCT_STATUS.DRAFT }, actor, {
-      activity: {
-        action: ACTIVITY_ACTIONS.PRODUCT_UNPUBLISHED,
-        summary: `Unpublished ${existing.name} to draft`,
-      },
-    });
-    return { ok: true, product };
-  },
+  /**
+   * Compatibility adapter — the canonical transition lives in the universal
+   * workflow command service (productWorkflowCommands.publishProduct).
+   * Publishing requires the APPROVED stage plus a full fresh validation.
+   */
+  publishProduct: (id, actor = null) => catalogRepository._workflowCommand("publishProduct", id, actor),
 
-  archiveProduct: (id, actor = null) => {
-    const existing = findNormalised(id);
-    if (!existing) return { ok: false, error: "Product not found." };
-    const product = writeProduct({ id, status: PRODUCT_STATUS.ARCHIVED }, actor, {
-      activity: {
-        action: ACTIVITY_ACTIONS.PRODUCT_ARCHIVED,
-        summary: `Archived ${existing.name}`,
-      },
-    });
-    return { ok: true, product };
-  },
+  /** Compatibility adapter — the canonical transition lives in the universal
+      workflow command service (productWorkflowCommands.unpublishProduct). */
+  unpublishProduct: (id, actor = null) => catalogRepository._workflowCommand("unpublishProduct", id, actor),
 
-  restoreProduct: (id, actor = null) => {
-    const existing = findNormalised(id);
-    if (!existing) return { ok: false, error: "Product not found." };
-    const product = writeProduct({ id, status: PRODUCT_STATUS.DRAFT }, actor, {
-      activity: {
-        action: ACTIVITY_ACTIONS.PRODUCT_RESTORED,
-        summary: `Restored ${existing.name} from the archive`,
-      },
-    });
-    return { ok: true, product };
-  },
+  /** Compatibility adapter — the canonical transition lives in the universal
+      workflow command service (productWorkflowCommands.archiveProduct). */
+  archiveProduct: (id, actor = null) => catalogRepository._workflowCommand("archiveProduct", id, actor),
 
-  /** Legacy status switch — Phase 11 callers keep working. */
+  /** Compatibility adapter — the canonical transition lives in the universal
+      workflow command service (productWorkflowCommands.restoreProduct). */
+  restoreProduct: (id, actor = null) => catalogRepository._workflowCommand("restoreProduct", id, actor),
+
+  /** Legacy status switch — Phase 11 callers keep working; publication and
+      archival route through the canonical workflow commands. */
   updateStatus: (id, status, actor = null) => {
-    if (status === PRODUCT_STATUS.PUBLISHED) return catalogRepository.publishProduct(id, actor);
-    if (status === PRODUCT_STATUS.ARCHIVED) return catalogRepository.archiveProduct(id, actor);
+    if (status === PRODUCT_STATUS.PUBLISHED) return catalogRepository._workflowCommand("publishProduct", id, actor);
+    if (status === PRODUCT_STATUS.ARCHIVED) return catalogRepository._workflowCommand("archiveProduct", id, actor);
     const existing = findNormalised(id);
     if (!existing) return { ok: false, error: "Product not found." };
     const product = writeProduct({ id, status }, actor);
@@ -1231,6 +1153,11 @@ export const catalogRepository = {
   /**
    * Bulk merchandising — publish, archive, flag. Applies only to products
    * that can legally take the change; returns what happened.
+   *
+   * Phase 2 FIX: bulk PUBLISH executes the SAME canonical command per
+   * product (authorize → lifecycle → product/media/category validation →
+   * publish). A product that is not APPROVED is skipped with its errors —
+   * there is no second, faster publishing implementation.
    */
   bulkUpdate: (ids, patch, actor = null, summary = "Bulk product update") => {
     const snap = getNormalizedSnapshot();
@@ -1239,7 +1166,7 @@ export const catalogRepository = {
     let skipped = 0;
     targets.forEach((product) => {
       if (patch.status === PRODUCT_STATUS.PUBLISHED) {
-        const result = catalogRepository.publishProduct(product.id, actor);
+        const result = catalogRepository._workflowCommand("publishProduct", product.id, actor);
         if (result.ok) applied += 1;
         else skipped += 1;
         return;

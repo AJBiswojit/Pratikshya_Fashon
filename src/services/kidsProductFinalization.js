@@ -25,6 +25,7 @@ import catalogRepository, {
   REVIEW_STATE,
   getPublishIssues,
 } from "./catalogRepository";
+import { commands as workflowCommands } from "./workflow/productWorkflowCommands";
 import mediaRepository from "./media/mediaRepository";
 import { getProductMediaSet } from "./media/productMediaSet";
 import taxonomyRepository from "./taxonomyRepository";
@@ -693,9 +694,14 @@ export const getKidsFinalizationSummary = (rows = getKidsFinalizationRows()) => 
 /* ------------------------------------------------------------------ */
 
 /**
- * ADMIN REVIEW → APPROVED. Uses the existing review state; the product
- * stays out of the storefront until a human publishes it separately.
- * Publishing is never automatic (section 21).
+ * ADMIN REVIEW → APPROVED — COMPATIBILITY WRAPPER.
+ *
+ * Phase 2 FIX: Kids no longer has a separate lifecycle. This wrapper
+ * delegates to the UNIVERSAL workflow command, which requires the
+ * submitted/Admin-review stage, runs the universal + Kids category
+ * validation, records approval and NEVER publishes. The Kids-specific
+ * checks are invoked automatically by the universal validator's category
+ * registry (kidswear → validateKidsProduct).
  */
 export const approveKidsProduct = (productId, actor = null) => {
   const product = catalogRepository.find(productId);
@@ -705,37 +711,16 @@ export const approveKidsProduct = (productId, actor = null) => {
   if (!isKidsWorkflowProduct(product)) {
     return { ok: false, error: "Not a Kids product.", errors: ["Not a Kids product."] };
   }
-  const blockers = getKidsPublishBlockers(product);
-  if (blockers.length) return { ok: false, errors: blockers };
-
-  const result = catalogRepository.updateProduct(
-    product.id,
-    {
-      status: PRODUCT_STATUS.PENDING_REVIEW,
-      review: {
-        ...product.review,
-        state: REVIEW_STATE.APPROVED,
-        reviewedBy:
-          typeof actor === "string" ? actor : actor?.name ?? actor?.label ?? "Administrator",
-        reviewedAt: new Date().toISOString(),
-        rejectionReason: "",
-      },
-    },
-    actor
-  );
-  if (!result.ok) return result;
-  note(
-    KIDS_ACTIVITY_ACTIONS.KIDS_PRODUCT_APPROVED,
-    `Approved ${product.id} — awaiting publication`,
-    actor,
-    product.id
-  );
-  return { ok: true, product: result.product };
+  return workflowCommands.approveProduct(productId, actor);
 };
 
 /**
- * APPROVED → PUBLISHED. A confirmed Kids product only reaches the
- * storefront after an explicit human approval AND an explicit publish.
+ * APPROVED → PUBLISHED — COMPATIBILITY WRAPPER.
+ *
+ * Delegates to the UNIVERSAL publish command: requires the APPROVED stage
+ * and revalidates the product, media ownership, taxonomy, price and the
+ * Kids category validator atomically. A confirmed Kids product only reaches
+ * the storefront after an explicit approval AND an explicit publish.
  */
 export const publishKidsProduct = (productId, actor = null) => {
   const product = catalogRepository.find(productId);
@@ -745,28 +730,11 @@ export const publishKidsProduct = (productId, actor = null) => {
   if (!isKidsWorkflowProduct(product)) {
     return { ok: false, error: "Not a Kids product.", errors: ["Not a Kids product."] };
   }
-  const blockers = getKidsPublishBlockers(product);
-  if (blockers.length) return { ok: false, errors: blockers };
-  if (product.review?.state !== REVIEW_STATE.APPROVED) {
-    return {
-      ok: false,
-      errors: [
-        `Admin review incomplete — approve ${product.id} before publishing (DRAFT → SUBMITTED → APPROVED → PUBLISHED).`,
-      ],
-    };
-  }
-  const result = catalogRepository.publishProduct(product.id, actor);
-  if (!result.ok) return result;
-  note(
-    KIDS_ACTIVITY_ACTIONS.KIDS_PRODUCT_PUBLISHED,
-    `Published ${product.id} · ${result.product.name}`,
-    actor,
-    product.id
-  );
-  return { ok: true, product: result.product };
+  return workflowCommands.publishProduct(productId, actor);
 };
 
-/** Return a submitted/approved Kids product to the employee for more work. */
+/** Return a submitted/approved Kids product — COMPATIBILITY WRAPPER around
+    the universal returnProduct command (Admin only, reason required). */
 export const returnKidsProductToDraft = (productId, reason = "", actor = null) => {
   const product = catalogRepository.find(productId);
   if (!product) {
@@ -775,12 +743,7 @@ export const returnKidsProductToDraft = (productId, reason = "", actor = null) =
   if (!isKidsWorkflowProduct(product)) {
     return { ok: false, error: "Not a Kids product.", errors: ["Not a Kids product."] };
   }
-  const result = catalogRepository.rejectProduct(
-    product.id,
-    reason || "Returned for further review.",
-    actor
-  );
-  return result;
+  return workflowCommands.returnProduct(productId, reason || "Returned for further review.", actor);
 };
 
 export default {

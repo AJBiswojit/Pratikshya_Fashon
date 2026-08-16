@@ -28,6 +28,8 @@
  */
 
 import catalogRepository, { PRODUCT_STATUS, getPublishIssues } from "./catalogRepository";
+import { commands as workflowCommands } from "./workflow/productWorkflowCommands";
+import { transferMediaOwnership as safeTransferOwnership, unassignMediaFromProduct as safeUnassignMedia } from "./media/mediaOwnershipService";
 import mediaRepository from "./media/mediaRepository";
 import { getProductMediaSet, resolveProductMediaClaims } from "./media/productMediaSet";
 import { buildMediaGroups } from "./media/mediaGroups";
@@ -206,106 +208,22 @@ export const validateMediaAssignment = (mediaId, targetProductId) => {
 };
 
 /**
- * Moves media ownership to another product — the ONE door for reassignment.
- * Nothing is silent: a conflicting assignment requires `confirm`, the
- * previous owner's stale authored references are removed, and the diary
- * records the transfer.
+ * Moves media ownership to another product — COMPATIBILITY WRAPPER.
+ *
+ * The authoritative, authorized ownership command is now the media
+ * ownership service (`mediaOwnershipService.transferMediaOwnership`), which
+ * authenticates the actor, applies the confirmed Kids plate lock, enforces
+ * marketing isolation, requires explicit confirmation for contested
+ * reassignment, cleans stale previous-owner references and revalidates both
+ * products. This function is kept so existing callers keep working.
  */
-export const transferMediaOwnership = (mediaId, targetProductId, actor = null, { confirm = false } = {}) => {
-  const check = validateMediaAssignment(mediaId, targetProductId);
-  if (!check.ok && !confirm) return { ok: false, ...check };
+export const transferMediaOwnership = (mediaId, targetProductId, actor = null, { confirm = false } = {}) =>
+  safeTransferOwnership({ mediaId, targetProductId, principal: actor, confirm });
 
-  const media = mediaRepository.getById(mediaId);
-  if (!media) return { ok: false, error: "Media not found." };
-
-  /* Phase 22.2 — a confirmed Kids plate belongs to exactly one KID product.
-     kids-002.webp may never become the media of KID-001. */
-  const confirmedOwner = kidsProductIdForFile(mediaFileName(media));
-  if (
-    confirmedOwner &&
-    isConfirmedKidsProductId(targetProductId) &&
-    String(targetProductId).toUpperCase() !== confirmedOwner
-  ) {
-    return {
-      ok: false,
-      error: `${mediaFileName(media)} is the confirmed media of ${confirmedOwner} — it cannot be transferred to ${targetProductId}.`,
-      confirmedOwnerProductId: confirmedOwner,
-    };
-  }
-
-  const previousOwnerId = media.productId ? String(media.productId) : null;
-  const moving = String(previousOwnerId ?? "") !== String(targetProductId);
-
-  const moved = mediaRepository.assignToProduct(mediaId, targetProductId, null, { confirmReassign: true });
-  if (!moved) return { ok: false, error: "Could not reassign media." };
-
-  let previousOwnerStripped = false;
-  if (moving && previousOwnerId) {
-    const owner = catalogRepository.find(previousOwnerId);
-    if (owner) {
-      const identityKeys = new Set(
-        [moved.id, moved.fileName, moved.currentFilename, moved.originalFilename, moved.url]
-          .filter(Boolean)
-          .map((value) => String(value))
-      );
-      const matches = identityMatcher(identityKeys);
-      const patch = {};
-      if (owner.image != null && matches(owner.image)) patch.image = undefined;
-      if (owner.hoverImage != null && matches(owner.hoverImage)) patch.hoverImage = undefined;
-      if (Array.isArray(owner.additionalImages)) {
-        patch.additionalImages = owner.additionalImages.filter((entry) => !matches(entry));
-      }
-      patch.reviewFlags = [...new Set([...(owner.reviewFlags ?? []), "MEDIA_OWNERSHIP_MOVED"])];
-      catalogRepository.updateProduct(previousOwnerId, patch, actor);
-      previousOwnerStripped = true;
-    }
-  }
-
-  note(
-    ACTIVITY_ACTIONS.PRODUCT_MEDIA_TRANSFERRED,
-    `Transferred ${mediaFileName(moved)} ${previousOwnerId ? `from ${previousOwnerId}` : "from the library"} to ${targetProductId}`,
-    actor,
-    targetProductId
-  );
-
-  return { ok: true, media: moved, previousOwnerId, previousOwnerStripped };
-};
-
-/** Detaches media from its product and returns it to the unassigned library. */
-export const unassignProductMedia = (mediaId, actor = null) => {
-  const media = mediaRepository.getById(mediaId);
-  if (!media) return { ok: false, error: "Media not found." };
-  const previousOwnerId = media.productId ? String(media.productId) : null;
-
-  if (previousOwnerId) {
-    const owner = catalogRepository.find(previousOwnerId);
-    if (owner) {
-      const identityKeys = new Set(
-        [media.id, media.fileName, media.currentFilename, media.originalFilename, media.url]
-          .filter(Boolean)
-          .map((value) => String(value))
-      );
-      const matches = identityMatcher(identityKeys);
-      const patch = {};
-      if (owner.image != null && matches(owner.image)) patch.image = undefined;
-      if (owner.hoverImage != null && matches(owner.hoverImage)) patch.hoverImage = undefined;
-      if (Array.isArray(owner.additionalImages)) {
-        patch.additionalImages = owner.additionalImages.filter((entry) => !matches(entry));
-      }
-      patch.reviewFlags = [...new Set([...(owner.reviewFlags ?? []), "MEDIA_UNASSIGNED"])];
-      catalogRepository.updateProduct(previousOwnerId, patch, actor);
-    }
-  }
-
-  const detached = mediaRepository.assignToProduct(mediaId, null);
-  note(
-    ACTIVITY_ACTIONS.PRODUCT_MEDIA_UNASSIGNED,
-    `Unassigned ${mediaFileName(detached)}${previousOwnerId ? ` from ${previousOwnerId}` : ""}`,
-    actor,
-    previousOwnerId
-  );
-  return { ok: true, media: detached, previousOwnerId };
-};
+/** Detaches media from its product — COMPATIBILITY WRAPPER around the
+    authorized media ownership service. */
+export const unassignProductMedia = (mediaId, actor = null) =>
+  safeUnassignMedia({ mediaId, principal: actor });
 
 /* ------------------------------------------------------------------ */
 /* Product drafts                                                      */
@@ -388,51 +306,30 @@ export const createProductDraftFromMedia = ({
   return { ok: true, product: result.product, conflicts };
 };
 
-/** Assign a product draft to an authorized employee. */
-export const assignProductToEmployee = (productId, employeeId, actor = null) => {
-  const product = catalogRepository.find(productId);
-  if (!product) return { ok: false, error: "Product not found." };
-  if (employeeId) {
-    const employee = getEmployee(loadEmployees(), employeeId);
-    if (!employee) return { ok: false, error: "Employee not found." };
-    if (employee.status !== EMPLOYEE_STATUS.ACTIVE) {
-      return { ok: false, error: "Only active employees can receive new product assignments." };
-    }
-  }
-  const result = catalogRepository.assignToEmployee(productId, employeeId || null, actor);
-  return { ok: true, product: result.product };
-};
+/** Assign a product draft to an authorized employee — COMPATIBILITY WRAPPER
+    around the universal workflow command (Super Admin only). */
+export const assignProductToEmployee = (productId, employeeId, actor = null) =>
+  workflowCommands.assignProduct(productId, employeeId, actor);
 
-/** Submit a draft for review. Publishing stays with the approver. */
-export const submitProductForReview = (productId, actor = null) => {
-  const product = catalogRepository.find(productId);
-  if (!product) return { ok: false, error: "Product not found." };
-  if (product.status === PRODUCT_STATUS.PUBLISHED) {
-    return { ok: false, error: "This product is already published." };
-  }
-  if (product.status === PRODUCT_STATUS.ARCHIVED) {
-    return { ok: false, error: "Archived products cannot be submitted." };
-  }
-  return catalogRepository.submitForReview(productId, actor);
-};
+/** Submit a draft for review — COMPATIBILITY WRAPPER around the universal
+    workflow command. Publishing stays with the approver. */
+export const submitProductForReview = (productId, actor = null) =>
+  workflowCommands.submitProduct(productId, actor);
 
-/** Approve + publish, honouring every validation rule. */
-export const approveProduct = (productId, actor = null) => {
-  const product = catalogRepository.find(productId);
-  if (!product) return { ok: false, error: "Product not found." };
-  return catalogRepository.approveProduct(productId, actor);
-};
+/** Approve — COMPATIBILITY WRAPPER around the universal workflow command.
+    Phase 2 FIX: approval does NOT publish; the product moves to APPROVED and
+    requires a separate explicit publish. */
+export const approveProduct = (productId, actor = null) =>
+  workflowCommands.approveProduct(productId, actor);
 
-export const publishProduct = (productId, actor = null) => {
-  const product = catalogRepository.find(productId);
-  if (!product) return { ok: false, error: "Product not found." };
-  const issues = getPublishIssues(product);
-  if (issues.length) return { ok: false, errors: issues };
-  return catalogRepository.publishProduct(productId, actor);
-};
+/** Publish — COMPATIBILITY WRAPPER around the universal workflow command.
+    Requires the APPROVED stage and a full fresh validation. */
+export const publishProduct = (productId, actor = null) =>
+  workflowCommands.publishProduct(productId, actor);
 
+/** Archive — COMPATIBILITY WRAPPER around the universal workflow command. */
 export const archiveProduct = (productId, actor = null) =>
-  catalogRepository.archiveProduct(productId, actor);
+  workflowCommands.archiveProduct(productId, actor);
 
 /** Admin-only Product ID change, with the media register kept in sync. */
 export const changeProductId = (productId, newProductId, actor = null) => {
@@ -458,41 +355,11 @@ export const changeProductId = (productId, newProductId, actor = null) => {
 /* Employee authorization for the workflow                             */
 /* ------------------------------------------------------------------ */
 
-/** Fields an assigned employee may edit — never identity or ownership. */
-export const EMPLOYEE_EDITABLE_FIELDS = [
-  "name",
-  "price",
-  "compareAtPrice",
-  "description",
-  "shortDescription",
-  "category",
-  "subcategory",
-  "gender",
-  "fabric",
-  "material",
-  "primaryColor",
-  "secondaryColor",
-  "colors",
-  "patterns",
-  "work",
-  "occasion",
-  "sizes",
-  "season",
-  "fit",
-  "length",
-  "highlights",
-  "careInstructions",
-  "collectionIds",
-  "collections",
-  "tags",
-  "stock",
-  "availability",
-];
-
-export const pickEmployeeEditableFields = (patch = {}) =>
-  Object.fromEntries(
-    Object.entries(patch).filter(([key]) => EMPLOYEE_EDITABLE_FIELDS.includes(key))
-  );
+/** Fields an assigned employee may edit — never identity or ownership.
+    Single source of truth: src/services/workflow/employeeEditableFields.js
+    (shared with the universal workflow command layer). */
+import { EMPLOYEE_EDITABLE_FIELDS, pickEmployeeEditableFields } from "./workflow/employeeEditableFields.js";
+export { EMPLOYEE_EDITABLE_FIELDS, pickEmployeeEditableFields };
 
 /**
  * May this employee edit this product?
@@ -521,23 +388,11 @@ export const employeeAssignedProducts = (employeeId) => {
   return result;
 };
 
-/** Save an employee's draft edits — allowed fields only, signed. */
-export const saveEmployeeDraft = (productId, patch, employee = null, actor = null) => {
-  const product = catalogRepository.find(productId);
-  if (!product) return { ok: false, error: "Product not found." };
-  if (!employeeCanEditProduct(employee, product)) {
-    return { ok: false, error: "You are not authorized to edit this product." };
-  }
-  const clean = pickEmployeeEditableFields(patch);
-  const pricingPatch = {};
-  if (clean.price != null) {
-    const selling = Math.max(0, Number(clean.price) || 0);
-    const mrp = Math.max(selling, Number(clean.compareAtPrice) || 0);
-    pricingPatch.pricing = { ...(product.pricing ?? {}), sellingPrice: selling, mrp };
-  }
-  const result = catalogRepository.updateDraft(productId, { ...clean, ...pricingPatch }, actor);
-  return { ok: true, product: result.product };
-};
+/** Save an employee's draft edits — COMPATIBILITY WRAPPER around the
+    universal workflow command (whitelist + assignment + editable-stage
+    enforcement + principal lookup all live in the command). */
+export const saveEmployeeDraft = (productId, patch, employee = null, actor = null) =>
+  workflowCommands.saveProductDraft(productId, patch, employee ?? actor, { actor });
 
 /* ------------------------------------------------------------------ */
 /* Review workspace views                                              */

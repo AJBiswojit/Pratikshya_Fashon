@@ -29,6 +29,7 @@ import {
   getProductMediaSet,
 } from "../src/services/media/productMediaSet.js";
 import {
+  approveProduct,
   assignProductToEmployee,
   changeProductId,
   createProductDraftFromMedia,
@@ -64,7 +65,7 @@ import { getEmployee, loadEmployees } from "../src/services/employees/employeeSe
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
-const ADMIN = { adminId: "admin-root", name: "House Admin" };
+const ADMIN = { adminId: "PF-ADM-00001", name: "House Admin" };
 
 const fileOf = (source) =>
   source?.fileName ||
@@ -484,6 +485,7 @@ test("draft and review products never appear in the storefront", () => {
   const scratchMedia = mediaRepository.create({
     url: "/library/scratch-publish-test.webp",
     title: "Scratch publish test plate",
+    status: "ACTIVE",
   });
   assert.ok(scratchMedia);
 
@@ -506,10 +508,12 @@ test("draft and review products never appear in the storefront", () => {
     {
       name: "Review-ready Kids Product",
       category: "kidswear",
+      subcategory: "Boys Casual Set",
       price: 1290,
       pricing: { sellingPrice: 1290, mrp: 1590 },
       description: "Complete commercial information.",
       sku: "KID-TEST-SKU",
+      stock: 5,
     },
     ADMIN
   );
@@ -519,6 +523,15 @@ test("draft and review products never appear in the storefront", () => {
     getLiveStorefrontProducts().some((product) => product.id === draft.product.id),
     false,
     "a REVIEW product must not reach customers"
+  );
+
+  /* Approve — must NOT publish (Phase 2 canonical lifecycle). */
+  const approved = approveProduct(draft.product.id, ADMIN);
+  assert.ok(approved.ok, `approve must succeed: ${(approved.errors ?? []).join(" ")}`);
+  assert.equal(
+    getLiveStorefrontProducts().some((product) => product.id === draft.product.id),
+    false,
+    "an APPROVED product must not reach customers"
   );
 
   /* Publish */
@@ -602,7 +615,7 @@ test("history captures who changed what, when — price, name, media, status", (
   assert.ok(fields.has("name"), "name change recorded");
   assert.ok(fields.has("price"), "price change recorded");
   const entry = product.history.find((item) => item.field === "price");
-  assert.equal(entry.by, "House Admin (admin-root)");
+  assert.equal(entry.by, "House Admin (PF-ADM-00001)");
   assert.ok(entry.at);
   catalogRepository.archiveProduct(id, ADMIN);
 });
