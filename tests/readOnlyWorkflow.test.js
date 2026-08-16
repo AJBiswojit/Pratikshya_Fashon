@@ -2,11 +2,20 @@
  * Phase 3A — Read-Only Workflow Tests (Node built-in test runner)
  */
 
-import { describe, it } from "node:test";
+import { describe, it, beforeEach, afterEach } from "node:test";
 import assert from "node:assert";
+import { setupBaseState } from "./helpers/workflowTestState.js";
 import catalogRepository from "../src/services/catalogRepository.js";
 import mediaRepository from "../src/services/media/mediaRepository.js";
 import { runExplicitMigrations } from "../src/services/workflow/explicitMigrations.js";
+
+beforeEach(() => {
+  setupBaseState();
+});
+
+afterEach(() => {
+  setupBaseState();
+});
 
 describe("Phase 3A — READ = READ ONLY", () => {
   it("catalogRepository.all() does not change product count on repeated reads", () => {

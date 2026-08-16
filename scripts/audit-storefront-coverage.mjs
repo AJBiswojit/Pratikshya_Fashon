@@ -24,6 +24,10 @@ import taxonomyRepository from "../src/services/taxonomyRepository.js";
 import { queryCatalogue } from "../src/data/products/query.js";
 import { getProductMediaSet } from "../src/services/media/productMediaSet.js";
 
+import { setupMigratedState } from "../tests/helpers/workflowTestState.js";
+
+setupMigratedState();
+
 const line = (text = "") => console.log(text);
 const pad = (value, width) => String(value ?? "—").padEnd(width);
 

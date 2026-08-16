@@ -37,6 +37,10 @@ import {
   uncoveredProductGroups,
 } from "../src/services/media/mediaProductDiscovery.js";
 
+import { setupMigratedState } from "../tests/helpers/workflowTestState.js";
+
+setupMigratedState();
+
 const line = (text = "") => console.log(text);
 const pad = (value, width) => String(value ?? "—").padEnd(width);
 const num = (value, width) => String(value ?? 0).padStart(width);

@@ -31,6 +31,10 @@ import { KIDS_PRODUCT_IDS } from "../src/services/kidsProductIdentity.js";
 import catalogRepository from "../src/services/catalogRepository.js";
 import { isIngestedPhotographyUrl } from "../src/services/media/mediaPaths.js";
 
+import { setupMigratedState } from "../tests/helpers/workflowTestState.js";
+
+setupMigratedState();
+
 const line = (text = "") => console.log(text);
 const cwd = process.cwd();
 const failures = [];

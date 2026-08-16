@@ -13,8 +13,9 @@
  *   · published products and the existing catalogue are untouched
  */
 
-import test from "node:test";
+import test, { beforeEach, afterEach } from "node:test";
 import assert from "node:assert/strict";
+import { setupBaseState, setupMigratedState } from "./helpers/workflowTestState.js";
 import { readFileSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -24,6 +25,7 @@ import catalogRepository, {
   getPublishIssues,
 } from "../src/services/catalogRepository.js";
 import mediaRepository from "../src/services/media/mediaRepository.js";
+import { assignMediaToProduct as assignMediaOwnership } from "../src/services/media/mediaOwnershipService.js";
 import {
   getProductCardMedia,
   getProductMediaSet,
@@ -84,6 +86,15 @@ const kidsProductIds = () => KIDS_PRODUCT_IDS;
 /* ------------------------------------------------------------------ */
 /* 1. Kids migration — 21 drafts with stable Product IDs               */
 /* ------------------------------------------------------------------ */
+
+
+beforeEach(() => {
+  setupMigratedState();
+});
+
+afterEach(() => {
+  setupBaseState();
+});
 
 test("all 21 kids media assets exist in the media register", () => {
   KIDS_MEDIA_FILENAMES.forEach((fileName) => {
@@ -232,7 +243,12 @@ test("transferMediaOwnership moves ownership and strips stale references", () =>
     ADMIN
   );
   assert.ok(created.ok);
-  mediaRepository.assignToProduct(scratchMedia.id, "SAR-901", null);
+  assert.ok(assignMediaOwnership({
+    mediaId: scratchMedia.id,
+    productId: "SAR-901",
+    principal: ADMIN,
+    actor: ADMIN,
+  }).ok);
 
   const target = catalogRepository.createDraftProduct(
     { id: "SAR-902", name: "Transfer Target", category: "sarees" },
@@ -271,7 +287,12 @@ test("unassignProductMedia returns media to the library and flags the owner", ()
       ADMIN
     ).ok
   );
-  mediaRepository.assignToProduct(scratchMedia.id, "SAR-903", null);
+  assert.ok(assignMediaOwnership({
+    mediaId: scratchMedia.id,
+    productId: "SAR-903",
+    principal: ADMIN,
+    actor: ADMIN,
+  }).ok);
 
   const result = unassignProductMedia(scratchMedia.id, ADMIN);
   assert.ok(result.ok);
@@ -628,7 +649,12 @@ test("admin can change a Product ID; the media register follows", () => {
       ADMIN
     ).ok
   );
-  mediaRepository.assignToProduct(media.id, "JEW-901", null);
+  assert.ok(assignMediaOwnership({
+    mediaId: media.id,
+    productId: "JEW-901",
+    principal: ADMIN,
+    actor: ADMIN,
+  }).ok);
 
   const result = changeProductId("JEW-901", "JEW-902", ADMIN);
   assert.ok(result.ok);

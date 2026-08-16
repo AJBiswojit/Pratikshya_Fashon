@@ -14,8 +14,9 @@
  *   · no cross-product / duplicate media results from the assignment
  */
 
-import test from "node:test";
+import test, { beforeEach, afterEach } from "node:test";
 import assert from "node:assert/strict";
+import { setupBaseState, setupMigratedState } from "./helpers/workflowTestState.js";
 
 import catalogRepository from "../src/services/catalogRepository.js";
 import { getLiveStorefrontProducts } from "../src/data/products/index.js";
@@ -28,6 +29,15 @@ import {
 } from "../src/services/catalogueReconciliation.js";
 
 const products = () => catalogRepository.all();
+
+
+beforeEach(() => {
+  setupMigratedState();
+});
+
+afterEach(() => {
+  setupBaseState();
+});
 
 test("the canonical assignment is deterministic and category-scoped", () => {
   const map = assignedProductMediaMap(products());

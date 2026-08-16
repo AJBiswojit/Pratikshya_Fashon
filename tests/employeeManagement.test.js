@@ -1,7 +1,8 @@
 /** Super Admin employee-management responsibility regression suite. */
 
-import test, { beforeEach } from "node:test";
+import test, { beforeEach, afterEach } from "node:test";
 import assert from "node:assert/strict";
+import { setupBaseState, setupMigratedState } from "./helpers/workflowTestState.js";
 
 import { INITIAL_ADMINS } from "../src/data/admin/adminAccounts.js";
 import { INITIAL_EMPLOYEES } from "../src/data/employees/mockEmployees.js";
@@ -65,6 +66,15 @@ const employeeDraft = (overrides = {}) => ({
 });
 
 beforeEach(() => memory.clear());
+
+
+beforeEach(() => {
+  setupMigratedState();
+});
+
+afterEach(() => {
+  setupBaseState();
+});
 
 test("1. Super Admin can access employee management", () => {
   assert.equal(canManageEmployeeAccounts(SUPER_ADMIN), true);

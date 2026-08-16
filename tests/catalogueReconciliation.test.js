@@ -13,8 +13,9 @@
  *   · the sync is idempotent and additive
  */
 
-import test from "node:test";
+import test, { beforeEach, afterEach } from "node:test";
 import assert from "node:assert/strict";
+import { setupBaseState, setupMigratedState } from "./helpers/workflowTestState.js";
 
 import catalogRepository, { getPublishIssues } from "../src/services/catalogRepository.js";
 import { getProductMediaSet } from "../src/services/media/productMediaSet.js";
@@ -28,6 +29,15 @@ import {
   staticUncataloguedGroups,
   uncataloguedGroups,
 } from "../src/services/catalogueReconciliation.js";
+
+
+beforeEach(() => {
+  setupMigratedState();
+});
+
+afterEach(() => {
+  setupBaseState();
+});
 
 test("every uncatalogued group is assigned to a published product or drafted", () => {
   const products = catalogRepository.all();

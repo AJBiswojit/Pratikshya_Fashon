@@ -28,8 +28,12 @@ import taxonomyRepository from "../src/services/taxonomyRepository.js";
 import { getLiveStorefrontProducts } from "../src/data/products/index.js";
 import { commands, resolvePrincipal } from "../src/services/workflow/productWorkflowCommands.js";
 import { getWorkflowCommands, getPublishValidator, workflowRegistryLoaded } from "../src/services/workflow/workflowCommandRegistry.js";
-import { transferMediaOwnership } from "../src/services/media/mediaOwnershipService.js";
+import {
+  assignMediaToProduct,
+  transferMediaOwnership,
+} from "../src/services/media/mediaOwnershipService.js";
 import { approveKidsProduct, publishKidsProduct } from "../src/services/kidsProductFinalization.js";
+import { setupBaseState, setupMigratedState } from "../tests/helpers/workflowTestState.js";
 import { captureGoldenData, compareGoldenData } from "./lib/goldenData.js";
 
 const ROOT = process.cwd();
@@ -51,6 +55,10 @@ const fail = (message) => {
 
 line("# WORKFLOW FOUNDATION AUDIT — Phase 2");
 line();
+
+/* Golden comparison and behavior probes target the persisted migrated state,
+ * established explicitly now that ordinary reads are mutation-free. */
+setupMigratedState();
 
 line("## 1. Universal workflow command layer");
 row("Commands registered", workflowRegistryLoaded() ? "yes" : "NO");
@@ -134,7 +142,13 @@ const createScratch = (id) => {
     },
     ADMIN
   );
-  mediaRepository.assignToProduct(media.id, created.product.id, null, { confirmReassign: true });
+  const ownership = assignMediaToProduct({
+    mediaId: media.id,
+    productId: created.product.id,
+    principal: ADMIN,
+    actor: ADMIN,
+  });
+  if (!ownership.ok) fail(`scratch media assignment failed: ${ownership.error}`);
   return { media, product: catalogRepository.find(created.product.id) };
 };
 
@@ -351,6 +365,7 @@ line();
 /* Summary                                                             */
 /* ------------------------------------------------------------------ */
 
+setupBaseState();
 line("# RESULT");
 if (failures.length) {
   line(`FAIL: ${failures.length} workflow-foundation violation${failures.length === 1 ? "" : "s"}`);

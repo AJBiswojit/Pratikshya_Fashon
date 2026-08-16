@@ -18,8 +18,9 @@
  *   · discovery is READ-ONLY — it publishes nothing and mutates nothing
  */
 
-import test from "node:test";
+import test, { after } from "node:test";
 import assert from "node:assert/strict";
+import { setupBaseState, setupMigratedState } from "./helpers/workflowTestState.js";
 import { readdirSync } from "node:fs";
 import { join } from "node:path";
 
@@ -40,6 +41,13 @@ const LIBRARY_DIR = join(process.cwd(), "public", "library");
 const MEDIA_EXTENSIONS = /\.(webp|jpe?g|png|avif|gif|mp4|webm)$/i;
 
 const diskFiles = readdirSync(LIBRARY_DIR).filter((file) => MEDIA_EXTENSIONS.test(file));
+
+/* This report is a snapshot of the explicitly migrated catalogue. */
+setupMigratedState();
+after(() => {
+  setupBaseState();
+});
+
 const products = catalogRepository.all();
 const discovery = getMediaProductDiscovery({ products, diskFiles });
 

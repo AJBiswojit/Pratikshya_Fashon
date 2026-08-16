@@ -57,28 +57,18 @@ import {
   assignMediaToProduct,
 } from "../src/services/media/mediaOwnershipService.js";
 import { runExplicitMigrations } from "../src/services/workflow/explicitMigrations.js";
+import { setupBaseState, setupMigratedState } from "./helpers/workflowTestState.js";
 import { captureGoldenData, compareGoldenData } from "../scripts/lib/goldenData.js";
 
-/* Phase 3B — explicit migration before any read-dependent assertions */
-runExplicitMigrations();
-
-/* Phase 3B.1 — ensure migrated state and clean scratch between tests */
+/* Every foundation test starts from a fresh explicitly migrated fixture. */
 beforeEach(() => {
-  try {
-    runExplicitMigrations();
-  } catch (e) { /* ignore */ }
+  setupMigratedState();
 });
 
 afterEach(() => {
-  try {
-    // Clean scratch products/media if any scratch fixtures accumulated
-    const scratchIds = [];
-    for (const p of catalogRepository.all()) {
-      if (/FND-/.test(String(p.id))) scratchIds.push(p.id);
-    }
-    // Remove scratch media and products through repository if needed
-  } catch (e) { /* ignore */ }
+  setupBaseState();
 });
+
 
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -131,7 +121,13 @@ const createScratchProduct = ({ id, category = "dupattas", subcategory = "Printe
     ADMIN
   );
   assert.ok(product.ok, `scratch product must be created: ${product.error ?? ""}`);
-  mediaRepository.assignToProduct(media.id, product.product.id, null, { confirmReassign: true });
+  const ownership = assignMediaToProduct({
+    mediaId: media.id,
+    productId: product.product.id,
+    principal: ADMIN,
+    actor: ADMIN,
+  });
+  assert.ok(ownership.ok, `scratch ownership must be assigned: ${ownership.error ?? ""}`);
   return { media, product: catalogRepository.find(product.product.id) };
 };
 
@@ -620,7 +616,12 @@ test("Kids uses the same approve/publish lifecycle as every category", () => {
     },
     ADMIN
   );
-  mediaRepository.assignToProduct(media.id, created.product.id, null, { confirmReassign: true });
+  assert.ok(assignMediaToProduct({
+    mediaId: media.id,
+    productId: created.product.id,
+    principal: ADMIN,
+    actor: ADMIN,
+  }).ok);
   const id = created.product.id;
 
   /* Direct publish before approval is refused. */
@@ -658,7 +659,12 @@ test("future non-confirmed Kids products do NOT inherit the 21-plate lock", () =
     ADMIN
   );
   const id = created.product.id;
-  mediaRepository.assignToProduct(media.id, id, null, { confirmReassign: true });
+  assert.ok(assignMediaToProduct({
+    mediaId: media.id,
+    productId: id,
+    principal: ADMIN,
+    actor: ADMIN,
+  }).ok);
   const product = catalogRepository.find(id);
 
   /* The Kids validator applies category rules… */
@@ -862,42 +868,8 @@ test("ordinary reads do not mutate workflow records", () => {
 test("the explicit migration entry point is idempotent and safe", () => {
   const first = runExplicitMigrations();
 
-/* Phase 3B.1 — ensure migrated state and clean scratch between tests */
-beforeEach(() => {
-  try {
-    runExplicitMigrations();
-  } catch (e) { /* ignore */ }
-});
-
-afterEach(() => {
-  try {
-    // Clean scratch products/media if any scratch fixtures accumulated
-    const scratchIds = [];
-    for (const p of catalogRepository.all()) {
-      if (/FND-/.test(String(p.id))) scratchIds.push(p.id);
-    }
-    // Remove scratch media and products through repository if needed
-  } catch (e) { /* ignore */ }
-});
   const second = runExplicitMigrations();
 
-/* Phase 3B.1 — ensure migrated state and clean scratch between tests */
-beforeEach(() => {
-  try {
-    runExplicitMigrations();
-  } catch (e) { /* ignore */ }
-});
-
-afterEach(() => {
-  try {
-    // Clean scratch products/media if any scratch fixtures accumulated
-    const scratchIds = [];
-    for (const p of catalogRepository.all()) {
-      if (/FND-/.test(String(p.id))) scratchIds.push(p.id);
-    }
-    // Remove scratch media and products through repository if needed
-  } catch (e) { /* ignore */ }
-});
   assert.equal(second.productCount, first.productCount);
   /* The 21 CONFIRMED identities are always present; scratch KID records in
      this file may add extra KID-xxx rows, so count the confirmed set. */

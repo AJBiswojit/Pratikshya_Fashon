@@ -43,6 +43,10 @@ import {
   kidsProductIdForFile,
 } from "../src/services/kidsProductIdentity.js";
 
+import { setupMigratedState } from "../tests/helpers/workflowTestState.js";
+
+setupMigratedState();
+
 const line = (text = "") => console.log(text);
 const pad = (value, width) => String(value ?? "—").padEnd(width);
 

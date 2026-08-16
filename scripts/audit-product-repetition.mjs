@@ -28,6 +28,10 @@ import mediaRepository from "../src/services/media/mediaRepository.js";
 import { getProductMediaSet } from "../src/services/media/productMediaSet.js";
 import { reconciliationMediaGroups } from "../src/services/catalogueReconciliation.js";
 
+import { setupMigratedState } from "../tests/helpers/workflowTestState.js";
+
+setupMigratedState();
+
 const line = (text = "") => console.log(text);
 
 const media = mediaRepository.getAll();
