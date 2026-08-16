@@ -21,7 +21,11 @@ import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import catalogRepository, { getPublishIssues } from "../src/services/catalogRepository.js";
-import { publishProduct } from "../src/services/productWorkflow.js";
+import {
+  approveProduct,
+  publishProduct,
+  submitProductForReview,
+} from "../src/services/productWorkflow.js";
 import {
   getLiveStorefrontProducts,
   getProductBySlug,
@@ -33,7 +37,7 @@ import { reconciliationDraftRecords } from "../src/services/catalogueReconciliat
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
-const ADMIN = { adminId: "admin-root", name: "House Admin" };
+const ADMIN = { adminId: "PF-ADM-00001", name: "House Admin" };
 
 /** Fill a reconciliation draft the way the admin editor does (pricing engine). */
 const fillDraft = (id, patch = {}) =>
@@ -87,6 +91,16 @@ test("a filled + published reconciled product flows the whole storefront pipelin
 
     const issues = getPublishIssues(catalogRepository.find(id));
     assert.deepEqual(issues, [], `publish blockers should clear: ${issues.join("; ")}`);
+
+    /* Phase 2 canonical lifecycle: submit → approve → publish. */
+    assert.ok(submitProductForReview(id, ADMIN).ok, "submission succeeds");
+    const approved = approveProduct(id, ADMIN);
+    assert.ok(approved.ok, `approve must succeed: ${(approved.errors ?? []).join("; ")}`);
+    assert.equal(
+      getLiveStorefrontProducts().some((entry) => entry.id === id),
+      false,
+      "approved-but-unpublished products stay invisible"
+    );
 
     const result = publishProduct(id, ADMIN);
     assert.ok(result.ok, `publish must succeed: ${(result.errors ?? []).join("; ")}`);

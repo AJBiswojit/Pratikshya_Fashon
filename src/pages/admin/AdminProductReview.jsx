@@ -105,8 +105,7 @@ export default function AdminProductReview() {
     setTimeout(() => {
       const result = catalogRepository.approveProduct(product.id, actor);
       if (result.ok) {
-        inventoryRepository.ensureOpeningStock(result.product, actor);
-        setNotice({ tone: "ok", text: `Approved and published “${product.name}”.` });
+        setNotice({ tone: "ok", text: `Approved “${product.name}” — publish it when you are ready.` });
       } else {
         setNotice({ tone: "warn", text: `Could not approve “${product.name}”: ${(result.errors ?? []).join(" ")}` });
       }

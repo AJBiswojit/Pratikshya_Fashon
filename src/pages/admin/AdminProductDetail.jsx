@@ -175,8 +175,8 @@ export default function AdminProductDetail() {
             <div className="mt-4 flex flex-wrap gap-2">
               {product.status === "PENDING_REVIEW" ? (
                 <>
-                  <AtelierButton size="chip" onClick={() => run(() => catalogRepository.approveProduct(product.id, actor), "Approved and published.")}>
-                    Approve &amp; publish
+                  <AtelierButton size="chip" onClick={() => run(() => catalogRepository.approveProduct(product.id, actor), "Approved — awaiting publication.")}>
+                    Approve
                   </AtelierButton>
                   <AtelierButton size="chip" variant="outline" onClick={() => setRejecting((open) => !open)}>
                     Reject

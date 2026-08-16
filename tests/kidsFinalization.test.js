@@ -74,7 +74,7 @@ import { loadActivity } from "../src/services/employees/activityService.js";
 import { getEmployee, loadEmployees } from "../src/services/employees/employeeService.js";
 import taxonomyRepository from "../src/services/taxonomyRepository.js";
 
-const ADMIN = { adminId: "admin-root", name: "House Admin" };
+const ADMIN = { adminId: "PF-ADM-00001", name: "House Admin" };
 
 const MANAGER_ID = "PF-MGR-00008";
 const SALES_ID = "PF-SLS-00124";
@@ -398,6 +398,7 @@ const createScratchKid = () => {
   const media = mediaRepository.create({
     url: `/library/scratch-kids-final-${n}.webp`,
     title: `Scratch kids finalization ${n}`,
+    status: "ACTIVE",
   });
   const created = catalogRepository.createDraftProduct(
     {

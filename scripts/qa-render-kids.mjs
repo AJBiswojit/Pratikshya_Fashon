@@ -69,7 +69,7 @@ try {
   const Panel = (await import("../src/components/admin/AdminKidsFinalizationPanel.jsx")).default;
   adminHtml = renderAt(
     React.createElement(Panel, {
-      actor: { adminId: "admin-root", name: "House Admin" },
+      actor: { adminId: "PF-ADM-00001", name: "House Admin" },
       onNotice: () => {},
       focusId: null,
     }),
@@ -130,7 +130,7 @@ try {
   const MANAGER_ID = "PF-MGR-00008";
   const employee = getEmployee(loadEmployees(), MANAGER_ID);
   ["KID-001", "KID-002", "KID-003"].forEach((id) =>
-    assignProductToEmployee(id, MANAGER_ID, { adminId: "admin-root", name: "House Admin" })
+    assignProductToEmployee(id, MANAGER_ID, { adminId: "PF-ADM-00001", name: "House Admin" })
   );
 
   const html = renderAt(

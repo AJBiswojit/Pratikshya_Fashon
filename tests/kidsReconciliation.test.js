@@ -23,6 +23,7 @@ import { getProductMediaSet } from "../src/services/media/productMediaSet.js";
 import { buildMediaGroups } from "../src/services/media/mediaGroups.js";
 import {
   KIDS_CONFLICT_ACTIONS,
+  approveProduct,
   clearReviewFlags,
   flagsSatisfiedByProduct,
   getKidsReconciliationRows,
@@ -30,6 +31,7 @@ import {
   isReadyToPublish,
   publishProduct,
   reconcileKidsConflict,
+  submitProductForReview,
 } from "../src/services/productWorkflow.js";
 import {
   KIDS_MEDIA_FILENAMES,
@@ -51,7 +53,7 @@ import {
   isPlaceholderProductName,
 } from "../src/services/productReviewFlags.js";
 
-const ADMIN = { adminId: "admin-root", name: "House Admin" };
+const ADMIN = { adminId: "PF-ADM-00001", name: "House Admin" };
 
 const fileOf = (source) =>
   source?.fileName ||
@@ -178,6 +180,7 @@ const createConflictPair = () => {
   const media = mediaRepository.create({
     url: `/library/scratch-kids-recon-${n}.webp`,
     title: `Scratch kids reconciliation ${n}`,
+    status: "ACTIVE",
   });
   const owner = catalogRepository.upsert(
     {
@@ -207,6 +210,7 @@ const createConflictPair = () => {
       mediaIds: [media.id],
       primaryMediaId: media.id,
       galleryMediaIds: [media.id],
+      stock: 5,
       reviewFlags: [REVIEW_FLAGS.CONFLICT_UNRESOLVED],
     },
     ADMIN
@@ -325,6 +329,16 @@ test("a fully resolved scratch KID product becomes ready and publishes", () => {
   reconcileKidsConflict(pair.draft.id, KIDS_CONFLICT_ACTIONS.TRANSFER, ADMIN);
   const draft = catalogRepository.find(pair.draft.id);
   assert.equal(isReadyToPublish(draft), true, "resolved draft is ready");
+
+  /* Phase 2 canonical lifecycle: submit → approve → publish. Approving
+     must NOT publish; publishing requires approval. */
+  const submitted = submitProductForReview(draft.id, ADMIN);
+  assert.ok(submitted.ok, "resolved draft submits for review");
+  const approved = approveProduct(draft.id, ADMIN);
+  assert.ok(approved.ok, `approve must succeed: ${(approved.errors ?? []).join(" ")}`);
+  assert.equal(catalogRepository.find(draft.id).status, "PENDING_REVIEW", "approval does not publish");
+  assert.equal(catalogRepository.find(draft.id).review.state, "APPROVED");
+
   const published = publishProduct(draft.id, ADMIN);
   assert.ok(published.ok, `publish must succeed: ${(published.errors ?? []).join(" ")}`);
   assert.equal(catalogRepository.find(draft.id).status, "PUBLISHED");
@@ -341,7 +355,7 @@ test("blocking review flags stop publication until a human clears them", () => {
   let draft = catalogRepository.find(pair.draft.id);
   assert.equal(isReadyToPublish(draft), true);
 
-  /* A required flag blocks again. */
+  /* A required flag blocks approval (and therefore publication). */
   catalogRepository.updateDraft(
     draft.id,
     { reviewFlags: [REVIEW_FLAGS.NAME_REVIEW_REQUIRED] },
@@ -349,7 +363,8 @@ test("blocking review flags stop publication until a human clears them", () => {
   );
   draft = catalogRepository.find(draft.id);
   assert.equal(isReadyToPublish(draft), false);
-  let result = publishProduct(draft.id, ADMIN);
+  assert.ok(submitProductForReview(draft.id, ADMIN).ok, "submission is allowed with a flag");
+  let result = approveProduct(draft.id, ADMIN);
   assert.equal(result.ok, false);
   assert.ok(result.errors.some((error) => /flag/i.test(error)));
 
@@ -359,6 +374,7 @@ test("blocking review flags stop publication until a human clears them", () => {
   clearReviewFlags(draft.id, satisfied, ADMIN);
   draft = catalogRepository.find(draft.id);
   assert.equal(blockingReviewFlags(draft.reviewFlags).length, 0);
+  assert.ok(approveProduct(draft.id, ADMIN).ok, "approval passes once the flag is cleared");
   result = publishProduct(draft.id, ADMIN);
   assert.ok(result.ok);
   cleanupPair({ ...pair, draft: catalogRepository.find(pair.draft.id) });
@@ -374,14 +390,16 @@ test("an open group decision blocks publication", () => {
   );
   const draft = catalogRepository.find(pair.draft.id);
   assert.equal(isReadyToPublish(draft), false);
-  let result = publishProduct(draft.id, ADMIN);
+  assert.ok(submitProductForReview(draft.id, ADMIN).ok);
+  let result = approveProduct(draft.id, ADMIN);
   assert.equal(result.ok, false);
   assert.ok(result.errors.some((error) => /grouping review/i.test(error)));
 
   /* A human decision closes it. */
   setGroupDecision("grp-kids-test", GROUP_DECISIONS.SEPARATE_PRODUCTS, "House Admin");
+  assert.ok(approveProduct(draft.id, ADMIN).ok, "decided groups no longer block approval");
   result = publishProduct(draft.id, ADMIN);
-  assert.ok(result.ok, "decided groups no longer block");
+  assert.ok(result.ok, "decided groups no longer block publish");
 
   resetGroups();
   cleanupPair({ ...pair, draft: catalogRepository.find(pair.draft.id) });
