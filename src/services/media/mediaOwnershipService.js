@@ -33,6 +33,7 @@ import {
   isVideo,
 } from "../../config/mediaTypes.js";
 import { isConfirmedKidsProductId, kidsProductIdForFile, kidsMediaFileForProductId } from "../kidsProductIdentity.js";
+import { checkCategoryMediaSafety, isMarketingFileName } from "./mediaCategorySafety.js";
 import { getProductMediaSet } from "./productMediaSet.js";
 import { validateProductForPublish } from "../workflow/productPublishValidator.js";
 import { resolvePrincipal } from "../workflow/productWorkflowCommands.js";
@@ -126,6 +127,34 @@ const validateOwnershipChange = ({ media, targetProductId, product, confirm, op 
   }
   if (op !== "assign" && media.scope === MEDIA_SCOPES.UNASSIGNED && !media.productId) {
     return { ok: false, error: `${fileNameOf(media)} is not assigned to any product.` };
+  }
+
+  /* Phase 3F — house/hero artwork is marketing photography by identity.
+     A NEW assignment of it as product media is refused outright; legacy
+     product-scoped house plates keep their existing ownership and can
+     still be detached or renamed with their product. */
+  if (op === "assign" && targetProductId && isMarketingFileName(fileNameOf(media))) {
+    return {
+      ok: false,
+      error: `${fileNameOf(media)} is house/marketing artwork — marketing imagery cannot become product media.`,
+    };
+  }
+
+  /* Phase 3F — category ↔ media-family safety. A men's product can never
+     own bangle photography, innerwear can never own saree photography, and
+     so on. Filenames are judged only where the ingested naming convention
+     applies; unnamed scratch/studio files are not guessed at. On a rename
+     the target record does not exist yet — the unchanged source category
+     is validated instead. */
+  if (targetProductId) {
+    const targetRecord = catalogRepository.find(targetProductId);
+    const targetCategory = targetRecord?.category ?? product?.category ?? null;
+    if (targetCategory) {
+      const safety = checkCategoryMediaSafety(fileNameOf(media), targetCategory);
+      if (!safety.ok) {
+        return { ok: false, error: safety.reason, code: "CATEGORY_MEDIA_MISMATCH" };
+      }
+    }
   }
 
   /* Confirmed Kids plate lock — kids-002.webp may never become KID-001's

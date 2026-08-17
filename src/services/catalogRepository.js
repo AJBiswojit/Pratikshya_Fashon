@@ -1235,6 +1235,36 @@ export const catalogRepository = {
   },
 
   /**
+   * Phase 3F — the low-level register removal PRIMITIVE.
+   *
+   * This is NOT the safe-delete command. It owns no dependency rules, no
+   * authorization and no activity event — those live in ONE place, the
+   * productDeletionService (`deleteProductPermanently`), which authorizes
+   * the Super Admin, verifies the product is a dependency-free draft,
+   * requires the re-typed Product ID and releases owned media back to the
+   * library BEFORE calling this. UI code must never call this directly.
+   *
+   * The one register rule enforced here regardless of caller: a PUBLISHED
+   * product can never be removed from the register — the storefront count
+   * must not change through deletion.
+   */
+  removeProductRecord: (id) => {
+    const items = read();
+    const index = items.findIndex((p) => String(p.id) === String(id));
+    if (index < 0) return { ok: false, error: "Product not found." };
+    const record = normaliseProductRecord(items[index], index);
+    if (record.status === PRODUCT_STATUS.PUBLISHED) {
+      return {
+        ok: false,
+        error: "A published product cannot be removed — unpublish or archive it first.",
+      };
+    }
+    const next = items.filter((_, i) => i !== index);
+    save(next);
+    return { ok: true, removedId: record.id };
+  },
+
+  /**
    * Bulk merchandising — publish, archive, flag. Applies only to products
    * that can legally take the change; returns what happened.
    *
