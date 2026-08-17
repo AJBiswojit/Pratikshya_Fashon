@@ -1,5 +1,22 @@
 import { resolveHousePlateUrl } from "../services/media/mediaPaths";
 
+/**
+ * NOTE (catalogue image fix): `catalogue.js` no longer sources product
+ * `image` / `hoverImage` / `additionalImages` from this pool by default.
+ * Every catalogue product now points directly at its own real photo under
+ * `public/library/...` (matched by category/subcategory, with front/back/
+ * side angles of the same real photo shared only within that one product).
+ *
+ * This manifest remains in use for: (1) the small number of catalogue
+ * products whose category/subcategory has no matching real photo left in
+ * the library, each of which now references exactly ONE entry below (no
+ * entry here is referenced by more than one catalogue product), and
+ * (2) non-catalogue call sites (AI Mirror, admin previews, editorial
+ * placeholders, category/collection hero fallbacks) that still resolve
+ * imagery by id through `getImage` / `imageRef`. Those remaining call
+ * sites are unaffected by this fix and are out of scope for it.
+ */
+
 const pexels = (id, width = 800, height = 1200, ext = "jpeg") =>
   `https://images.pexels.com/photos/${id}/pexels-photo-${id}.${ext}?auto=compress&cs=tinysrgb&fit=crop&h=${height}&w=${width}`;
 
