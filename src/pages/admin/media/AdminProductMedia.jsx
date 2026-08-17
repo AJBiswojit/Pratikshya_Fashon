@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { ArrowDown, ArrowUp, Film, Image as ImageIcon, Star } from "lucide-react";
 import AdminPage from "../../../components/admin/AdminPage";
 import AdminPanel from "../../../components/admin/AdminPanel";
@@ -20,6 +20,7 @@ import {
 import { useMediaLibrary, useProductMedia } from "../../../hooks/useMedia";
 import useMediaActions from "../../../hooks/useMediaActions";
 import catalogRepository from "../../../services/catalogRepository";
+import ProductLifecycleActions from "../../../components/admin/ProductLifecycleActions";
 
 /**
  * PRATIKSHYA FASHON — Product media manager.
@@ -35,6 +36,10 @@ const field =
 
 export default function AdminProductMedia() {
   const { productId } = useParams();
+  const navigate = useNavigate();
+  const [productVersion, setProductVersion] = useState(0);
+  // eslint-disable-next-line no-unused-vars
+  const _refreshKey = productVersion; /* re-find the record after lifecycle actions */
   const product = catalogRepository.find(productId);
   const { items, summary } = useProductMedia(productId);
   const library = useMediaLibrary();
@@ -294,6 +299,13 @@ export default function AdminProductMedia() {
           </div>
         </AdminPanel>
       ) : null}
+
+      {/* Lifecycle — archive / restore / safe permanent delete ---- */}
+      <ProductLifecycleActions
+        product={product}
+        onChanged={() => setProductVersion((v) => v + 1)}
+        onDeleted={() => navigate("/admin/media")}
+      />
     </AdminPage>
   );
 }

@@ -20,6 +20,7 @@ import {
   getProductRoleLabel,
 } from "../../../config/mediaTypes";
 import taxonomyRepository from "../../../services/taxonomyRepository";
+import catalogRepository from "../../../services/catalogRepository";
 import { useMediaLibrary, useMediaMetrics } from "../../../hooks/useMedia";
 import useMediaActions from "../../../hooks/useMediaActions";
 import { cn } from "../../../utils/cn";
@@ -35,9 +36,14 @@ const TABS = [
   { id: "UNMAPPED", label: "Unmapped" },
   { id: "DUPLICATE", label: "Duplicates" },
   { id: "NEEDS_REVIEW", label: "Needs Review" },
+  /* Phase 3F — ownership-state queues. Orphaned: PRODUCT scope whose owner
+     no longer exists in the catalogue. Archived product: the owner exists
+     but has been retired from the storefront. */
+  { id: "ORPHANED", label: "Orphaned" },
+  { id: "ARCHIVED_PRODUCT", label: "Archived Product" },
 ];
 
-const matchesTab = (media, tab) => {
+const matchesTab = (media, tab, ownerStatusOf) => {
   switch (tab) {
     case "IMAGES":
       return media.type === MEDIA_TYPES.IMAGE;
@@ -63,6 +69,18 @@ const matchesTab = (media, tab) => {
         media.duplicateStatus === "POSSIBLE_DUPLICATE" ||
         media.broken ||
         media.lowResolution
+      );
+    case "ORPHANED":
+      return (
+        media.scope === MEDIA_SCOPES.PRODUCT &&
+        Boolean(media.productId) &&
+        ownerStatusOf(media.productId) === null
+      );
+    case "ARCHIVED_PRODUCT":
+      return (
+        media.scope === MEDIA_SCOPES.PRODUCT &&
+        Boolean(media.productId) &&
+        ownerStatusOf(media.productId) === "ARCHIVED"
       );
     default:
       return true;
@@ -93,10 +111,24 @@ export default function AdminMediaLibrary() {
   const [selected, setSelected] = useState([]);
   const categories = useMemo(() => taxonomyRepository.activeCategories(), []);
 
+  /* Phase 3F — owner status lookup for the Orphaned / Archived Product
+     queues. Computed once per media/list change, not per row. */
+  const ownerStatusOf = useMemo(() => {
+    const cache = new Map();
+    return (productId) => {
+      const key = String(productId);
+      if (!cache.has(key)) {
+        const owner = catalogRepository.find(key);
+        cache.set(key, owner ? owner.status : null);
+      }
+      return cache.get(key);
+    };
+  }, [media]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const filtered = useMemo(() => {
     const needle = query.trim().toLowerCase();
     return media.filter((item) => {
-      if (!matchesTab(item, tab)) return false;
+      if (!matchesTab(item, tab, ownerStatusOf)) return false;
       if (status !== "ALL" && item.status !== status) return false;
       if (category !== "ALL" && item.categoryId !== category) return false;
       if (usage !== "ALL" && !(item.usageRoles || []).includes(usage)) return false;
@@ -121,7 +153,7 @@ export default function AdminMediaLibrary() {
         .toLowerCase()
         .includes(needle);
     });
-  }, [media, tab, status, category, usage, query]);
+  }, [media, tab, status, category, usage, query, ownerStatusOf]);
 
   const toggle = (id) =>
     setSelected((current) =>
@@ -417,6 +449,12 @@ export default function AdminMediaLibrary() {
                       {item.duplicateStatus === "DUPLICATE" ? <StatusBadge label="Duplicate" tone="muted" /> : null}
                       {item.ingested ? <StatusBadge label="Ingested" tone="quiet" /> : null}
                       {item.demoPlaceholder ? <StatusBadge label="Demo" tone="muted" /> : null}
+                      {item.scope === MEDIA_SCOPES.PRODUCT && item.productId && ownerStatusOf(item.productId) === null ? (
+                        <StatusBadge label="Orphaned" tone="alert" />
+                      ) : null}
+                      {item.scope === MEDIA_SCOPES.PRODUCT && item.productId && ownerStatusOf(item.productId) === "ARCHIVED" ? (
+                        <StatusBadge label="Archived product" tone="muted" />
+                      ) : null}
                     </div>
 
                     {/* Quick action buttons */}
@@ -451,6 +489,16 @@ export default function AdminMediaLibrary() {
                           Details
                         </AtelierButton>
                       )}
+                      {item.scope === MEDIA_SCOPES.PRODUCT && item.productId && ownerStatusOf(item.productId) !== null ? (
+                        <AtelierButton
+                          as={Link}
+                          to={`/admin/products/${item.productId}/media`}
+                          size="chip"
+                          variant="outline"
+                        >
+                          View product
+                        </AtelierButton>
+                      ) : null}
                     </div>
                   </div>
                 </li>

@@ -18,6 +18,8 @@
     "audit:storefront-coverage": "node --import ./scripts/node-loader/register.mjs scripts/audit-storefront-coverage.mjs",
     "audit:storefront-images": "node --import ./scripts/node-loader/register.mjs scripts/audit-storefront-images.mjs",
     "audit:rendered-product-media": "node --import ./scripts/node-loader/register.mjs scripts/audit-rendered-product-media.mjs",
+    "audit:product-image-integrity": "node --import ./scripts/node-loader/register.mjs scripts/audit-product-image-integrity.mjs",
+    "audit:rendered-image-integrity": "node --import ./scripts/node-loader/register.mjs scripts/audit-rendered-image-integrity.mjs",
     "audit:product-repetition": "node --import ./scripts/node-loader/register.mjs scripts/audit-product-repetition.mjs",
     "audit:kids-products": "node --import ./scripts/node-loader/register.mjs scripts/audit-kids-products.mjs",
     "audit:media": "node --import ./scripts/node-loader/register.mjs scripts/audit-media.mjs",

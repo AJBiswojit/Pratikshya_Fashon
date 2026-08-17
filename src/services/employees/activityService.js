@@ -56,6 +56,8 @@ export const ACTIVITY_ACTIONS = {
   PRODUCT_RESTORED: "PRODUCT_RESTORED",
   PRODUCT_DUPLICATED: "PRODUCT_DUPLICATED",
   PRODUCT_BULK_UPDATED: "PRODUCT_BULK_UPDATED",
+  /* Phase 3F — permanent deletion of a dependency-free draft. */
+  PRODUCT_DELETED: "PRODUCT_DELETED",
 
   /* Products — Phase 22. Media-to-product workflow, recorded in this same
      diary rather than a second logging system. */
@@ -177,6 +179,7 @@ const ACTION_LABELS = {
   [ACTIVITY_ACTIONS.PRODUCT_RESTORED]: "Product restored",
   [ACTIVITY_ACTIONS.PRODUCT_DUPLICATED]: "Product duplicated",
   [ACTIVITY_ACTIONS.PRODUCT_BULK_UPDATED]: "Products updated in bulk",
+  [ACTIVITY_ACTIONS.PRODUCT_DELETED]: "Product permanently deleted",
   [ACTIVITY_ACTIONS.PRODUCT_DRAFT_CREATED]: "Product draft created",
   [ACTIVITY_ACTIONS.PRODUCT_MEDIA_ASSIGNED]: "Product media assigned",
   [ACTIVITY_ACTIONS.PRODUCT_MEDIA_UNASSIGNED]: "Product media unassigned",
